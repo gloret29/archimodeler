@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import {
     ChevronRight, ChevronDown, Folder, FileText,
-    Layout, Box, Search, MoreHorizontal
+    Layout, Box, Search, Trash2, Edit2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -117,6 +117,45 @@ export default function ModelTree() {
         }
     };
 
+    const handleRenameElement = async (elementId: string, currentName: string) => {
+        const newName = prompt('New name:', currentName);
+        if (!newName || newName === currentName) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            await fetch(`http://localhost:3002/model/elements/${elementId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ name: newName })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to rename element');
+        }
+    };
+
+    const handleDeleteElement = async (elementId: string, elementName: string) => {
+        if (!confirm(`Delete "${elementName}"? This action cannot be undone.`)) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            await fetch(`http://localhost:3002/model/elements/${elementId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete element');
+        }
+    };
+
     const renderFolder = (folder: FolderType): JSX.Element => {
         const isExpanded = expanded[folder.id];
 
@@ -174,7 +213,29 @@ export default function ModelTree() {
                                 }}
                             >
                                 <Box className="h-3.5 w-3.5 text-gray-400" />
-                                <span className="truncate">{el.name}</span>
+                                <span className="truncate flex-1">{el.name}</span>
+                                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                                    <button
+                                        className="p-0.5 hover:bg-gray-200 rounded"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRenameElement(el.id, el.name);
+                                        }}
+                                        title="Rename"
+                                    >
+                                        <Edit2 className="h-3 w-3 text-gray-600" />
+                                    </button>
+                                    <button
+                                        className="p-0.5 hover:bg-red-100 rounded"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteElement(el.id, el.name);
+                                        }}
+                                        title="Delete"
+                                    >
+                                        <Trash2 className="h-3 w-3 text-red-600" />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -214,7 +275,7 @@ export default function ModelTree() {
                     {rootElements.map((el: Element) => (
                         <div
                             key={el.id}
-                            className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm ml-2"
+                            className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm ml-2 group"
                             draggable
                             onDragStart={(e) => {
                                 e.dataTransfer.setData('application/reactflow', JSON.stringify({
@@ -226,7 +287,29 @@ export default function ModelTree() {
                             }}
                         >
                             <Box className="h-3.5 w-3.5 text-gray-400" />
-                            <span className="truncate">{el.name}</span>
+                            <span className="truncate flex-1">{el.name}</span>
+                            <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                                <button
+                                    className="p-0.5 hover:bg-gray-200 rounded"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRenameElement(el.id, el.name);
+                                    }}
+                                    title="Rename"
+                                >
+                                    <Edit2 className="h-3 w-3 text-gray-600" />
+                                </button>
+                                <button
+                                    className="p-0.5 hover:bg-red-100 rounded"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteElement(el.id, el.name);
+                                    }}
+                                    title="Delete"
+                                >
+                                    <Trash2 className="h-3 w-3 text-red-600" />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
