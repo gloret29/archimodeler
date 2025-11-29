@@ -181,6 +181,31 @@ export class ModelService {
 
     // Views
     async createView(data: Prisma.ViewCreateInput) {
+        // Handle default package ID
+        if (data.modelPackage && 'connect' in data.modelPackage) {
+            const connectData = data.modelPackage.connect as any;
+            if (connectData.id === 'default-package-id') {
+                let defaultPackage = await this.prisma.modelPackage.findFirst({
+                    where: { name: 'Default Package' }
+                });
+
+                if (!defaultPackage) {
+                    defaultPackage = await this.prisma.modelPackage.create({
+                        data: {
+                            name: 'Default Package',
+                            description: 'Default model package'
+                        }
+                    });
+                }
+
+                // Update the data with the real package ID
+                data = {
+                    ...data,
+                    modelPackage: { connect: { id: defaultPackage.id } }
+                };
+            }
+        }
+
         return this.prisma.view.create({ data });
     }
 
