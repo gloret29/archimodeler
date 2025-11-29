@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Layout, BarChart3, ArrowRight, Box, Settings, LogOut, Shield, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
 interface ModelPackage {
     id: string;
@@ -42,26 +43,6 @@ export default function HomePage() {
             });
     }, []);
 
-    const handleCreatePackage = async () => {
-        const name = prompt('Enter package name:');
-        if (!name) return;
-
-        try {
-            const res = await fetch('http://localhost:3002/model/packages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                },
-                body: JSON.stringify({ name, description: 'New package', status: 'DRAFT' })
-            });
-            const newPackage = await res.json();
-            setPackages([...packages, { ...newPackage, _count: { elements: 0, relationships: 0 } }]);
-        } catch (err) {
-            console.error(err);
-            alert('Failed to create package');
-        }
-    };
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
@@ -76,6 +57,7 @@ export default function HomePage() {
                     <p className="text-muted-foreground mt-2">Manage your enterprise architecture models and views.</p>
                 </div>
                 <div className="flex gap-4">
+                    <NotificationCenter />
                     <Button variant="ghost" onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
                         {t('logout')}
@@ -112,13 +94,13 @@ export default function HomePage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <Button className="w-full justify-start" onClick={handleCreatePackage}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Create New Model Package
-                        </Button>
                         <Button variant="secondary" className="w-full justify-start" onClick={() => router.push('/studio')}>
                             <Layout className="mr-2 h-4 w-4" />
-                            Continue Designing
+                            Open Studio
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/packages')}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            Manage Packages (Admin)
                         </Button>
                     </CardContent>
                 </Card>

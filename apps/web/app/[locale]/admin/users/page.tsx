@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Home } from "lucide-react";
+import { Link } from "@/navigation";
+import { useTranslations } from "next-intl";
 
 interface User {
     id: string;
@@ -62,11 +64,30 @@ export default function UsersPage() {
 
     const fetchRoles = async () => {
         try {
-            const res = await fetch("http://localhost:3002/roles");
-            const data = await res.json();
-            setRoles(data);
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                console.warn("No access token found for fetching roles.");
+                setRoles([]);
+                return;
+            }
+
+            const res = await fetch("http://localhost:3002/roles", {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                // Ensure data is an array
+                setRoles(Array.isArray(data) ? data : []);
+            } else {
+                console.error("Failed to fetch roles:", res.status, res.statusText);
+                setRoles([]);
+            }
         } catch (error) {
             console.error("Failed to fetch roles:", error);
+            setRoles([]);
         }
     };
 
@@ -199,6 +220,8 @@ export default function UsersPage() {
         }
     };
 
+    const t = useTranslations('Home');
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -208,9 +231,17 @@ export default function UsersPage() {
                         Manage system users and their roles.
                     </p>
                 </div>
-                <Button onClick={handleOpenDialog}>
-                    <Plus className="mr-2 h-4 w-4" /> Add User
-                </Button>
+                <div className="flex gap-2">
+                    <Link href="/home">
+                        <Button variant="outline" title={t('backToHome')}>
+                            <Home className="mr-2 h-4 w-4" />
+                            {t('backToHome')}
+                        </Button>
+                    </Link>
+                    <Button onClick={handleOpenDialog}>
+                        <Plus className="mr-2 h-4 w-4" /> Add User
+                    </Button>
+                </div>
             </div>
 
             <Card>
@@ -346,7 +377,7 @@ export default function UsersPage() {
                                 <Label>Roles</Label>
                                 <ScrollArea className="h-48 border rounded-md p-4">
                                     <div className="space-y-2">
-                                        {roles.length === 0 ? (
+                                        {!Array.isArray(roles) || roles.length === 0 ? (
                                             <p className="text-sm text-muted-foreground">Loading roles...</p>
                                         ) : (
                                             roles.map((role) => (

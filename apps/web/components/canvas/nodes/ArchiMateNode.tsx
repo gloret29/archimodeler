@@ -167,9 +167,19 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
         opacity: style?.opacity !== undefined ? style.opacity : 1,
     };
     
+    // Determine text color - use custom color if provided, otherwise use theme-aware default
+    const getTextColor = () => {
+        if (style?.fontColor) {
+            return style.fontColor;
+        }
+        // Default to black for light mode, white for dark mode
+        // We'll use CSS variables that adapt to theme
+        return undefined; // Let CSS classes handle it
+    };
+    
     const textStyle: React.CSSProperties = {
         fontSize: style?.fontSize !== undefined ? `${style.fontSize}px` : undefined,
-        color: style?.fontColor,
+        color: getTextColor(),
     };
     
     return (
@@ -253,38 +263,48 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
                         <img 
                             src={`/archimate-symbols/${svgFile}`} 
                             alt={type}
-                            className="w-full h-full object-contain max-w-[180px] max-h-[100px]"
+                            className="w-full h-full object-contain max-w-[180px] max-h-[100px] dark:invert"
                             draggable={false}
                         />
                         <div className="absolute inset-0 flex flex-col items-center justify-center pt-6 px-2">
                             {stereotypes.length > 0 && (
                                 <span 
-                                    className="text-[10px] font-semibold text-center break-words w-full pointer-events-none select-none opacity-80"
-                                    style={textStyle}
+                                    className={`text-[10px] font-semibold text-center break-words w-full pointer-events-none select-none ${!style?.fontColor ? 'text-black dark:text-white' : ''}`}
+                                    style={{
+                                        ...textStyle,
+                                        textShadow: !style?.fontColor 
+                                            ? '0 1px 3px rgba(255, 255, 255, 0.8), 0 0 6px rgba(255, 255, 255, 0.6), -1px -1px 2px rgba(0, 0, 0, 0.3), 1px 1px 2px rgba(0, 0, 0, 0.3)' 
+                                            : undefined,
+                                    }}
                                 >
                                     &lt;&lt;{formatStereotypes()}&gt;&gt;
                                 </span>
                             )}
                             <span 
-                                className={`text-xs font-medium text-center break-words w-full ${stereotypes.length > 0 ? 'line-clamp-1' : 'line-clamp-2'} pointer-events-none select-none`}
-                                style={textStyle}
+                                className={`text-xs font-medium text-center break-words w-full ${stereotypes.length > 0 ? 'line-clamp-1' : 'line-clamp-2'} pointer-events-none select-none ${!style?.fontColor ? 'text-black dark:text-white' : ''}`}
+                                style={{
+                                    ...textStyle,
+                                    textShadow: !style?.fontColor 
+                                        ? '0 1px 3px rgba(255, 255, 255, 0.8), 0 0 6px rgba(255, 255, 255, 0.6), -1px -1px 2px rgba(0, 0, 0, 0.3), 1px 1px 2px rgba(0, 0, 0, 0.3)' 
+                                        : undefined,
+                                }}
                             >
                                 {label}
                             </span>
                         </div>
                     </div>
                 ) : (
-                    <div className="border-2 border-gray-400 bg-white rounded p-2 w-full h-full flex flex-col items-center justify-center">
+                    <div className="border-2 border-border bg-background rounded p-2 w-full h-full flex flex-col items-center justify-center">
                         {stereotypes.length > 0 && (
                             <span 
-                                className="text-[10px] font-semibold text-center break-words w-full pointer-events-none select-none opacity-80"
+                                className={`text-[10px] font-semibold text-center break-words w-full pointer-events-none select-none opacity-80 ${!style?.fontColor ? 'text-foreground' : ''}`}
                                 style={textStyle}
                             >
                                 &lt;&lt;{formatStereotypes()}&gt;&gt;
                             </span>
                         )}
                         <span 
-                            className="text-xs font-medium text-center break-words w-full pointer-events-none select-none"
+                            className={`text-xs font-medium text-center break-words w-full pointer-events-none select-none ${!style?.fontColor ? 'text-foreground' : ''}`}
                             style={textStyle}
                         >
                             {label}

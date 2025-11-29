@@ -40,23 +40,22 @@ archimodeler/
 - **Framework** : NestJS 11
 - **Langage** : TypeScript
 - **ORM** : Prisma 5.22.0
-- **Graph Database** : Neo4j 5.15 (Driver)
+- **Database** : PostgreSQL 15 (via Prisma)
 - **Search** : OpenSearch 2.11.0
 - **Authentification** : JWT + Passport.js
 - **RBAC** : Rôles et Permissions
 - **Versioning** : Octokit (GitHub API) - prévu
 
-#### Infrastructure de Données Hybride
-- **PostgreSQL 15** : Source de vérité
+#### Infrastructure de Données
+- **PostgreSQL 15** : Base de données principale
   - Objets (Elements)
+  - Relations (Relationships)
   - Vues (Views)
+  - Packages de modèles (ModelPackage)
   - Utilisateurs, Rôles, Permissions
   - Configuration système
   - Métamodèle ArchiMate
-- **Neo4j 5.15** : Moteur de relations
-  - Relations entre objets (Relationships)
-  - Relations entre objets et vues
-  - Analyse d'impact et requêtes de graphe
+  - Stéréotypes et métadonnées
 - **OpenSearch 2.11** : Moteur de recherche
   - Indexation des éléments
   - Recherche full-text
@@ -83,14 +82,16 @@ archimodeler/
   - `RelationshipsController` - CRUD Relationships (`/model/relationships`)
 - **Fonctionnalités** :
   - Création automatique de ConceptType
-  - Synchronisation Neo4j pour les éléments
+  - Gestion des packages de modèles (ModelPackage)
   - Gestion du "Default Package"
 
-### 3. **Neo4jModule** - Gestion des Relations Graphiques
+### 3. **ModelModule** - Gestion des Modèles et Relations
 - **Services** :
-  - `Neo4jService` - Connexion et requêtes Cypher
-  - `RelationshipsService` - CRUD des relations
+  - `ModelService` - CRUD des éléments, vues, dossiers, packages
+  - `RelationshipsService` - CRUD des relations (PostgreSQL)
 - **Fonctionnalités** :
+  - Gestion des packages de modèles (ModelPackage)
+  - Isolation des données par package
   - Création/suppression de relations
   - Requêtes de graphe (relations d'un élément, relations entre éléments)
   - Migration des relations existantes
@@ -238,10 +239,10 @@ archimodeler/
 - Relations : `conceptType`, `modelPackage`, `folder`, `dataSource`
 - Versioning : `validFrom`, `validTo`, `versionId`
 
-#### 5. **Relationship** - Relations (PostgreSQL - Legacy)
+#### 5. **Relationship** - Relations
 - `id`, `name`, `documentation`, `properties` (JSONB)
 - Relations : `relationType`, `source`, `target`, `modelPackage`
-- **Note** : Les relations sont maintenant stockées dans Neo4j
+- **Note** : Les relations sont stockées dans PostgreSQL et isolées par ModelPackage
 
 #### 6. **View** - Vues de Diagrammes
 - `id`, `name`, `description`, `content` (JSONB - layout)
@@ -278,7 +279,7 @@ archimodeler/
 
 ## 🔄 Flux de Données
 
-### Architecture Hybride
+### Architecture de Données
 
 ```
 ┌─────────────────┐
@@ -290,28 +291,32 @@ archimodeler/
 ┌─────────────────┐
 │   Backend       │
 │   (NestJS)      │
-└─────┬─────┬─────┘
-      │     │
-      ▼     ▼
-┌─────────┐ ┌─────────┐
-│PostgreSQL│ │  Neo4j  │
-│(Source)  │ │(Graph)  │
-└─────────┘ └─────────┘
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   PostgreSQL    │
+│   (Principal)   │
+│  - Elements     │
+│  - Relations    │
+│  - Views        │
+│  - Packages     │
+│  - Users        │
+└─────────────────┘
 ```
 
-### Synchronisation PostgreSQL ↔ Neo4j
+### Gestion des Données
 
 1. **Création d'élément** :
-   - PostgreSQL : Création de l'Element
-   - Neo4j : Création du nœud Element (automatique)
+   - PostgreSQL : Création de l'Element avec association au ModelPackage
 
 2. **Création de relation** :
-   - PostgreSQL : Métadonnées (optionnel, pour compatibilité)
-   - Neo4j : Création de la relation RELATES_TO (principal)
+   - PostgreSQL : Création de la Relationship avec validation des types
+   - Isolation par ModelPackage (les relations ne peuvent lier que des éléments du même package)
 
 3. **Suppression d'élément** :
-   - Neo4j : Suppression du nœud et toutes ses relations (DETACH DELETE)
-   - PostgreSQL : Suppression de l'Element
+   - PostgreSQL : Suppression en cascade des relations associées
+   - Suppression de l'Element
 
 ---
 
@@ -328,7 +333,7 @@ archimodeler/
 - ✅ Améliorations UX
 
 ### Phase 9 : Infrastructure Hybride ✅
-- ✅ Intégration Neo4j
+- ✅ Gestion des relations PostgreSQL
 - ✅ Page d'administration
 - ✅ Gestion des paramètres système
 
@@ -366,7 +371,7 @@ archimodeler/
 - ❌ Suppression non-destructive
 
 ### Phase 15 : Analyse Avancée
-- ❌ Page d'exploration Neo4j "No-Code"
+- ❌ Page d'exploration PostgreSQL "No-Code"
 - ❌ Système de notifications global
 
 ### Autres
@@ -438,7 +443,7 @@ archimodeler/
 
 ### Long Terme
 1. Optimiser les performances pour les gros modèles
-2. Ajouter des analyses avancées Neo4j
+2. Ajouter des analyses avancées basées sur PostgreSQL
 3. Implémenter le système de notifications
 4. Ajouter plus de connecteurs (Excel, CSV, etc.)
 
@@ -449,7 +454,7 @@ archimodeler/
 - **Backend** : ~15 modules NestJS
 - **Frontend** : ~10 pages principales, ~20 composants
 - **Base de données** : 13 modèles Prisma
-- **Infrastructure** : 4 services Docker (PostgreSQL, Neo4j, OpenSearch, Dashboards)
+- **Infrastructure** : 3 services Docker (PostgreSQL, OpenSearch, Dashboards)
 
 ---
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     ChevronRight, ChevronDown, Folder, FileText,
-    Layout, Box, Search, Trash2, Edit2, FolderPlus, MoreHorizontal, AlertTriangle
+    Layout, Box, Search, Trash2, Edit2, FolderPlus, MoreHorizontal, AlertTriangle, GitBranch
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ interface Element {
 interface ModelTreeProps {
     packageId: string | null;
     onElementSelect?: (elementId: string, elementName: string, elementType: string) => void;
+    onRelationshipSelect?: (relationshipId: string, relationshipName: string, relationshipType: string) => void;
 }
 
 interface FolderType {
@@ -69,6 +70,22 @@ interface ViewType {
     id: string;
     name: string;
     folderId?: string | null;
+}
+
+interface Relationship {
+    id: string;
+    name?: string | null;
+    relationType: {
+        name: string;
+    };
+    source: {
+        id: string;
+        name: string;
+    };
+    target: {
+        id: string;
+        name: string;
+    };
 }
 
 interface DeleteConfirmation {
@@ -162,7 +179,7 @@ const svgMapping: Record<string, string> = {
     'Location': 'Location.svg',
 };
 
-function ModelTree({ packageId, onElementSelect }: ModelTreeProps) {
+function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTreeProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { refreshTrigger } = useRepositoryStore();
@@ -170,6 +187,7 @@ function ModelTree({ packageId, onElementSelect }: ModelTreeProps) {
     const [folders, setFolders] = useState<FolderType[]>([]);
     const [elements, setElements] = useState<Element[]>([]);
     const [views, setViews] = useState<ViewType[]>([]);
+    const [relationships, setRelationships] = useState<Relationship[]>([]);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({
         'repository': true,
     });
@@ -188,6 +206,7 @@ function ModelTree({ packageId, onElementSelect }: ModelTreeProps) {
             setFolders([]);
             setElements([]);
             setViews([]);
+            setRelationships([]);
             return;
         }
 
@@ -220,6 +239,16 @@ function ModelTree({ packageId, onElementSelect }: ModelTreeProps) {
             .then(data => {
                 if (Array.isArray(data)) {
                     setViews(data);
+                }
+            })
+            .catch(console.error);
+
+        // Fetch relationships filtered by packageId
+        fetch(`http://localhost:3002/model/relationships?packageId=${packageId}`, { headers })
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setRelationships(data);
                 }
             })
             .catch(console.error);
@@ -487,6 +516,24 @@ function ModelTree({ packageId, onElementSelect }: ModelTreeProps) {
         } catch (err) {
             console.error(err);
             alert('Failed to delete element');
+        }
+    };
+
+    const handleDeleteRelationship = async (relationshipId: string, relationshipName: string) => {
+        if (!confirm(`Delete the relationship "${relationshipName}"? This action cannot be undone.`)) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            await fetch(`http://localhost:3002/model/relationships/${relationshipId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete relationship');
         }
     };
 
@@ -948,6 +995,55 @@ function ModelTree({ packageId, onElementSelect }: ModelTreeProps) {
                             );
                         })}
                     </div>
+
+                    {relationships.length > 0 && (
+                        <div className="mt-4">
+                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2">Relations</h3>
+                            {relationships.map((rel: Relationship) => {
+                                const relationshipName = rel.name || `${rel.source.name} → ${rel.target.name}`;
+                                const formattedTypeName = formatConceptTypeName(rel.relationType.name);
+                                return (
+                                    <Tooltip key={rel.id}>
+                                        <TooltipTrigger asChild>
+                                            <div
+                                                className="flex items-center gap-2 p-1 rounded-md hover:bg-accent cursor-pointer text-sm ml-2 group"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onRelationshipSelect?.(rel.id, relationshipName, rel.relationType.name);
+                                                }}
+                                            >
+                                                <GitBranch className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                                                <span className="truncate flex-1">{relationshipName}</span>
+                                                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                                                    <button
+                                                        className="p-0.5 hover:bg-destructive/10 rounded"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteRelationship(rel.id, relationshipName);
+                                                        }}
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-3 w-3 text-destructive" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right" className="max-w-xs">
+                                            <div className="space-y-1.5">
+                                                <div className="font-semibold text-sm">{relationshipName}</div>
+                                                <div className="space-y-0.5 border-t border-border/50 pt-1.5">
+                                                    <div className="text-xs font-medium text-foreground">{formattedTypeName}</div>
+                                                    <div className="text-[10px] text-muted-foreground">
+                                                        {rel.source.name} → {rel.target.name}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                );
+                            })}
+                        </div>
+                    )}
                 </ScrollArea>
             </aside>
 

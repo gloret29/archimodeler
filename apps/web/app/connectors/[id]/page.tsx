@@ -5,9 +5,13 @@ import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Home } from 'lucide-react';
+import { Link } from '@/navigation';
+import { useTranslations } from 'next-intl';
 
 export default function ConnectorDetailPage() {
     const params = useParams();
+    const t = useTranslations('Home');
     const [dataSource, setDataSource] = useState<any>(null);
     const [syncing, setSyncing] = useState(false);
 
@@ -41,9 +45,17 @@ export default function ConnectorDetailPage() {
         <div className="p-8">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">Connector Configuration</h1>
-                <Button onClick={handleSync} disabled={syncing}>
-                    {syncing ? 'Syncing...' : 'Sync Now'}
-                </Button>
+                <div className="flex gap-2">
+                    <Link href="/home">
+                        <Button variant="outline" title={t('backToHome')}>
+                            <Home className="mr-2 h-4 w-4" />
+                            {t('backToHome')}
+                        </Button>
+                    </Link>
+                    <Button onClick={handleSync} disabled={syncing}>
+                        {syncing ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

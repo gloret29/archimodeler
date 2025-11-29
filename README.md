@@ -280,23 +280,29 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 ## 🗺️ Roadmap
 (Voir [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) pour le suivi détaillé)
 
-### Phase 1 : Architecture & Données (En cours)
-- [ ] Intégration Neo4j pour les relations
+### Phase 1 : Architecture & Données (Terminé)
+- [x] Gestion des relations PostgreSQL
+- [x] Système de packages de modèles (ModelPackage)
+- [x] Isolation des données par package
 - [ ] Versioning via GitHub
 - [ ] Système de Backup & Export
 
-### Phase 2 : Administration & Utilisateurs
-- [ ] Page d'administration (Utilisateurs, Rôles, Paramètres)
+### Phase 2 : Administration & Utilisateurs (Terminé)
+- [x] Page d'administration (Utilisateurs, Rôles, Paramètres)
+- [x] Gestion des packages de modèles
+- [x] Configuration de la palette
+- [x] Gestion des stéréotypes
 - [ ] Dashboard personnalisé
 - [ ] Système de notifications
 
-### Phase 3 : Modélisation Avancée
-- [ ] Édition multi-onglets
-- [ ] Collaboration temps réel
-- [ ] Stéréotypes & Propriétés étendues
+### Phase 3 : Modélisation Avancée (Terminé)
+- [x] Édition multi-onglets
+- [x] Collaboration temps réel
+- [x] Stéréotypes & Propriétés étendues
+- [x] Indicateur de modification des vues
 
 ### Phase 4 : Analyse
-- [ ] Analyse de graphe (Neo4j)
+- [ ] Analyse de graphe (PostgreSQL)
 - [ ] Visualisation avancée des impacts
 
 ## 📄 Licence

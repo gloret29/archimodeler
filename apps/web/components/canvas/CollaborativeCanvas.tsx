@@ -286,6 +286,8 @@ export default function CollaborativeCanvas({
     }, [nodes, users, selections, currentUser.id]);
 
     // Notify parent of content changes
+    const lastContentRef = useRef<string>('');
+    
     useEffect(() => {
         if (onContentChange && isLoaded) {
             // Clean nodes and edges before sending (remove React Flow internal properties)
@@ -302,7 +304,17 @@ export default function CollaborativeCanvas({
                 selected: undefined // Remove selection state for persistence
             }));
             
-            onContentChange({ nodes: cleanNodes, edges: cleanEdges });
+            // Create a stable string representation to compare
+            const contentString = JSON.stringify({
+                nodes: cleanNodes.map(n => ({ id: n.id, position: n.position, data: n.data })),
+                edges: cleanEdges.map(e => ({ id: e.id, source: e.source, target: e.target }))
+            });
+            
+            // Only call onContentChange if content actually changed
+            if (contentString !== lastContentRef.current) {
+                lastContentRef.current = contentString;
+                onContentChange({ nodes: cleanNodes, edges: cleanEdges });
+            }
         }
     }, [nodes, edges, onContentChange, isLoaded]);
 

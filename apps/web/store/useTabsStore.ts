@@ -8,6 +8,7 @@ export interface ViewTab {
     packageId: string;
     folderId?: string;
     isPersisted: boolean; // Whether the view exists in the database
+    isModified: boolean; // Whether the view has been modified since last save
 }
 
 interface TabsStore {
@@ -22,6 +23,8 @@ interface TabsStore {
     updateTabName: (tabId: string, newName: string) => Promise<void>;
     updateTabFolder: (tabId: string, folderId: string | null) => Promise<void>;
     saveActiveTab: (content: any) => Promise<void>;
+    markTabAsModified: (tabId: string) => void;
+    markTabAsSaved: (tabId: string) => void;
     closeAllTabs: () => void;
     openViewFromRepository: (viewId: string, viewName: string, packageId: string, folderId?: string) => void;
 }
@@ -68,6 +71,7 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
                 packageId: createdView.modelPackageId,
                 folderId: createdView.folderId,
                 isPersisted: true,
+                isModified: false,
             };
 
             set((state) => ({
@@ -184,11 +188,32 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
             // Update view content in database
             await viewsApi.update(activeTab.viewId, { content });
             console.log('✓ View saved:', activeTab.viewName);
+            
+            // Mark tab as saved (not modified)
+            set((state) => ({
+                tabs: state.tabs.map((t) =>
+                    t.id === activeTab.id ? { ...t, isModified: false } : t
+                ),
+            }));
         } catch (error) {
             console.error('Failed to save view:', error);
             throw error;
         }
     },
+
+    markTabAsModified: (tabId) =>
+        set((state) => ({
+            tabs: state.tabs.map((t) =>
+                t.id === tabId ? { ...t, isModified: true } : t
+            ),
+        })),
+
+    markTabAsSaved: (tabId) =>
+        set((state) => ({
+            tabs: state.tabs.map((t) =>
+                t.id === tabId ? { ...t, isModified: false } : t
+            ),
+        })),
 
     closeAllTabs: () =>
         set(() => ({
@@ -214,6 +239,7 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
             packageId,
             folderId,
             isPersisted: true,
+            isModified: false,
         };
 
         set((state) => ({

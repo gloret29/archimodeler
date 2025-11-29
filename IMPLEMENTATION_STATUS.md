@@ -161,6 +161,98 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [x] Prévention des doublons de relations
 - [x] Validation temps réel (Drag & Drop)
 
+### 11.6 Chat et Communication
+**Statut**: 🟢 **Terminé**
+- [x] Système de chat en temps réel entre utilisateurs
+- [x] Interface de chat dans la liste des utilisateurs actifs
+- [x] Notifications toast pour les nouveaux messages
+- [x] Pastille sur l'avatar de l'utilisateur connecté pour les messages non lus
+- [x] Liste des conversations dans le menu utilisateur
+- [x] Ouverture du chat depuis le menu utilisateur
+- [x] Compteur de messages non lus par utilisateur
+- [x] Enregistrement des expéditeurs de messages pour la liste des conversations
+
+## 🔴 Phase 11.7 : Améliorations Collaboration (À faire)
+
+### 11.7.1 Gestion des Conflits
+**Statut**: 🔴 **À faire**
+- [ ] Implémentation OT (Operational Transform) ou CRDT pour la résolution de conflits
+- [ ] Détection automatique des modifications simultanées
+- [ ] Résolution intelligente des conflits (merge automatique quand possible)
+- [ ] Interface de résolution manuelle des conflits
+- [ ] Historique des opérations pour le rollback
+
+### 11.7.2 Commentaires et Annotations
+**Statut**: 🔴 **À faire**
+- [ ] Système de commentaires sur les éléments et relations
+- [ ] Annotations visuelles sur le canvas
+- [ ] Threads de discussion sur les éléments
+- [ ] Mentions d'utilisateurs dans les commentaires
+- [ ] Notifications pour les réponses aux commentaires
+- [ ] Résolution/marquage des commentaires comme résolus
+
+### 11.7.3 Partage et Permissions
+**Statut**: 🔴 **À faire**
+- [ ] Partage de vues avec permissions granulaires (lecture seule, édition, commentaire)
+- [ ] Liens de partage avec expiration
+- [ ] Invitations par email pour rejoindre une vue
+- [ ] Gestion des accès par rôle ou utilisateur spécifique
+- [ ] Mode "présentation" pour les vues partagées
+
+### 11.7.4 Présence Avancée
+**Statut**: 🔴 **À faire**
+- [ ] Indicateur de ce que fait l'utilisateur (édition, sélection, navigation)
+- [ ] Zone de focus visible (ce que l'utilisateur regarde)
+- [ ] Indicateur de modification en temps réel (élément en cours d'édition)
+- [ ] Statut de disponibilité (disponible, occupé, absent)
+- [ ] Historique de présence dans une vue
+
+### 11.7.5 Historique et Versioning Collaboratif
+**Statut**: 🔴 **À faire**
+- [ ] Historique des modifications collaboratives (qui a fait quoi et quand)
+- [ ] Timeline des changements dans une vue
+- [ ] Annulation/Refaire collaboratif (undo/redo partagé)
+- [ ] Points de restauration (snapshots) collaboratifs
+- [ ] Comparaison de versions (diff visuel)
+
+### 11.7.6 Améliorations du Chat
+**Statut**: 🔴 **À faire**
+- [ ] Mentions d'utilisateurs dans le chat (@username)
+- [ ] Réactions aux messages (emoji)
+- [ ] Partage de fichiers/images dans le chat
+- [ ] Historique des conversations persistantes
+- [ ] Recherche dans les conversations
+- [ ] Chat de groupe (plusieurs utilisateurs)
+- [ ] Partage de liens vers des éléments/vues dans le chat
+- [ ] Prévisualisation des éléments partagés dans le chat
+
+### 11.7.7 Sessions de Travail
+**Statut**: 🔴 **À faire**
+- [ ] Création de "salles de travail" collaboratives
+- [ ] Invitation à rejoindre une session de travail
+- [ ] Enregistrement des sessions (replay)
+- [ ] Partage d'écran ou de vue spécifique
+- [ ] Mode "suivre" un utilisateur (caméra collaborative)
+- [ ] Notes de session partagées
+
+### 11.7.8 Notifications Collaboratives
+**Statut**: 🔴 **À faire**
+- [ ] Notifications pour les modifications importantes (création/suppression d'éléments)
+- [ ] Notifications pour les mentions dans les commentaires
+- [ ] Notifications pour les invitations à collaborer
+- [ ] Préférences de notification par utilisateur
+- [ ] Notifications push (si supporté par le navigateur)
+- [ ] Résumé quotidien/hebdomadaire des activités collaboratives
+
+### 11.7.9 Performance et Optimisation
+**Statut**: 🔴 **À faire**
+- [ ] Optimisation de la synchronisation pour de grandes vues (debouncing, throttling)
+- [ ] Compression des données WebSocket
+- [ ] Gestion des reconnexions automatiques avec récupération d'état
+- [ ] Cache local pour réduire la charge serveur
+- [ ] Limitation du nombre d'utilisateurs simultanés par vue (si nécessaire)
+- [ ] Métriques de performance collaborative
+
 ## ✅ Phase 12 : Améliorations Interface et Expérience Utilisateur (Terminé)
 
 ### 12.1 Symboles ArchiMate Officiels
@@ -222,6 +314,20 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [x] Propriétés étendues dynamiques
 - [x] Application de stéréotypes aux éléments et relations
 - [x] Panneau de gestion des stéréotypes dans le canvas
+- [x] Attribution de stéréotypes à des types d'objets/relations spécifiques
+- [x] Interface de création d'attributs pour les stéréotypes (tableau avec types)
+
+## ✅ Phase 13.5 : Packages de Modèles et Isolation (Terminé)
+
+### 13.5.1 Système de Packages
+**Statut**: 🟢 **Terminé**
+- [x] Modèle de données ModelPackage
+- [x] Isolation des éléments, relations, vues et dossiers par package
+- [x] Sélection de package lors de l'ouverture du studio
+- [x] Filtrage automatique du repository par package
+- [x] Gestion des packages dans l'administration (création, modification, suppression)
+- [x] Indicateur visuel de modification dans les onglets (point orange)
+- [x] Documentation Swagger de l'API
 
 ## 🔴 Phase 14 : Versioning (À faire)
 
@@ -243,8 +349,19 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [ ] Requêtes de parcours de relations
 
 ### 15.2 Notifications
-- [ ] Système de notifications global
-- [ ] Centre de notifications utilisateur
+**Statut**: 🟢 **Terminé**
+- [x] Système de notifications global
+  - [x] Modèle de données Notification (Prisma)
+  - [x] Service de notifications backend (CRUD)
+  - [x] API REST pour les notifications
+  - [x] Intégration WebSocket pour notifications en temps réel
+  - [x] Notifications automatiques pour les change requests (création, approbation, rejet, publication)
+- [x] Centre de notifications utilisateur
+  - [x] Composant NotificationCenter avec badge de compteur
+  - [x] Affichage des notifications avec filtres (lues/non lues)
+  - [x] Actions: marquer comme lue, supprimer, marquer tout comme lu
+  - [x] Intégration dans la page d'accueil
+  - [x] Support multilingue (FR/EN)
 
 ## 🔴 Phase 16 : Export et Sécurité (À faire)
 

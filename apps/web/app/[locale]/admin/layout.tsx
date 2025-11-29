@@ -5,7 +5,8 @@ import { useRouter, Link } from "@/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag, Package, Home } from "lucide-react";
+import { useTranslations } from 'next-intl';
 
 export default function AdminLayout({
     children,
@@ -13,6 +14,7 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const router = useRouter();
+    const t = useTranslations('Home');
     const [authorized, setAuthorized] = useState(false);
 
     useEffect(() => {
@@ -72,6 +74,12 @@ export default function AdminLayout({
                                 Stereotypes
                             </Button>
                         </Link>
+                        <Link href="/admin/packages">
+                            <Button variant="ghost" className="w-full justify-start">
+                                <Package className="mr-2 h-4 w-4" />
+                                Model Packages
+                            </Button>
+                        </Link>
                         <div className="pt-4">
                             <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Infrastructure
@@ -91,7 +99,13 @@ export default function AdminLayout({
                         </div>
                     </nav>
                 </ScrollArea>
-                <div className="p-4 border-t">
+                <div className="p-4 border-t space-y-2">
+                    <Link href="/home" className="w-full">
+                        <Button variant="outline" className="w-full">
+                            <Home className="mr-2 h-4 w-4" />
+                            {t('backToHome')}
+                        </Button>
+                    </Link>
                     <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
                         Exit Admin
                     </Button>

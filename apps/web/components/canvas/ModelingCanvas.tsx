@@ -100,8 +100,16 @@ export default function ModelingCanvas({
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
     const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
     const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
-    const lastSelectedEdgeRef = useRef<string | null>(null);
     const lastSelectedNodeRef = useRef<string | null>(null);
+    const lastSelectedEdgeRef = useRef<string | null>(null);
+    const onNodeClickRef = useRef(onNodeClick);
+    const onEdgeClickRef = useRef(onEdgeClick);
+    
+    // Update refs when callbacks change
+    useEffect(() => {
+        onNodeClickRef.current = onNodeClick;
+        onEdgeClickRef.current = onEdgeClick;
+    }, [onNodeClick, onEdgeClick]);
 
     const [connectionMenu, setConnectionMenu] = useState<{
         isOpen: boolean;
@@ -445,6 +453,54 @@ export default function ModelingCanvas({
         }
     };
 
+    const handleSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
+        // Only update state if selection actually changed
+        setSelectedNodes((prev) => {
+            if (prev.length === selectedNodes.length && 
+                prev.every((n, i) => n.id === selectedNodes[i]?.id)) {
+                return prev; // No change
+            }
+            return selectedNodes;
+        });
+        setSelectedEdges((prev) => {
+            if (prev.length === selectedEdges.length && 
+                prev.every((e, i) => e.id === selectedEdges[i]?.id)) {
+                return prev; // No change
+            }
+            return selectedEdges;
+        });
+        
+        // If an edge is selected, trigger onEdgeClick (only if different from last selection)
+        if (selectedEdges.length > 0 && selectedNodes.length === 0) {
+            const edge = selectedEdges[0];
+            if (lastSelectedEdgeRef.current !== edge.id && onEdgeClickRef.current) {
+                lastSelectedEdgeRef.current = edge.id;
+                lastSelectedNodeRef.current = null;
+                const relationshipId = edge.data?.relationshipId;
+                const relationshipName = edge.label || edge.data?.name || edge.id;
+                const relationshipType = edge.data?.type || edge.label || 'Unknown';
+                onEdgeClickRef.current(edge.id, relationshipId, relationshipName, relationshipType);
+            }
+        }
+        // If a node is selected, trigger onNodeClick (only if different from last selection)
+        else if (selectedNodes.length > 0 && selectedEdges.length === 0) {
+            const node = selectedNodes[0];
+            if (lastSelectedNodeRef.current !== node.id && onNodeClickRef.current) {
+                lastSelectedNodeRef.current = node.id;
+                lastSelectedEdgeRef.current = null;
+                const elementId = node.data?.elementId;
+                const elementName = node.data?.label || node.id;
+                const elementType = node.data?.type || 'Unknown';
+                onNodeClickRef.current(node.id, elementId, elementName, elementType);
+            }
+        }
+        // If nothing is selected, reset refs
+        else if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+            lastSelectedNodeRef.current = null;
+            lastSelectedEdgeRef.current = null;
+        }
+    }, []); // No dependencies - we use refs for callbacks
+
     return (
         <div className="w-full h-full" ref={reactFlowWrapper}>
             <ReactFlow
@@ -471,39 +527,7 @@ export default function ModelingCanvas({
                 onDragOver={onDragOver}
                 isValidConnection={isValidConnection}
                 nodeTypes={nodeTypes}
-                onSelectionChange={useCallback(({ nodes: selectedNodes, edges: selectedEdges }) => {
-                    setSelectedNodes(selectedNodes);
-                    setSelectedEdges(selectedEdges);
-                    // If an edge is selected, trigger onEdgeClick (only if different from last selection)
-                    if (onEdgeClick && selectedEdges.length > 0 && selectedNodes.length === 0) {
-                        const edge = selectedEdges[0];
-                        if (lastSelectedEdgeRef.current !== edge.id) {
-                            lastSelectedEdgeRef.current = edge.id;
-                            lastSelectedNodeRef.current = null;
-                            const relationshipId = edge.data?.relationshipId;
-                            const relationshipName = edge.label || edge.data?.name || edge.id;
-                            const relationshipType = edge.data?.type || edge.label || 'Unknown';
-                            onEdgeClick(edge.id, relationshipId, relationshipName, relationshipType);
-                        }
-                    }
-                    // If a node is selected, trigger onNodeClick (only if different from last selection)
-                    else if (onNodeClick && selectedNodes.length > 0 && selectedEdges.length === 0) {
-                        const node = selectedNodes[0];
-                        if (lastSelectedNodeRef.current !== node.id) {
-                            lastSelectedNodeRef.current = node.id;
-                            lastSelectedEdgeRef.current = null;
-                            const elementId = node.data?.elementId;
-                            const elementName = node.data?.label || node.id;
-                            const elementType = node.data?.type || 'Unknown';
-                            onNodeClick(node.id, elementId, elementName, elementType);
-                        }
-                    }
-                    // If nothing is selected, reset refs
-                    else if (selectedNodes.length === 0 && selectedEdges.length === 0) {
-                        lastSelectedNodeRef.current = null;
-                        lastSelectedEdgeRef.current = null;
-                    }
-                }, [onNodeClick, onEdgeClick])}
+                onSelectionChange={handleSelectionChange}
                 fitView
             >
                 <Controls />

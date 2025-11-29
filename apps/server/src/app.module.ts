@@ -16,9 +16,10 @@ import { SettingsModule } from './settings/settings.module';
 import { RolesModule } from './roles/roles.module';
 import { CollaborationModule } from './collaboration/collaboration.module';
 import { StereotypesModule } from './stereotypes/stereotypes.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, SettingsModule, RolesModule, CollaborationModule, StereotypesModule],
+  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, SettingsModule, RolesModule, CollaborationModule, StereotypesModule, NotificationsModule],
   controllers: [AppController],
   providers: [AppService],
 })

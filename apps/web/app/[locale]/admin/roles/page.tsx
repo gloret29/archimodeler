@@ -11,7 +11,9 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Shield } from "lucide-react";
+import { Plus, Pencil, Trash2, Shield, Home } from "lucide-react";
+import { Link } from "@/navigation";
+import { useTranslations } from "next-intl";
 
 interface Role {
     id: string;
@@ -21,6 +23,7 @@ interface Role {
 }
 
 export default function RolesPage() {
+    const t = useTranslations('Home');
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -59,9 +62,17 @@ export default function RolesPage() {
                         Define roles and assign permissions to control access.
                     </p>
                 </div>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Create Role
-                </Button>
+                <div className="flex gap-2">
+                    <Link href="/home">
+                        <Button variant="outline" title={t('backToHome')}>
+                            <Home className="mr-2 h-4 w-4" />
+                            {t('backToHome')}
+                        </Button>
+                    </Link>
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" /> Create Role
+                    </Button>
+                </div>
             </div>
 
             <Card>

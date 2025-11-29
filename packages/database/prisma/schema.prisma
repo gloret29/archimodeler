@@ -26,6 +26,8 @@ model User {
 
   requestedChanges ChangeRequest[] @relation("Requester")
   reviewedChanges  ChangeRequest[] @relation("Reviewer")
+  
+  notifications Notification[]
 }
 
 model Role {
@@ -339,4 +341,48 @@ model RelationshipStereotype {
   updatedAt     DateTime @updatedAt
   
   @@unique([relationshipId, stereotypeId])
+}
+
+// --- Notifications System ---
+
+enum NotificationType {
+  CHANGE_REQUEST_CREATED
+  CHANGE_REQUEST_APPROVED
+  CHANGE_REQUEST_REJECTED
+  CHANGE_REQUEST_PUBLISHED
+  ELEMENT_CREATED
+  ELEMENT_UPDATED
+  RELATIONSHIP_CREATED
+  VIEW_CREATED
+  VIEW_UPDATED
+  SYSTEM_ALERT
+  COLLABORATION_INVITE
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+}
+
+model Notification {
+  id        String            @id @default(uuid())
+  type      NotificationType
+  severity  NotificationSeverity @default(INFO)
+  title     String
+  message   String
+  read      Boolean           @default(false)
+  
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Optional metadata for linking to related entities
+  metadata  Json?             // e.g., { changeRequestId: "...", elementId: "...", viewId: "..." }
+  
+  createdAt DateTime          @default(now())
+  readAt    DateTime?
+  
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

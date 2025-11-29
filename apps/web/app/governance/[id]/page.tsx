@@ -6,10 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Home } from 'lucide-react';
+import { Link } from '@/navigation';
+import { useTranslations } from 'next-intl';
 
 export default function ChangeRequestDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const t = useTranslations('Home');
     const [request, setRequest] = useState<any>(null);
 
     useEffect(() => {
@@ -55,6 +59,12 @@ export default function ChangeRequestDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <Link href="/home">
+                        <Button variant="outline" title={t('backToHome')}>
+                            <Home className="mr-2 h-4 w-4" />
+                            {t('backToHome')}
+                        </Button>
+                    </Link>
                     <Badge className="text-lg px-4 py-1">{request.status}</Badge>
                 </div>
             </div>

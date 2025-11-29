@@ -22,21 +22,23 @@ ArchiModeler est une plateforme collaborative de modélisation d'architecture d'
 - **Framework**: NestJS
 - **Langage**: TypeScript
 - **ORM**: Prisma 5.22.0 (PostgreSQL)
-- **Graph Driver**: Neo4j Driver (Neo4j)
+- **Database**: PostgreSQL 15 (via Prisma)
 - **Versioning**: Octokit (GitHub API)
 - **Authentification**: JWT + RBAC (Passport.js)
 
-#### Infrastructure de Données Hybride
-- **PostgreSQL** : "Source of Truth" pour :
+#### Infrastructure de Données
+- **PostgreSQL 15** : Base de données principale pour :
   - Définitions des objets (Elements)
+  - Relations entre objets (Relationships)
   - Définitions des vues (Views)
+  - Packages de modèles (ModelPackage)
   - Utilisateurs, Rôles, Permissions
   - Configuration et Stéréotypes
-- **Neo4j** : Moteur de relations pour :
-  - Relations entre objets (Relationships)
-  - Relations entre objets et vues
-  - Analyse d'impact et requêtes de graphe
-- **GitHub** : Backend de versioning pour :
+  - Isolation des données par package
+- **OpenSearch 2.11** : Moteur de recherche pour :
+  - Indexation des éléments
+  - Recherche full-text
+- **GitHub** : Backend de versioning (prévu) pour :
   - Historique des modifications (Commit/Rollback)
   - Diff et Blame
 

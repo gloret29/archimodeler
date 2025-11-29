@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, HttpException, HttpStatus, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { Prisma } from '@repo/database';
@@ -12,6 +12,18 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @ApiBearerAuth('JWT-auth')
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
+
+    @Get('me')
+    @ApiOperation({ summary: 'Get current user', description: 'Retrieve the currently authenticated user based on JWT token.' })
+    @ApiResponse({ status: 200, description: 'Current user retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async getCurrentUser(@Request() req: any) {
+        const userId = req.user?.userId;
+        if (!userId) {
+            throw new HttpException('User not found in token', HttpStatus.UNAUTHORIZED);
+        }
+        return this.usersService.findById(userId);
+    }
 
     @Get()
     @Roles('System Administrator', 'Lead Designer')

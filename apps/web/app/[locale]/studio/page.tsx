@@ -13,6 +13,9 @@ import ViewTabs from '@/components/studio/ViewTabs';
 import CollaborativeCanvas from '@/components/canvas/CollaborativeCanvas';
 import ActiveUsers from '@/components/collaboration/ActiveUsers';
 import { useCollaboration } from '@/hooks/useCollaboration';
+import { useChatNotifications } from '@/hooks/useChatNotifications';
+import { useChatContext } from '@/contexts/ChatContext';
+import { UserChat } from '@/components/collaboration/UserChat';
 
 import { Home, Save, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,14 +23,29 @@ import { Link, useRouter } from '@/navigation';
 
 function StudioContent() {
     const searchParams = useSearchParams();
+    const packageId = searchParams.get('packageId');
     const t = useTranslations('Studio');
-    const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab } = useTabsStore();
+    const router = useRouter();
+    const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab, markTabAsModified } = useTabsStore();
     const [isSaving, setIsSaving] = React.useState(false);
     const [repositoryWidth, setRepositoryWidth] = React.useState(320); // Default width: 320px (w-80)
     const [isResizing, setIsResizing] = React.useState(false);
     const [currentCanvasContent, setCurrentCanvasContent] = React.useState<{ nodes: any[]; edges: any[] } | null>(null);
     const [selectedElement, setSelectedElement] = React.useState<{ id: string; name: string; type: string } | null>(null);
     const [selectedRelationship, setSelectedRelationship] = React.useState<{ id: string; name: string; type: string } | null>(null);
+    const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
+    const isInitialLoadRef = React.useRef<boolean>(true);
+    const lastContentRef = React.useRef<string>('');
+
+    // Check authentication FIRST, before rendering anything
+    React.useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+        setIsAuthenticated(true);
+    }, []);
 
     const handleElementSelect = React.useCallback((id: string, name: string, type: string) => {
         setSelectedElement({ id, name, type });
@@ -37,7 +55,38 @@ function StudioContent() {
     // Get the active tab
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
     const [isLoadingPackage, setIsLoadingPackage] = React.useState(false);
-    const router = useRouter();
+
+    // Reset initial load flag when active tab changes
+    React.useEffect(() => {
+        if (activeTab) {
+            isInitialLoadRef.current = true;
+            lastContentRef.current = ''; // Reset content comparison
+            // Reset after a short delay to allow initial content to load
+            const timer = setTimeout(() => {
+                isInitialLoadRef.current = false;
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [activeTab?.id]);
+
+    // Handle content change with memoization
+    const handleContentChange = React.useCallback((content: { nodes: any[]; edges: any[] }) => {
+        // Create a stable string representation to compare
+        const contentString = JSON.stringify({
+            nodes: content.nodes.map(n => ({ id: n.id, position: n.position, data: n.data })),
+            edges: content.edges.map(e => ({ id: e.id, source: e.source, target: e.target }))
+        });
+        
+        // Only update if content actually changed
+        if (contentString !== lastContentRef.current) {
+            lastContentRef.current = contentString;
+            setCurrentCanvasContent(content);
+            // Mark tab as modified when content changes (but not on initial load)
+            if (activeTab?.isPersisted && !isInitialLoadRef.current) {
+                markTabAsModified(activeTab.id);
+            }
+        }
+    }, [activeTab?.id, activeTab?.isPersisted, markTabAsModified]);
 
     // Handle repository resizing
     React.useEffect(() => {
@@ -90,22 +139,70 @@ function StudioContent() {
                 viewName: 'Main View',
                 packageId,
                 isPersisted: false,
+                isModified: false,
             });
         }
     }, [searchParams, tabs.length, addTab, router]);
 
     // Get collaboration state for the active tab
-    const currentUser = {
-        id: Math.random().toString(36).substring(7),
-        name: `User ${Math.floor(Math.random() * 1000)}`,
-        color: '#4ECDC4',
-    };
+    const [currentUser, setCurrentUser] = React.useState<{ id: string; name: string; color: string } | null>(null);
+    const { chatTarget, isChatOpen, closeChat } = useChatContext();
+
+    // Fetch current user info
+    React.useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    console.warn('No access token found');
+                    return;
+                }
+
+                const res = await fetch('http://localhost:3002/users/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const user = await res.json();
+                    // Generate a color based on user ID for consistency
+                    const colors = ['#4ECDC4', '#45B7D1', '#FF6B6B', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+                    const colorIndex = parseInt(user.id.slice(-1), 16) % colors.length;
+                    setCurrentUser({
+                        id: user.id,
+                        name: user.name || user.email || 'User',
+                        color: colors[colorIndex],
+                    });
+                } else if (res.status === 401) {
+                    console.error('Unauthorized - token may be expired');
+                    localStorage.removeItem('accessToken');
+                    router.push('/');
+                }
+            } catch (error) {
+                console.error('Failed to fetch current user:', error);
+                // Fallback to random user
+                setCurrentUser({
+                    id: Math.random().toString(36).substring(7),
+                    name: 'User',
+                    color: '#4ECDC4',
+                });
+            }
+        };
+        fetchCurrentUser();
+    }, [router]);
 
     const { users, isConnected } = useCollaboration({
         viewId: activeTab?.viewId || '',
-        user: currentUser,
+        user: currentUser && currentUser.name && currentUser.name !== 'User' 
+            ? currentUser 
+            : currentUser || { id: '', name: 'User', color: '#4ECDC4' },
         onNodeChanged: () => { },
         onEdgeChanged: () => { },
+    });
+
+    // Enable chat notifications
+    useChatNotifications({
+        currentUser,
+        enabled: !!currentUser && !!activeTab,
+        activeUsers: users,
     });
 
     const handleNewTab = async () => {
@@ -134,6 +231,7 @@ function StudioContent() {
                 viewName: `New View ${tabs.length + 1}`,
                 packageId,
                 isPersisted: false,
+                isModified: false,
             });
         }
     };
@@ -178,8 +276,33 @@ function StudioContent() {
         }
     };
 
+    // Check authentication synchronously before rendering (client-side only)
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/';
+            return (
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <p className="text-muted-foreground">Redirecting to login...</p>
+                    </div>
+                </div>
+            );
+        }
+    }
+
+    // Don't render anything until we've checked authentication
+    if (isAuthenticated === null) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <p className="text-muted-foreground">Checking authentication...</p>
+                </div>
+            </div>
+        );
+    }
+
     // Show package selector if no packageId is selected
-    const packageId = searchParams.get('packageId');
     if (!packageId) {
         return <PackageSelector />;
     }
@@ -208,8 +331,8 @@ function StudioContent() {
                             <Save className={`h-5 w-5 ${isSaving ? 'animate-pulse' : ''}`} />
                         </Button>
                     )}
-                    {activeTab && (
-                        <ActiveUsers users={users} isConnected={isConnected} />
+                    {activeTab && currentUser && (
+                        <ActiveUsers users={users} isConnected={isConnected} currentUser={currentUser} />
                     )}
                 </div>
             </header>
@@ -226,7 +349,7 @@ function StudioContent() {
                             viewId={activeTab.viewId}
                             viewName={activeTab.viewName}
                             packageId={activeTab.packageId}
-                            onContentChange={setCurrentCanvasContent}
+                            onContentChange={handleContentChange}
                             onNodeClick={(nodeId, elementId, elementName, elementType) => {
                                 if (elementId && nodeId) {
                                     setSelectedElement({ id: elementId, name: elementName, type: elementType });
@@ -261,6 +384,16 @@ function StudioContent() {
                     )}
                     <CoachChat />
                 </main>
+                
+                {/* Global Chat Dialog */}
+                {currentUser && chatTarget && (
+                    <UserChat
+                        currentUser={currentUser}
+                        targetUser={{ id: chatTarget.id, name: chatTarget.name, color: chatTarget.color }}
+                        isOpen={isChatOpen}
+                        onClose={closeChat}
+                    />
+                )}
                 {/* Resizer */}
                 <div
                     className={`w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors ${
@@ -277,7 +410,11 @@ function StudioContent() {
                         <div className="flex-1 overflow-hidden">
                             <ModelTree 
                                 packageId={packageId}
-                                onElementSelect={handleElementSelect} 
+                                onElementSelect={handleElementSelect}
+                                onRelationshipSelect={(relationshipId, relationshipName, relationshipType) => {
+                                    setSelectedRelationship({ id: relationshipId, name: relationshipName, type: relationshipType });
+                                    setSelectedElement(null); // Deselect element when selecting relationship
+                                }}
                             />
                         </div>
                         <PropertiesPanel

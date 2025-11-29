@@ -57,8 +57,15 @@ export default function ViewTabs({ onNewTab }: ViewTabsProps) {
                                 onClick={() => setActiveTab(tab.id)}
                                 onDoubleClick={() => handleRename(tab.id, tab.viewName)}
                             >
-                                <span className="text-sm font-medium truncate flex-1">
-                                    {tab.viewName}
+                                <span className="text-sm font-medium truncate flex-1 flex items-center gap-1.5">
+                                    <span className="truncate">{tab.viewName}</span>
+                                    {tab.isModified && (
+                                        <span 
+                                            className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0 animate-pulse" 
+                                            title="Modified - not saved"
+                                            aria-label="Modified"
+                                        />
+                                    )}
                                 </span>
                                 <button
                                     onClick={(e) => {

@@ -86,15 +86,16 @@ const svgMapping: Record<string, string> = {
     'Location': 'Location.svg',
 };
 
+// Colors that adapt to dark/light theme
 const layerColors: Record<string, string> = {
-    'Strategy': 'bg-orange-50 border-orange-200 hover:bg-orange-100',
-    'Business': 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100',
-    'Application': 'bg-cyan-50 border-cyan-200 hover:bg-cyan-100',
-    'Technology': 'bg-green-50 border-green-200 hover:bg-green-100',
-    'Physical': 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100',
-    'Motivation': 'bg-purple-50 border-purple-200 hover:bg-purple-100',
-    'Implementation & Migration': 'bg-pink-50 border-pink-200 hover:bg-pink-100',
-    'Composite': 'bg-gray-50 border-gray-200 hover:bg-gray-100',
+    'Strategy': 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-950/50',
+    'Business': 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-950/50',
+    'Application': 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 dark:hover:bg-cyan-950/50',
+    'Technology': 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-950/50',
+    'Physical': 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50',
+    'Motivation': 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-950/50',
+    'Implementation & Migration': 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800 hover:bg-pink-100 dark:hover:bg-pink-950/50',
+    'Composite': 'bg-muted border-border hover:bg-muted/80',
 };
 
 export default function Stencil() {
@@ -173,7 +174,7 @@ export default function Stencil() {
                             <div className="grid grid-cols-2 gap-2">
                                 {items.map((item) => {
                                     const svgFile = svgMapping[item.name];
-                                    const colorClass = layerColors[layer] || 'bg-gray-50 border-gray-200';
+                                    const colorClass = layerColors[layer] || 'bg-muted border-border hover:bg-muted/80';
 
                                     return (
                                         <div
@@ -187,12 +188,12 @@ export default function Stencil() {
                                                 <img 
                                                     src={`/archimate-symbols/${svgFile}`} 
                                                     alt={item.name}
-                                                    className="w-8 h-8 object-contain pointer-events-none select-none"
+                                                    className="w-8 h-8 object-contain pointer-events-none select-none dark:invert"
                                                 />
                                             ) : (
-                                                <Box className="w-6 h-6 text-gray-500" />
+                                                <Box className="w-6 h-6 text-muted-foreground" />
                                             )}
-                                            <span className="text-[10px] font-medium text-center leading-tight line-clamp-2 w-full">
+                                            <span className="text-[10px] font-medium text-center leading-tight line-clamp-2 w-full text-foreground">
                                                 {item.name.replace(/([A-Z])/g, ' $1').trim()}
                                             </span>
                                         </div>

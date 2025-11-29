@@ -41,6 +41,23 @@ export function useCollaboration({
     onSelectionChanged,
 }: UseCollaborationOptions) {
     const socketRef = useRef<Socket | null>(null);
+    const onNodeChangedRef = useRef(onNodeChanged);
+    const onEdgeChangedRef = useRef(onEdgeChanged);
+    const onNodeDeletedRef = useRef(onNodeDeleted);
+    const onEdgeDeletedRef = useRef(onEdgeDeleted);
+    const onSelectionChangedRef = useRef(onSelectionChanged);
+    const userRef = useRef(user);
+    
+    // Update refs when callbacks change
+    useEffect(() => {
+        onNodeChangedRef.current = onNodeChanged;
+        onEdgeChangedRef.current = onEdgeChanged;
+        onNodeDeletedRef.current = onNodeDeleted;
+        onEdgeDeletedRef.current = onEdgeDeleted;
+        onSelectionChangedRef.current = onSelectionChanged;
+        userRef.current = user;
+    }, [onNodeChanged, onEdgeChanged, onNodeDeleted, onEdgeDeleted, onSelectionChanged, user]);
+    
     const [state, setState] = useState<CollaborationState>({
         users: [],
         cursors: {},
@@ -50,8 +67,8 @@ export function useCollaboration({
 
     // Initialize socket connection
     useEffect(() => {
-        // Don't connect if viewId is empty
-        if (!viewId) {
+        // Don't connect if viewId is empty or user doesn't have a valid name
+        if (!viewId || !user || !user.name || user.name.trim() === '' || user.name === 'User') {
             setState((prev) => ({ ...prev, isConnected: false }));
             return;
         }
@@ -71,7 +88,7 @@ export function useCollaboration({
             setState((prev) => ({ ...prev, isConnected: true }));
 
             // Join the view
-            socket.emit('join-view', { viewId, user });
+            socket.emit('join-view', { viewId, user: userRef.current });
         });
 
         socket.on('disconnect', (reason) => {
@@ -90,23 +107,35 @@ export function useCollaboration({
         });
 
         socket.on('session-state', (data: { users: User[]; cursors: Record<string, CursorPosition> }) => {
+            // Filter out duplicate users
+            const uniqueUsers = data.users.filter((user, index, self) => 
+                index === self.findIndex(u => u.id === user.id)
+            );
             setState((prev) => ({
                 ...prev,
-                users: data.users,
+                users: uniqueUsers,
                 cursors: data.cursors,
             }));
         });
 
         socket.on('user-joined', (data: { userId: string; user: User; users: User[] }) => {
             console.log('User joined:', data.user.name);
+            // Filter out duplicate users
+            const uniqueUsers = data.users.filter((user, index, self) => 
+                index === self.findIndex(u => u.id === user.id)
+            );
             setState((prev) => ({
                 ...prev,
-                users: data.users,
+                users: uniqueUsers,
             }));
         });
 
         socket.on('user-left', (data: { userId: string; users: User[] }) => {
             console.log('User left:', data.userId);
+            // Filter out duplicate users
+            const uniqueUsers = data.users.filter((user, index, self) => 
+                index === self.findIndex(u => u.id === user.id)
+            );
             setState((prev) => {
                 const newCursors = { ...prev.cursors };
                 delete newCursors[data.userId];
@@ -116,7 +145,7 @@ export function useCollaboration({
 
                 return {
                     ...prev,
-                    users: data.users,
+                    users: uniqueUsers,
                     cursors: newCursors,
                     selections: newSelections,
                 };
@@ -124,19 +153,44 @@ export function useCollaboration({
         });
 
         socket.on('cursor-update', (data: { userId: string; position: CursorPosition }) => {
-            setState((prev) => ({
-                ...prev,
-                cursors: {
-                    ...prev.cursors,
-                    [data.userId]: data.position,
-                },
-            }));
+            // Only update if position actually changed
+            setState((prev) => {
+                const currentPos = prev.cursors[data.userId];
+                if (currentPos && 
+                    currentPos.x === data.position.x && 
+                    currentPos.y === data.position.y) {
+                    return prev; // No change, return previous state
+                }
+                return {
+                    ...prev,
+                    cursors: {
+                        ...prev.cursors,
+                        [data.userId]: data.position,
+                    },
+                };
+            });
         });
 
-        socket.on('node-changed', onNodeChanged || (() => { }));
-        socket.on('edge-changed', onEdgeChanged || (() => { }));
-        socket.on('node-deleted', onNodeDeleted || (() => { }));
-        socket.on('edge-deleted', onEdgeDeleted || (() => { }));
+        socket.on('node-changed', (data: { userId: string; node: any }) => {
+            if (onNodeChangedRef.current) {
+                onNodeChangedRef.current(data);
+            }
+        });
+        socket.on('edge-changed', (data: { userId: string; edge: any }) => {
+            if (onEdgeChangedRef.current) {
+                onEdgeChangedRef.current(data);
+            }
+        });
+        socket.on('node-deleted', (data: { userId: string; nodeId: string }) => {
+            if (onNodeDeletedRef.current) {
+                onNodeDeletedRef.current(data);
+            }
+        });
+        socket.on('edge-deleted', (data: { userId: string; edgeId: string }) => {
+            if (onEdgeDeletedRef.current) {
+                onEdgeDeletedRef.current(data);
+            }
+        });
         
         socket.on('selection-changed', (data: { userId: string; selectedNodes: string[] }) => {
             setState((prev) => ({
@@ -146,7 +200,9 @@ export function useCollaboration({
                     [data.userId]: data.selectedNodes,
                 },
             }));
-            if (onSelectionChanged) onSelectionChanged(data);
+            if (onSelectionChangedRef.current) {
+                onSelectionChangedRef.current(data);
+            }
         });
 
         return () => {

@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { ModelService } from './model.service';
 import { Prisma } from '@repo/database';
 import { CreateElementDto } from './dto/create-element.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import type { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Model - Elements')
 @Controller('model/elements')
@@ -81,12 +84,52 @@ export class ModelPackageController {
     }
 
     @Post()
-    @ApiOperation({ summary: 'Create a new package', description: 'Create a new model package' })
+    @ApiOperation({ summary: 'Create a new package', description: 'Create a new model package (Admin only)' })
     @ApiResponse({ status: 201, description: 'Package created successfully' })
     @ApiResponse({ status: 400, description: 'Invalid input data' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @UseGuards(RolesGuard)
     create(@Body() data: Prisma.ModelPackageCreateInput) {
         return this.modelService.createPackage(data);
+    }
+
+    @Put(':id')
+    @ApiOperation({ summary: 'Update a package', description: 'Update a model package (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Package ID', example: 'pkg-123' })
+    @ApiResponse({ status: 200, description: 'Package updated successfully' })
+    @ApiResponse({ status: 404, description: 'Package not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @UseGuards(RolesGuard)
+    update(@Param('id') id: string, @Body() data: Prisma.ModelPackageUpdateInput) {
+        return this.modelService.updatePackage(id, data);
+    }
+
+    @Post(':id/duplicate')
+    @ApiOperation({ summary: 'Duplicate a package', description: 'Create a copy of a model package with all its contents' })
+    @ApiParam({ name: 'id', description: 'Source Package ID', example: 'pkg-123' })
+    @ApiResponse({ status: 201, description: 'Package duplicated successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid package name or package not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @UseGuards(RolesGuard)
+    duplicate(
+        @Param('id') id: string,
+        @Body() body: { name: string }
+    ) {
+        if (!body.name || !body.name.trim()) {
+            throw new Error('Package name is required');
+        }
+        return this.modelService.duplicatePackage(id, body.name.trim());
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Delete a package', description: 'Delete a model package and all its contents' })
+    @ApiParam({ name: 'id', description: 'Package ID', example: 'pkg-123' })
+    @ApiResponse({ status: 200, description: 'Package deleted successfully' })
+    @ApiResponse({ status: 404, description: 'Package not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @UseGuards(RolesGuard)
+    remove(@Param('id') id: string) {
+        return this.modelService.deletePackage(id);
     }
 
     @Get(':packageId/elements')
@@ -114,6 +157,113 @@ export class ModelPackageController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     getViewsByPackage(@Param('packageId') packageId: string) {
         return this.modelService.findViewsByPackage(packageId);
+    }
+
+    @Post('export')
+    @ApiOperation({ summary: 'Export one or more packages', description: 'Export model packages to JSON format' })
+    @ApiResponse({ status: 200, description: 'Packages exported successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid package IDs' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @UseGuards(RolesGuard)
+    async exportPackages(
+        @Body() body: { packageIds: string[] },
+        @Res() res: Response
+    ) {
+        try {
+            if (!body.packageIds || !Array.isArray(body.packageIds) || body.packageIds.length === 0) {
+                return res.status(400).json({ error: 'packageIds array is required' });
+            }
+
+            let exportData;
+            if (body.packageIds.length === 1) {
+                exportData = await this.modelService.exportPackage(body.packageIds[0]);
+            } else {
+                exportData = await this.modelService.exportPackages(body.packageIds);
+            }
+
+            const filename = body.packageIds.length === 1 && 'package' in exportData
+                ? `package-${exportData.package.name}-${new Date().toISOString().split('T')[0]}.json`
+                : `packages-${new Date().toISOString().split('T')[0]}.json`;
+
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.json(exportData);
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    @Post('import')
+    @ApiOperation({ summary: 'Import a package', description: 'Import a model package from JSON format' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                file: {
+                    type: 'string',
+                    format: 'binary',
+                },
+                overwrite: {
+                    type: 'boolean',
+                    description: 'Overwrite existing package if it exists'
+                },
+                newPackageName: {
+                    type: 'string',
+                    description: 'New name for the imported package (optional)'
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 201, description: 'Package imported successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid import data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @UseGuards(RolesGuard)
+    @UseInterceptors(FileInterceptor('file'))
+    async importPackage(
+        @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype: string },
+        @Body() body: { overwrite?: string; newPackageName?: string }
+    ) {
+        if (!file) {
+            throw new Error('No file uploaded');
+        }
+
+        try {
+            // Handle both single package and multiple packages format
+            const fileContent = file.buffer.toString('utf-8');
+            const importData = JSON.parse(fileContent);
+            
+            // Check if it's a single package or multiple packages format
+            let packageData;
+            if (importData.package && importData.elements) {
+                // Single package format
+                packageData = importData;
+            } else if (importData.packages && importData.data) {
+                // Multiple packages format - import first one for now
+                if (importData.data.length === 0) {
+                    throw new Error('No package data found in file');
+                }
+                const firstPackage = importData.data[0];
+                packageData = {
+                    package: importData.packages.find((p: any) => p.name === firstPackage.packageName) || { name: firstPackage.packageName },
+                    elements: firstPackage.elements,
+                    relationships: firstPackage.relationships,
+                    folders: firstPackage.folders,
+                    views: firstPackage.views
+                };
+            } else {
+                throw new Error('Invalid import file format');
+            }
+
+            const options = {
+                overwrite: body.overwrite === 'true',
+                newPackageName: body.newPackageName || undefined
+            };
+
+            return await this.modelService.importPackage(packageData, options);
+        } catch (error) {
+            throw new Error(`Failed to import package: ${error.message}`);
+        }
     }
 }
 

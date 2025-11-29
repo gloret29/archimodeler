@@ -13,7 +13,8 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
 - **`apps/server`** : Backend NestJS
   - API REST
   - Services Métier (Model, Search, Workflow)
-  - Intégration Neo4j & GitHub
+  - Gestion des packages de modèles
+  - Intégration GitHub (prévu)
 - **`packages/database`** : Couche de données
   - Schéma Prisma (PostgreSQL)
   - Migrations & Seeds
@@ -36,14 +37,24 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
 - **Framework** : NestJS
 - **Langage** : TypeScript
 - **ORM** : Prisma
-- **Graph Driver** : Neo4j Driver
-- **Versioning** : Octokit (GitHub API)
-- **Search** : OpenSearch (prévu)
+- **Database** : PostgreSQL 15
+- **Versioning** : Octokit (GitHub API) - prévu
+- **Search** : OpenSearch 2.11
 
-### Infrastructure de Données Hybride
-- **PostgreSQL** : *Source of Truth* (Objets, Vues, Utilisateurs, Config)
-- **Neo4j** : *Graph Engine* (Relations, Analyse d'impact, Requêtes complexes)
-- **GitHub** : *Versioning Engine* (Historique, Diff, Blame)
+### Infrastructure de Données
+- **PostgreSQL 15** : *Base de données principale*
+  - Objets (Elements)
+  - Relations (Relationships)
+  - Vues (Views)
+  - Packages de modèles (ModelPackage)
+  - Utilisateurs, Rôles, Permissions
+  - Configuration système
+  - Métamodèle ArchiMate
+  - Stéréotypes et métadonnées
+- **OpenSearch 2.11** : *Moteur de recherche*
+  - Indexation des éléments
+  - Recherche full-text
+- **GitHub** : *Versioning Engine* (prévu - Historique, Diff, Blame)
 
 ## 🔐 Sécurité & Authentification
 - **Auth** : JWT + Passport.js
@@ -52,4 +63,4 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
 
 ## 🛠️ Démarrage
 Utiliser `npm run dev` à la racine pour lancer tous les services (Web + Server).
-Assurez-vous que les conteneurs Docker (PostgreSQL, Neo4j) sont actifs.
+Assurez-vous que les conteneurs Docker (PostgreSQL, OpenSearch) sont actifs.

@@ -1,10 +1,23 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Database, FileText, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Database, FileText, Activity, Home } from "lucide-react";
+import { Link } from "@/navigation";
+import { useTranslations } from "next-intl";
 
 export default function AdminDashboard() {
+    const t = useTranslations('Home');
+    
     return (
         <div className="space-y-6">
-            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+            <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+                <Link href="/home">
+                    <Button variant="outline" title={t('backToHome')}>
+                        <Home className="mr-2 h-4 w-4" />
+                        {t('backToHome')}
+                    </Button>
+                </Link>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
