@@ -16,13 +16,15 @@ ArchiModeler est une plateforme collaborative de modélisation d'architecture d'
   - Lucide React (icônes)
 - **Diagramming**: @xyflow/react (React Flow)
 - **State Management**: Zustand (Support multi-onglets et collaboration)
-- **Collaboration**: WebSocket / Socket.io (à définir)
+- **Collaboration**: Socket.io Client (WebSocket pour collaboration temps réel)
+- **Internationalisation**: next-intl
 
 #### Backend
 - **Framework**: NestJS
 - **Langage**: TypeScript
 - **ORM**: Prisma 5.22.0 (PostgreSQL)
 - **Database**: PostgreSQL 15 (via Prisma)
+- **WebSocket**: Socket.io (collaboration temps réel)
 - **Versioning**: Octokit (GitHub API)
 - **Authentification**: JWT + RBAC (Passport.js)
 
@@ -33,6 +35,7 @@ ArchiModeler est une plateforme collaborative de modélisation d'architecture d'
   - Définitions des vues (Views)
   - Packages de modèles (ModelPackage)
   - Utilisateurs, Rôles, Permissions
+  - Notifications
   - Configuration et Stéréotypes
   - Isolation des données par package
 - **OpenSearch 2.11** : Moteur de recherche pour :
@@ -119,7 +122,12 @@ model Role {
 
 #### Expérience Utilisateur
 - **Dashboard Personnalisé** : Chaque utilisateur peut organiser ses vues favorites en raccourcis sur sa page d'accueil (Drag & Drop).
-- **Notifications** : Système de bandeau d'alerte global en haut de l'application pour les messages importants (Maintenance, Versioning, etc.).
+- **Notifications** : 
+  - Centre de notifications avec badge de compteur non lus
+  - Notifications automatiques pour les change requests (création, soumission, approbation, rejet, publication)
+  - Notifications en temps réel via WebSocket
+  - Gestion des notifications (marquer comme lues, supprimer)
+- **Thème Sombre** : Support complet du thème sombre avec adaptation automatique des couleurs et SVG.
 - **Préférences** : Stockage des paramètres utilisateur (Thème, Langue, Affichage par défaut).
 
 ### 3.2 Modélisation Avancée
@@ -130,8 +138,12 @@ model Role {
 
 #### Collaboration Temps Réel
 - **Édition Concurrente** : Plusieurs utilisateurs peuvent éditer la même vue sans blocage.
-- **Synchronisation** : Les modifications (déplacement, ajout, suppression) sont répercutées instantanément sur les écrans des autres utilisateurs.
+- **Synchronisation** : Les modifications (déplacement, ajout, suppression) sont répercutées instantanément sur les écrans des autres utilisateurs via WebSocket.
 - **Curseurs** : Affichage des curseurs des autres utilisateurs avec leur nom.
+- **Utilisateurs Actifs** : Liste des utilisateurs actifs dans le Studio avec leurs noms.
+- **Chat Direct** : Chat en temps réel entre utilisateurs actifs avec notifications visuelles (toast).
+- **Badge Messages Non Lus** : Indicateur de messages non lus sur les avatars des utilisateurs.
+- **Gestion des Conversations** : Accès rapide aux conversations depuis l'avatar de l'utilisateur connecté.
 
 #### Relations et Stéréotypes
 - **Stéréotypes** :
@@ -165,6 +177,12 @@ model Role {
 - **Export** :
   - Export des Vues (PNG, SVG, PDF).
   - Export des Données (JSON, XML ArchiMate Exchange Format).
+  - Export des Packages complets incluant les relations (relationships).
+- **Import** :
+  - Import de Packages complets avec reconstruction des relations.
+  - Gestion des ID et mapping lors de l'import.
+- **Duplication** :
+  - Duplication de ModelPackage avec toutes les données (éléments, relations, vues, dossiers).
 - **Backup** :
   - Sauvegarde automatisée de la base PostgreSQL.
   - Sauvegarde synchronisée de la base Neo4j.

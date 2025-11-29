@@ -25,11 +25,11 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 ### Pourquoi ArchiModeler ?
 
 - ✅ **Conforme ArchiMate 3.2** - Respect strict du métamodèle
-- 🎨 **Interface Moderne** - UI/UX inspirée de Figma
+- 🎨 **Interface Moderne** - UI/UX inspirée de Figma avec support thème sombre
 - 🚀 **Performance** - Architecture optimisée avec React Flow
 - 🔒 **Sécurisé** - Authentification JWT et RBAC
 - 📱 **Responsive** - Fonctionne sur tous les appareils
-- 🌐 **Collaboratif** - Édition multi-utilisateurs (roadmap)
+- 🌐 **Collaboratif** - Édition multi-utilisateurs en temps réel avec chat intégré
 
 ## ✨ Fonctionnalités
 
@@ -48,12 +48,15 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 
 - **Repository** - Organisation hiérarchique des éléments avec dossiers imbriqués
 - **Repository Redimensionnable** - Ajustez la largeur du panneau repository selon vos besoins
+- **Relations Visibles** - Affichage des relations dans le repository avec leurs types et éléments connectés
 - **Miniatures** - Visualisation des objets avec leurs symboles ArchiMate dans le repository
 - **Tooltips Informatifs** - Informations détaillées sur les objets au survol
 - **Menu Contextuel Dossiers** - Créez des sous-dossiers et des éléments directement depuis le menu contextuel
 - **Vues Multiples** - Créez et gérez plusieurs diagrammes avec onglets
 - **Recherche** - Trouvez rapidement vos éléments
 - **Dossiers** - Organisez vos modèles de manière hiérarchique
+- **Duplication de Packages** - Dupliquez un ModelPackage avec toutes ses données (éléments, relations, vues, dossiers)
+- **Export/Import** - Exportez et importez des packages complets incluant les relations
 
 ### Édition
 
@@ -61,7 +64,25 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 - **Suppression Intelligente** - Supprimez de la vue ou du repository avec confirmation
 - **Sauvegarde des Vues** - Sauvegarde automatique du contenu du canvas (positions, styles, relations)
 - **Personnalisation Visuelle** - Personnalisez l'apparence de vos diagrammes (couleurs, styles, opacité)
+- **Thème Sombre** - Support complet du thème sombre avec adaptation automatique des couleurs et SVG
 - **Undo/Redo** - Annulez vos actions (roadmap)
+
+### Collaboration
+
+- **Édition Temps Réel** - Plusieurs utilisateurs peuvent éditer simultanément la même vue
+- **Curseurs Collaboratifs** - Visualisez les curseurs des autres utilisateurs avec leurs noms
+- **Utilisateurs Actifs** - Liste des utilisateurs actifs dans le Studio avec leurs noms
+- **Chat Direct** - Chat en temps réel entre utilisateurs actifs
+- **Notifications de Chat** - Alertes visuelles (toast) pour les nouveaux messages
+- **Badge Messages Non Lus** - Indicateur de messages non lus sur les avatars
+- **Gestion des Conversations** - Accès rapide aux conversations depuis l'avatar utilisateur
+
+### Notifications
+
+- **Centre de Notifications** - Badge avec compteur de notifications non lues
+- **Notifications Workflow** - Notifications automatiques pour les change requests (création, soumission, approbation, rejet, publication)
+- **Notifications en Temps Réel** - Réception instantanée via WebSocket
+- **Gestion des Notifications** - Marquer comme lues, supprimer, tout marquer comme lu
 
 ## 🏗️ Architecture
 
@@ -74,13 +95,17 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 │  - React Flow (diagramming)             │
 │  - Tailwind CSS + shadcn/ui             │
 │  - Zustand (state management)           │
+│  - Socket.io Client (collaboration)     │
 └─────────────────────────────────────────┘
-                    ↕ HTTP/REST
+                    ↕ HTTP/REST + WebSocket
 ┌─────────────────────────────────────────┐
 │           Backend (NestJS)              │
 │  - TypeScript                           │
 │  - Prisma ORM                           │
 │  - JWT Authentication                   │
+│  - WebSocket Gateway (Socket.io)        │
+│  - Notifications Service                │
+│  - Collaboration Service                │
 │  - Search Service                       │
 └─────────────────────────────────────────┘
                     ↕
@@ -89,6 +114,7 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 │  - Metamodel                            │
 │  - Elements & Relations                 │
 │  - Views & Packages                     │
+│  - Users & Notifications                │
 └─────────────────────────────────────────┘
 ```
 
@@ -102,13 +128,21 @@ archimodeler/
 │   │   ├── components/   # Composants React
 │   │   │   ├── canvas/   # Composants de diagramming
 │   │   │   ├── studio/   # Composants du studio
+│   │   │   ├── collaboration/ # Chat et collaboration
+│   │   │   ├── notifications/ # Centre de notifications
+│   │   │   ├── common/   # Composants communs
 │   │   │   └── ui/       # Composants UI réutilisables
+│   │   ├── hooks/        # Hooks React personnalisés
+│   │   ├── contexts/     # Contextes React
 │   │   └── lib/          # Utilitaires et helpers
 │   ├── server/           # Backend NestJS
 │   │   └── src/
 │   │       ├── model/    # Gestion des modèles
 │   │       ├── search/   # Service de recherche
-│   │       └── auth/     # Authentification
+│   │       ├── auth/     # Authentification
+│   │       ├── collaboration/ # WebSocket & collaboration
+│   │       ├── notifications/ # Service de notifications
+│   │       └── users/    # Gestion des utilisateurs
 │   └── docs/             # Documentation
 ├── packages/
 │   ├── database/         # Schéma Prisma
@@ -290,14 +324,19 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 ### Phase 2 : Administration & Utilisateurs (Terminé)
 - [x] Page d'administration (Utilisateurs, Rôles, Paramètres)
 - [x] Gestion des packages de modèles
+- [x] Duplication de packages avec toutes les données
 - [x] Configuration de la palette
 - [x] Gestion des stéréotypes
+- [x] Système de notifications (Phase 15.2)
 - [ ] Dashboard personnalisé
-- [ ] Système de notifications
 
 ### Phase 3 : Modélisation Avancée (Terminé)
 - [x] Édition multi-onglets
-- [x] Collaboration temps réel
+- [x] Collaboration temps réel avec curseurs
+- [x] Chat collaboratif entre utilisateurs actifs
+- [x] Affichage des relations dans le repository
+- [x] Export/Import des relations
+- [x] Support thème sombre complet
 - [x] Stéréotypes & Propriétés étendues
 - [x] Indicateur de modification des vues
 

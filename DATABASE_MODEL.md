@@ -9,6 +9,7 @@ ArchiModeler utilise PostgreSQL comme base de données principale pour stocker t
 - **Versioning temporel** (Time Travel) pour les éléments et relations
 - **Système de stéréotypes** extensible
 - **Workflow de validation** pour les packages de modèles
+- **Système de notifications** pour les utilisateurs
 - **Intégration de sources de données externes**
 - **Organisation hiérarchique** via dossiers
 
@@ -16,7 +17,7 @@ ArchiModeler utilise PostgreSQL comme base de données principale pour stocker t
 
 Le modèle de données est organisé en plusieurs domaines fonctionnels :
 
-1. **Authentification et Autorisation** : User, Role, Permission, Group
+1. **Authentification et Autorisation** : User, Role, Permission, Group, Notification
 2. **Métamodèle** : Metamodel, ConceptType, RelationType
 3. **Modèles d'Architecture** : ModelPackage, Element, Relationship, Folder, View
 4. **Stéréotypes** : Stereotype, ElementStereotype, RelationshipStereotype
@@ -47,9 +48,51 @@ Représente un utilisateur de l'application.
 - `groups` : Many-to-Many avec `Group` (via `_GroupToUser`)
 - `requestedChanges` : One-to-Many avec `ChangeRequest` (requester)
 - `reviewedChanges` : One-to-Many avec `ChangeRequest` (reviewer)
+- `notifications` : One-to-Many avec `Notification`
 
 **Index :**
 - UNIQUE sur `email`
+
+---
+
+#### `Notification`
+Représente une notification pour un utilisateur.
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY, DEFAULT uuid() | Identifiant unique |
+| `type` | NotificationType | NOT NULL | Type de notification |
+| `severity` | NotificationSeverity | DEFAULT 'INFO' | Niveau de sévérité |
+| `title` | TEXT | NOT NULL | Titre de la notification |
+| `message` | TEXT | NOT NULL | Message de la notification |
+| `read` | BOOLEAN | DEFAULT false | Indique si la notification a été lue |
+| `userId` | UUID | FOREIGN KEY → User.id, CASCADE DELETE | Utilisateur destinataire |
+| `metadata` | JSONB | NULLABLE | Métadonnées optionnelles (ex: changeRequestId, elementId, viewId) |
+| `createdAt` | TIMESTAMP | DEFAULT now() | Date de création |
+| `readAt` | TIMESTAMP | NULLABLE | Date de lecture |
+
+**Relations :**
+- `user` : Many-to-One avec `User`
+
+**Enum `NotificationType` :**
+- `CHANGE_REQUEST_CREATED` : Demande de changement créée
+- `CHANGE_REQUEST_SUBMITTED` : Demande de changement soumise
+- `CHANGE_REQUEST_APPROVED` : Demande de changement approuvée
+- `CHANGE_REQUEST_REJECTED` : Demande de changement rejetée
+- `CHANGE_REQUEST_PUBLISHED` : Demande de changement publiée
+- `CHAT_MESSAGE` : Message de chat reçu
+- `SYSTEM` : Notification système
+
+**Enum `NotificationSeverity` :**
+- `INFO` : Information
+- `WARNING` : Avertissement
+- `ERROR` : Erreur
+- `SUCCESS` : Succès
+
+**Index :**
+- Index sur `userId` pour les requêtes de récupération par utilisateur
+- Index sur `read` pour filtrer les notifications non lues
+- Index sur `createdAt` pour le tri chronologique
 
 ---
 
@@ -661,6 +704,12 @@ CREATE INDEX idx_relationship_current_version ON "Relationship"("versionId", "va
 
 -- Recherche de vues par package
 CREATE INDEX idx_view_package ON "View"("modelPackageId");
+
+-- Notifications : récupération par utilisateur et statut de lecture
+CREATE INDEX idx_notification_user ON "Notification"("userId");
+CREATE INDEX idx_notification_read ON "Notification"("read");
+CREATE INDEX idx_notification_user_read ON "Notification"("userId", "read");
+CREATE INDEX idx_notification_created ON "Notification"("createdAt" DESC);
 ```
 
 ---
@@ -680,6 +729,7 @@ Les colonnes `JSONB` sont utilisées pour stocker des données flexibles :
 - **`DataSource.config`** : Configuration de la source de données
 - **`DataSource.mapping`** : Mapping des colonnes
 - **`SystemSetting.value`** : Valeur du paramètre système
+- **`Notification.metadata`** : Métadonnées optionnelles (ex: changeRequestId, elementId, viewId)
 
 **Avantages du JSONB :**
 - Indexation et recherche efficaces
@@ -698,7 +748,8 @@ Les colonnes `JSONB` sont utilisées pour stocker des données flexibles :
 User ──┬── Role (Many-to-Many)
        ├── Group (Many-to-Many)
        ├── ChangeRequest (requester)
-       └── ChangeRequest (reviewer)
+       ├── ChangeRequest (reviewer)
+       └── Notification
 
 Role ── Permission (Many-to-Many)
 
