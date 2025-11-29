@@ -18,6 +18,7 @@ import '@xyflow/react/dist/style.css';
 
 import ArchiMateNode from './nodes/ArchiMateNode';
 import ConnectionMenu from './ConnectionMenu';
+import NodeContextMenu from './NodeContextMenu';
 import { getValidRelations } from '@/lib/metamodel';
 import DiagramDescriber from '../ai/DiagramDescriber';
 
@@ -50,6 +51,89 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
         params: null,
         relations: [],
     });
+
+    const [nodeContextMenu, setNodeContextMenu] = useState<{
+        isOpen: boolean;
+        position: { x: number; y: number };
+        nodeId: string | null;
+        nodeData: any;
+    }>({
+        isOpen: false,
+        position: { x: 0, y: 0 },
+        nodeId: null,
+        nodeData: null,
+    });
+
+    const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+        event.preventDefault();
+        setNodeContextMenu({
+            isOpen: true,
+            position: { x: event.clientX, y: event.clientY },
+            nodeId: node.id,
+            nodeData: node.data,
+        });
+    }, []);
+
+    const handleRenameNode = async () => {
+        if (!nodeContextMenu.nodeId || !nodeContextMenu.nodeData.elementId) return;
+
+        const newName = prompt('New name:', nodeContextMenu.nodeData.label);
+        if (!newName) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            await fetch(`http://localhost:3002/model/elements/${nodeContextMenu.nodeData.elementId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ name: newName })
+            });
+
+            // Update node label locally
+            setNodes((nds) =>
+                nds.map((n) =>
+                    n.id === nodeContextMenu.nodeId
+                        ? { ...n, data: { ...n.data, label: newName } }
+                        : n
+                )
+            );
+        } catch (err) {
+            console.error(err);
+            alert('Failed to rename element');
+        }
+    };
+
+    const handleRemoveFromView = () => {
+        if (!nodeContextMenu.nodeId) return;
+        setNodes((nds) => nds.filter((n) => n.id !== nodeContextMenu.nodeId));
+    };
+
+    const handleDeleteFromRepository = async () => {
+        if (!nodeContextMenu.nodeId || !nodeContextMenu.nodeData.elementId) return;
+
+        // TODO: Fetch views using this element
+        const confirmMsg = `Delete "${nodeContextMenu.nodeData.label}" from repository?\n\nThis will remove it from all views. This action cannot be undone.`;
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            await fetch(`http://localhost:3002/model/elements/${nodeContextMenu.nodeData.elementId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            // Remove from current view
+            setNodes((nds) => nds.filter((n) => n.id !== nodeContextMenu.nodeId));
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete element');
+        }
+    };
 
     const onConnect = useCallback(
         (params: Connection) => {
@@ -128,6 +212,10 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
             if (!elementId) {
                 try {
                     const token = localStorage.getItem('accessToken');
+
+                    // First, ensure we have a valid package ID
+                    const targetPackageId = packageId || 'default-package-id';
+
                     const res = await fetch('http://localhost:3002/model/elements', {
                         method: 'POST',
                         headers: {
@@ -136,13 +224,9 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                         },
                         body: JSON.stringify({
                             name: label || type,
-                            conceptType: {
-                                connectOrCreate: {
-                                    where: { name_metamodelId: { name: type, metamodelId: 'default' } }, // Assuming default metamodel for now
-                                    create: { name: type, category: layer, metamodel: { connect: { name: 'ArchiMate 3.1' } } } // Fallback
-                                }
-                            },
-                            modelPackage: { connect: { id: packageId || 'default-package-id' } }
+                            type: type,
+                            layer: layer,
+                            packageId: targetPackageId
                         })
                     });
 
@@ -150,11 +234,13 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                         const newElement = await res.json();
                         elementId = newElement.id;
                     } else {
-                        console.error('Failed to create element');
-                        // Fallback to visual-only if backend fails (or handle error appropriately)
+                        const errorText = await res.text();
+                        console.error('Failed to create element. Status:', res.status, 'Response:', errorText);
+                        alert(`Failed to create element: ${res.status} - ${errorText.substring(0, 200)}`);
                     }
                 } catch (err) {
                     console.error('Error creating element:', err);
+                    alert('Error creating element: ' + (err as Error).message);
                 }
             }
 
@@ -213,6 +299,7 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onNodeContextMenu={onNodeContextMenu}
                 onInit={setReactFlowInstance}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
@@ -237,6 +324,16 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                     relations={connectionMenu.relations as any}
                     onSelect={onRelationSelect}
                     onClose={() => setConnectionMenu((prev) => ({ ...prev, isOpen: false }))}
+                />
+            )}
+            {nodeContextMenu.isOpen && (
+                <NodeContextMenu
+                    position={nodeContextMenu.position}
+                    nodeData={nodeContextMenu.nodeData}
+                    onRename={handleRenameNode}
+                    onRemoveFromView={handleRemoveFromView}
+                    onDeleteFromRepository={handleDeleteFromRepository}
+                    onClose={() => setNodeContextMenu((prev) => ({ ...prev, isOpen: false }))}
                 />
             )}
         </div>

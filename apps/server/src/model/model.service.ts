@@ -21,6 +21,91 @@ export class ModelService {
         return element;
     }
 
+    async createElementSimple(dto: { name: string; type: string; layer: string; packageId: string }) {
+        try {
+            console.log('Creating element with DTO:', dto);
+
+            // First, ensure the package exists or create a default one
+            let packageId = dto.packageId;
+            if (packageId === 'default-package-id') {
+                let defaultPackage = await this.prisma.modelPackage.findFirst({
+                    where: { name: 'Default Package' }
+                });
+
+                if (!defaultPackage) {
+                    console.log('Default package not found, creating...');
+                    defaultPackage = await this.prisma.modelPackage.create({
+                        data: {
+                            name: 'Default Package',
+                            description: 'Default model package'
+                        }
+                    });
+                    console.log('Default package created:', defaultPackage.id);
+                }
+                packageId = defaultPackage.id;
+            }
+
+            // Find or create the metamodel
+            let metamodel = await this.prisma.metamodel.findUnique({
+                where: { name: 'ArchiMate 3.2' }
+            });
+
+            if (!metamodel) {
+                console.log('Metamodel not found, creating...');
+                metamodel = await this.prisma.metamodel.create({
+                    data: {
+                        name: 'ArchiMate 3.2',
+                        version: '3.2',
+                        description: 'ArchiMate 3.2 Metamodel'
+                    }
+                });
+                console.log('Metamodel created:', metamodel.id);
+            }
+
+            // Find or create the concept type
+            let conceptType = await this.prisma.conceptType.findUnique({
+                where: {
+                    name_metamodelId: {
+                        name: dto.type,
+                        metamodelId: metamodel.id
+                    }
+                }
+            });
+
+            if (!conceptType) {
+                console.log('ConceptType not found, creating for:', dto.type);
+                conceptType = await this.prisma.conceptType.create({
+                    data: {
+                        name: dto.type,
+                        category: dto.layer,
+                        metamodelId: metamodel.id
+                    }
+                });
+                console.log('ConceptType created:', conceptType.id);
+            }
+
+            // Create the element
+            console.log('Creating element with conceptTypeId:', conceptType.id, 'packageId:', packageId);
+            const element = await this.prisma.element.create({
+                data: {
+                    name: dto.name,
+                    conceptTypeId: conceptType.id,
+                    modelPackageId: packageId
+                },
+                include: {
+                    conceptType: true
+                }
+            });
+
+            console.log('Element created successfully:', element.id);
+            await this.searchService.indexElement(element);
+            return element;
+        } catch (error) {
+            console.error('Error in createElementSimple:', error);
+            throw error;
+        }
+    }
+
     async updateElement(id: string, data: Prisma.ElementUpdateInput) {
         const element = await this.prisma.element.update({
             where: { id },

@@ -2,13 +2,26 @@ import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common'
 import { ModelService } from './model.service';
 import { Prisma } from '@repo/database';
 
+
+interface CreateElementDto {
+    name: string;
+    type: string;
+    layer: string;
+    packageId: string;
+}
+
 @Controller('model/elements')
 export class ModelController {
     constructor(private readonly modelService: ModelService) { }
 
     @Post()
-    create(@Body() data: Prisma.ElementCreateInput) {
-        return this.modelService.createElement(data);
+    async create(@Body() dto: CreateElementDto | Prisma.ElementCreateInput) {
+        // Check if it's the simplified DTO
+        if ('type' in dto && 'layer' in dto && 'packageId' in dto) {
+            return this.modelService.createElementSimple(dto as CreateElementDto);
+        }
+        // Otherwise use the full Prisma input
+        return this.modelService.createElement(dto as Prisma.ElementCreateInput);
     }
 
     @Get()
