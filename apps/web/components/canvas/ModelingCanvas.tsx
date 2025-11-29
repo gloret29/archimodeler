@@ -19,6 +19,7 @@ import '@xyflow/react/dist/style.css';
 import ArchiMateNode from './nodes/ArchiMateNode';
 import ConnectionMenu from './ConnectionMenu';
 import NodeContextMenu from './NodeContextMenu';
+import RenameDialog from '../ui/RenameDialog';
 import { getValidRelations } from '@/lib/metamodel';
 import DiagramDescriber from '../ai/DiagramDescriber';
 
@@ -64,6 +65,18 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
         nodeData: null,
     });
 
+    const [renameDialog, setRenameDialog] = useState<{
+        isOpen: boolean;
+        nodeId: string | null;
+        currentName: string;
+        elementId: string | null;
+    }>({
+        isOpen: false,
+        nodeId: null,
+        currentName: '',
+        elementId: null,
+    });
+
     const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
         event.preventDefault();
         setNodeContextMenu({
@@ -74,47 +87,36 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
         });
     }, []);
 
+
     const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
         if (!node.data.elementId) return;
 
-        const newName = prompt('New name:', String(node.data.label));
-        if (!newName) return;
+        setRenameDialog({
+            isOpen: true,
+            nodeId: node.id,
+            currentName: String(node.data.label),
+            elementId: node.data.elementId,
+        });
+    }, []);
 
-        // Update in backend
-        const token = localStorage.getItem('accessToken');
-        fetch(`http://localhost:3002/model/elements/${node.data.elementId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ name: newName })
-        })
-            .then(() => {
-                // Update node label locally
-                setNodes((nds) =>
-                    nds.map((n) =>
-                        n.id === node.id
-                            ? { ...n, data: { ...n.data, label: newName } }
-                            : n
-                    )
-                );
-            })
-            .catch((err) => {
-                console.error(err);
-                alert('Failed to rename element');
-            });
-    }, [setNodes]);
 
     const handleRenameNode = async () => {
         if (!nodeContextMenu.nodeId || !nodeContextMenu.nodeData.elementId) return;
 
-        const newName = prompt('New name:', nodeContextMenu.nodeData.label);
-        if (!newName) return;
+        setRenameDialog({
+            isOpen: true,
+            nodeId: nodeContextMenu.nodeId,
+            currentName: String(nodeContextMenu.nodeData.label),
+            elementId: nodeContextMenu.nodeData.elementId,
+        });
+    };
+
+    const handleRenameConfirm = async (newName: string) => {
+        if (!renameDialog.elementId || !renameDialog.nodeId) return;
 
         try {
             const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/elements/${nodeContextMenu.nodeData.elementId}`, {
+            await fetch(`http://localhost:3002/model/elements/${renameDialog.elementId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -126,7 +128,7 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
             // Update node label locally
             setNodes((nds) =>
                 nds.map((n) =>
-                    n.id === nodeContextMenu.nodeId
+                    n.id === renameDialog.nodeId
                         ? { ...n, data: { ...n.data, label: newName } }
                         : n
                 )
@@ -134,6 +136,8 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
         } catch (err) {
             console.error(err);
             alert('Failed to rename element');
+        } finally {
+            setRenameDialog({ isOpen: false, nodeId: null, currentName: '', elementId: null });
         }
     };
 
@@ -367,6 +371,14 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                     onRemoveFromView={handleRemoveFromView}
                     onDeleteFromRepository={handleDeleteFromRepository}
                     onClose={() => setNodeContextMenu((prev) => ({ ...prev, isOpen: false }))}
+                />
+            )}
+            {renameDialog.isOpen && (
+                <RenameDialog
+                    isOpen={renameDialog.isOpen}
+                    currentName={renameDialog.currentName}
+                    onConfirm={handleRenameConfirm}
+                    onCancel={() => setRenameDialog({ isOpen: false, nodeId: null, currentName: '', elementId: null })}
                 />
             )}
         </div>
