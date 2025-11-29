@@ -230,5 +230,103 @@ export class RelationshipsService {
 
         return this.neo4jService.executeQuery<RelationshipNode>(query, { modelPackageId });
     }
+    /**
+     * Migrate relationships from PostgreSQL to Neo4j
+     */
+    async migrateFromPostgres(prisma: any): Promise<{ migrated: number, skipped: number, total: number }> {
+        console.log('Starting migration of relationships from PostgreSQL to Neo4j...');
+        const session = this.neo4jService.getSession();
+
+        try {
+            // First, ensure all elements exist in Neo4j
+            console.log('Creating element nodes in Neo4j...');
+            const elements = await prisma.element.findMany({
+                include: { conceptType: true },
+            });
+
+            for (const element of elements) {
+                const createElementQuery = `
+                    MERGE (e:Element {id: $elementId})
+                    SET e.name = $name,
+                        e.conceptTypeId = $conceptTypeId
+                `;
+                await session.run(createElementQuery, {
+                    elementId: element.id,
+                    name: element.name,
+                    conceptTypeId: element.conceptTypeId,
+                });
+            }
+            console.log(`Created ${elements.length} element nodes in Neo4j`);
+
+            // Now migrate relationships
+            console.log('Migrating relationships...');
+            const relationships = await prisma.relationship.findMany({
+                include: {
+                    relationType: true,
+                    source: true,
+                    target: true,
+                },
+            });
+
+            let migrated = 0;
+            let skipped = 0;
+
+            for (const rel of relationships) {
+                try {
+                    // Check if relationship already exists
+                    const checkQuery = `
+                        MATCH ()-[r:RELATES_TO {id: $id}]->()
+                        RETURN r.id as id
+                    `;
+                    const existing = await session.run(checkQuery, { id: rel.id });
+
+                    if (existing.records.length > 0) {
+                        skipped++;
+                        continue;
+                    }
+
+                    const createRelQuery = `
+                        MATCH (source:Element {id: $sourceId})
+                        MATCH (target:Element {id: $targetId})
+                        MERGE (source)-[r:RELATES_TO {
+                            id: $id,
+                            relationTypeId: $relationTypeId,
+                            relationTypeName: $relationTypeName,
+                            modelPackageId: $modelPackageId,
+                            versionId: $versionId
+                        }]->(target)
+                        SET r.name = $name,
+                            r.documentation = $documentation,
+                            r.properties = $properties,
+                            r.validFrom = $validFrom,
+                            r.validTo = $validTo
+                    `;
+
+                    await session.run(createRelQuery, {
+                        id: rel.id,
+                        name: rel.name || null,
+                        documentation: rel.documentation || null,
+                        properties: rel.properties || null,
+                        relationTypeId: rel.relationTypeId,
+                        relationTypeName: rel.relationType.name,
+                        sourceId: rel.sourceId,
+                        targetId: rel.targetId,
+                        modelPackageId: rel.modelPackageId,
+                        validFrom: rel.validFrom.toISOString(),
+                        validTo: rel.validTo ? rel.validTo.toISOString() : null,
+                        versionId: rel.versionId,
+                    });
+
+                    migrated++;
+                } catch (error) {
+                    console.error(`Error migrating relationship ${rel.id}:`, error);
+                }
+            }
+
+            return { migrated, skipped, total: relationships.length };
+        } finally {
+            await session.close();
+        }
+    }
 }
 

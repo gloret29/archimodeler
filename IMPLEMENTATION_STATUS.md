@@ -85,12 +85,12 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 ## 🟡 Phase 9 : Infrastructure Hybride et Administration (En cours)
 
 ### 9.1 Intégration Neo4j
-**Statut**: 🟡 **En cours**
+**Statut**: 🟢 **Terminé**
 - [x] Installer et configurer Neo4j (docker-compose)
 - [x] Créer un module Neo4j dans le backend
 - [x] Créer un service pour gérer les relations (CRUD)
-- [ ] Adapter les endpoints existants pour utiliser Neo4j pour les relations
-- [ ] Créer des migrations pour transférer les relations existantes
+- [x] Adapter les endpoints existants pour utiliser Neo4j pour les relations
+- [x] Créer des migrations pour transférer les relations existantes (Endpoint /model/relationships/migrate)
 
 ### 9.2 Page d'Administration
 **Statut**: 🔴 **À faire**

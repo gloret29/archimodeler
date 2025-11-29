@@ -26,6 +26,11 @@ export class RelationshipsController {
         private readonly prisma: PrismaService,
     ) { }
 
+    @Post('migrate')
+    async migrate() {
+        return this.relationshipsService.migrateFromPostgres(this.prisma);
+    }
+
     @Post()
     async create(@Body() dto: CreateRelationshipDto) {
         // Get relation type info from PostgreSQL

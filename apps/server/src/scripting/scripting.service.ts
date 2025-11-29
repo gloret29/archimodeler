@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RelationshipsService } from '../neo4j/relationships.service';
 import { VM } from 'vm2';
 
 @Injectable()
 export class ScriptingService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private relationshipsService: RelationshipsService
+    ) { }
 
     async executeScript(script: string, context?: any) {
         // Create a sandboxed VM
@@ -79,28 +83,31 @@ export class ScriptingService {
 
                 element: {
                     getRelations: async (elementId: string, relationType?: string) => {
-                        const where: any = {
-                            OR: [
-                                { sourceId: elementId },
-                                { targetId: elementId },
-                            ],
-                            validTo: null,
-                        };
+                        // Fetch relationships from Neo4j
+                        const relationships = await this.relationshipsService.getElementRelationships(elementId);
 
-                        if (relationType) {
-                            where.relationType = {
-                                name: relationType,
+                        // Filter by relation type if provided
+                        const filtered = relationType
+                            ? relationships.filter(r => r.relationTypeName === relationType)
+                            : relationships;
+
+                        // Hydrate with Prisma data to match previous DSL return type
+                        const hydrated = await Promise.all(filtered.map(async (rel) => {
+                            const [source, target, type] = await Promise.all([
+                                this.prisma.element.findUnique({ where: { id: rel.sourceId } }),
+                                this.prisma.element.findUnique({ where: { id: rel.targetId } }),
+                                this.prisma.relationType.findUnique({ where: { id: rel.relationTypeId } })
+                            ]);
+
+                            return {
+                                ...rel,
+                                source,
+                                target,
+                                relationType: type
                             };
-                        }
+                        }));
 
-                        return this.prisma.relationship.findMany({
-                            where,
-                            include: {
-                                relationType: true,
-                                source: true,
-                                target: true,
-                            },
-                        });
+                        return hydrated;
                     },
                 },
 
