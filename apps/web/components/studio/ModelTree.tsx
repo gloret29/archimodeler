@@ -225,7 +225,7 @@ export default function ModelTree() {
         return (
             <div key={folder.id} className="ml-4">
                 <div
-                    className="flex items-center gap-1 p-1.5 hover:bg-gray-100 rounded-md cursor-pointer text-sm group"
+                    className="flex items-center gap-1 p-1.5 hover:bg-accent rounded-md cursor-pointer text-sm group"
                     onClick={() => toggleExpand(folder.id)}
                     draggable
                     onDragStart={(e) => {
@@ -238,11 +238,11 @@ export default function ModelTree() {
                     }}
                     onDrop={(e) => handleDrop(e, folder.id)}
                 >
-                    {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                     <Folder className="h-4 w-4 text-yellow-500" />
                     <span className="truncate flex-1">{folder.name}</span>
 
-                    <div className="opacity-0 group-hover:opacity-100 flex gap-1 bg-white/80 rounded px-1">
+                    <div className="opacity-0 group-hover:opacity-100 flex gap-1 bg-background/80 rounded px-1">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -253,7 +253,7 @@ export default function ModelTree() {
                             }}
                             title="New Subfolder"
                         >
-                            <FolderPlus className="h-3.5 w-3.5 text-blue-600" />
+                            <FolderPlus className="h-3.5 w-3.5 text-primary" />
                         </Button>
                         <Button
                             variant="ghost"
@@ -265,7 +265,7 @@ export default function ModelTree() {
                             }}
                             title="Rename Folder"
                         >
-                            <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                            <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
                         <Button
                             variant="ghost"
@@ -277,22 +277,22 @@ export default function ModelTree() {
                             }}
                             title="Delete Folder"
                         >
-                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                     </div>
                 </div>
 
                 {isExpanded && (
-                    <div className="border-l border-gray-200 ml-2 pl-2">
+                    <div className="border-l border-border ml-2 pl-2">
                         {folder.children?.map(renderFolder)}
 
                         {folder.views?.map((view: ViewType) => (
                             <div
                                 key={view.id}
-                                className="flex items-center gap-2 p-1.5 rounded-md cursor-pointer text-sm hover:bg-gray-100"
+                                className="flex items-center gap-2 p-1.5 rounded-md cursor-pointer text-sm hover:bg-accent"
                                 onClick={() => router.push(`/studio?viewId=${view.id}`)}
                             >
-                                <Layout className="h-3.5 w-3.5 text-blue-500" />
+                                <Layout className="h-3.5 w-3.5 text-primary" />
                                 <span className="truncate">{view.name}</span>
                             </div>
                         ))}
@@ -300,7 +300,7 @@ export default function ModelTree() {
                         {folder.elements?.map((el: Element) => (
                             <div
                                 key={el.id}
-                                className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm group"
+                                className="flex items-center gap-2 p-1 rounded-md hover:bg-accent cursor-grab text-sm group"
                                 draggable
                                 onDragStart={(e) => {
                                     e.stopPropagation();
@@ -312,28 +312,28 @@ export default function ModelTree() {
                                     }));
                                 }}
                             >
-                                <Box className="h-3.5 w-3.5 text-gray-400" />
+                                <Box className="h-3.5 w-3.5 text-muted-foreground" />
                                 <span className="truncate flex-1">{el.name}</span>
                                 <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                                     <button
-                                        className="p-0.5 hover:bg-gray-200 rounded"
+                                        className="p-0.5 hover:bg-accent rounded"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleRenameElement(el.id, el.name);
                                         }}
                                         title="Rename"
                                     >
-                                        <Edit2 className="h-3 w-3 text-gray-600" />
+                                        <Edit2 className="h-3 w-3 text-muted-foreground" />
                                     </button>
                                     <button
-                                        className="p-0.5 hover:bg-red-100 rounded"
+                                        className="p-0.5 hover:bg-destructive/10 rounded"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDeleteElement(el.id, el.name);
                                         }}
                                         title="Delete"
                                     >
-                                        <Trash2 className="h-3 w-3 text-red-600" />
+                                        <Trash2 className="h-3 w-3 text-destructive" />
                                     </button>
                                 </div>
                             </div>
@@ -347,8 +347,8 @@ export default function ModelTree() {
     const rootElements = elements.filter((el: Element) => !folders.some((f: FolderType) => f.elements?.some((fe: Element) => fe.id === el.id)));
 
     return (
-        <aside className="w-80 bg-white border-l border-gray-200 h-full flex flex-col">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <aside className="w-80 bg-background border-l border-border h-full flex flex-col">
+            <div className="p-4 border-b border-border flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Repository</h2>
                 <Button variant="outline" size="sm" onClick={() => handleCreateFolder()}>
                     <Folder className="h-4 w-4 mr-1" /> New Folder
@@ -371,11 +371,11 @@ export default function ModelTree() {
                 {folders.map(renderFolder)}
 
                 <div className="mt-4">
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-2">Uncategorized Elements</h3>
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2">Uncategorized Elements</h3>
                     {rootElements.map((el: Element) => (
                         <div
                             key={el.id}
-                            className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm ml-2 group"
+                            className="flex items-center gap-2 p-1 rounded-md hover:bg-accent cursor-grab text-sm ml-2 group"
                             draggable
                             onDragStart={(e) => {
                                 e.stopPropagation();
@@ -387,28 +387,28 @@ export default function ModelTree() {
                                 }));
                             }}
                         >
-                            <Box className="h-3.5 w-3.5 text-gray-400" />
+                            <Box className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="truncate flex-1">{el.name}</span>
                             <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                                 <button
-                                    className="p-0.5 hover:bg-gray-200 rounded"
+                                    className="p-0.5 hover:bg-accent rounded"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleRenameElement(el.id, el.name);
                                     }}
                                     title="Rename"
                                 >
-                                    <Edit2 className="h-3 w-3 text-gray-600" />
+                                    <Edit2 className="h-3 w-3 text-muted-foreground" />
                                 </button>
                                 <button
-                                    className="p-0.5 hover:bg-red-100 rounded"
+                                    className="p-0.5 hover:bg-destructive/10 rounded"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleDeleteElement(el.id, el.name);
                                     }}
                                     title="Delete"
                                 >
-                                    <Trash2 className="h-3 w-3 text-red-600" />
+                                    <Trash2 className="h-3 w-3 text-destructive" />
                                 </button>
                             </div>
                         </div>

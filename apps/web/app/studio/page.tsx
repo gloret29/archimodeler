@@ -18,7 +18,7 @@ function StudioContent() {
                 <ModelingCanvas packageId={searchParams.get('packageId')} />
                 <CoachChat />
             </main>
-            <Suspense fallback={<div className="w-80 bg-white border-l border-gray-200" />}>
+            <Suspense fallback={<div className="w-80 bg-background border-l border-border" />}>
                 <ModelTree />
             </Suspense>
         </>
@@ -27,9 +27,9 @@ function StudioContent() {
 
 export default function StudioPage() {
     return (
-        <div className="flex h-screen w-full overflow-hidden bg-gray-50">
+        <div className="flex h-screen w-full overflow-hidden bg-muted/40">
             <ReactFlowProvider>
-                <Suspense fallback={<div className="flex h-screen w-full overflow-hidden bg-gray-50" />}>
+                <Suspense fallback={<div className="flex h-screen w-full overflow-hidden bg-muted/40" />}>
                     <StudioContent />
                 </Suspense>
             </ReactFlowProvider>

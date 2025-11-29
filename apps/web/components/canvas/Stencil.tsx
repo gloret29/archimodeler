@@ -125,8 +125,8 @@ export default function Stencil() {
     ];
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 h-full flex flex-col">
-            <div className="p-4 border-b border-gray-200">
+        <aside className="w-64 bg-background border-r border-border h-full flex flex-col">
+            <div className="p-4 border-b border-border">
                 <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
                     <Layers className="w-5 h-5" />
                     Palette
@@ -134,7 +134,7 @@ export default function Stencil() {
                 <input
                     type="text"
                     placeholder="Search elements..."
-                    className="w-full px-3 py-1 text-sm border rounded-md"
+                    className="w-full px-3 py-1 text-sm border rounded-md bg-background text-foreground"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -146,7 +146,7 @@ export default function Stencil() {
 
                     return (
                         <div key={layer}>
-                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{layer} Layer</h3>
+                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{layer} Layer</h3>
                             <div className="space-y-2">
                                 {items.map((item) => {
                                     const Icon = icons[item.name] || Box;

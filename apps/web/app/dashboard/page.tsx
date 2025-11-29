@@ -25,7 +25,7 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-lg shadow border">
+                <div className="bg-card p-6 rounded-lg shadow border">
                     <h2 className="text-xl font-semibold mb-4">Elements by Type</h2>
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
@@ -51,7 +51,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow border">
+                <div className="bg-card p-6 rounded-lg shadow border">
                     <h2 className="text-xl font-semibold mb-4">Elements by Layer</h2>
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">

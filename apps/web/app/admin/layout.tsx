@@ -33,12 +33,12 @@ export default function AdminLayout({
     }
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-muted/40">
             {/* Sidebar */}
-            <aside className="w-64 bg-white border-r flex flex-col">
+            <aside className="w-64 bg-background border-r flex flex-col">
                 <div className="p-6">
-                    <h1 className="text-xl font-bold text-gray-900">Admin Console</h1>
-                    <p className="text-sm text-gray-500">ArchiModeler</p>
+                    <h1 className="text-xl font-bold text-foreground">Admin Console</h1>
+                    <p className="text-sm text-muted-foreground">ArchiModeler</p>
                 </div>
                 <Separator />
                 <ScrollArea className="flex-1 p-4">
@@ -68,7 +68,7 @@ export default function AdminLayout({
                             </Button>
                         </Link>
                         <div className="pt-4">
-                            <h3 className="mb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Infrastructure
                             </h3>
                             <Link href="/admin/neo4j">
