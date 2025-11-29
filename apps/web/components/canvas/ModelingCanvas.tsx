@@ -23,7 +23,9 @@ import ConnectionMenu from './ConnectionMenu';
 import NodeContextMenu from './NodeContextMenu';
 import RenameDialog from '../ui/RenameDialog';
 import FormattingPanel from './FormattingPanel';
+import StereotypePanel from './StereotypePanel';
 import LayoutOrganizer from './LayoutOrganizer';
+import ExportButton from './ExportButton';
 import { getValidRelations } from '@/lib/metamodel';
 import DiagramDescriber from '../ai/DiagramDescriber';
 
@@ -37,6 +39,7 @@ const getId = () => `dndnode_${id++}`;
 
 export interface ModelingCanvasProps {
     packageId?: string | null;
+    viewName?: string;
     // Controlled state props
     nodes?: Node[];
     edges?: Edge[];
@@ -44,16 +47,21 @@ export interface ModelingCanvasProps {
     onEdgesChange?: OnEdgesChange;
     setNodes?: Dispatch<SetStateAction<Node[]>>;
     setEdges?: Dispatch<SetStateAction<Edge[]>>;
+    onNodeClick?: (nodeId: string, elementId: string | undefined, elementName: string, elementType: string) => void;
+    onEdgeClick?: (edgeId: string, relationshipId: string | undefined, relationshipName: string, relationshipType: string) => void;
 }
 
 export default function ModelingCanvas({
     packageId,
+    viewName,
     nodes: controlledNodes,
     edges: controlledEdges,
     onNodesChange: controlledOnNodesChange,
     onEdgesChange: controlledOnEdgesChange,
     setNodes: controlledSetNodes,
     setEdges: controlledSetEdges,
+    onNodeClick,
+    onEdgeClick,
 }: ModelingCanvasProps) {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     
@@ -92,6 +100,8 @@ export default function ModelingCanvas({
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
     const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
     const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
+    const lastSelectedEdgeRef = useRef<string | null>(null);
+    const lastSelectedNodeRef = useRef<string | null>(null);
 
     const [connectionMenu, setConnectionMenu] = useState<{
         isOpen: boolean;
@@ -152,6 +162,23 @@ export default function ModelingCanvas({
         });
     }, []);
 
+    const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        if (onNodeClick) {
+            const elementId = node.data?.elementId;
+            const elementName = node.data?.label || node.id;
+            const elementType = node.data?.type || 'Unknown';
+            onNodeClick(node.id, elementId, elementName, elementType);
+        }
+    }, [onNodeClick]);
+
+    const handleEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (onEdgeClick) {
+            const relationshipId = edge.data?.relationshipId;
+            const relationshipName = edge.label || edge.data?.name || edge.id;
+            const relationshipType = edge.data?.type || edge.label || 'Unknown';
+            onEdgeClick(edge.id, relationshipId, relationshipName, relationshipType);
+        }
+    }, [onEdgeClick]);
 
     const handleRenameNode = async () => {
         const elementId = nodeContextMenu.nodeData?.elementId;
@@ -337,8 +364,11 @@ export default function ModelingCanvas({
                 try {
                     const token = localStorage.getItem('accessToken');
 
-                    // First, ensure we have a valid package ID
-                    const targetPackageId = packageId || 'default-package-id';
+                    // Ensure we have a valid package ID
+                    if (!packageId) {
+                        alert('No package selected. Please select a package first.');
+                        return;
+                    }
 
                     const res = await fetch('http://localhost:3002/model/elements', {
                         method: 'POST',
@@ -350,7 +380,7 @@ export default function ModelingCanvas({
                             name: label || type,
                             type: type,
                             layer: layer,
-                            packageId: targetPackageId
+                            packageId: packageId
                         })
                     });
 
@@ -405,7 +435,7 @@ export default function ModelingCanvas({
                 body: JSON.stringify({
                     name,
                     content,
-                    modelPackage: { connect: { id: packageId || 'default-package-id' } }
+                    modelPackage: { connect: { id: packageId } }
                 })
             });
             alert('View saved!');
@@ -425,20 +455,65 @@ export default function ModelingCanvas({
                 onConnect={onConnect}
                 onNodeContextMenu={onNodeContextMenu}
                 onNodeDoubleClick={onNodeDoubleClick}
+                onNodeClick={handleNodeClick}
+                onEdgeClick={handleEdgeClick}
+                onPaneClick={() => {
+                    // Deselect element/relationship when clicking on empty canvas
+                    if (onNodeClick) {
+                        onNodeClick('', undefined, '', '');
+                    }
+                    if (onEdgeClick) {
+                        onEdgeClick('', undefined, '', '');
+                    }
+                }}
                 onInit={setReactFlowInstance}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 isValidConnection={isValidConnection}
                 nodeTypes={nodeTypes}
-                onSelectionChange={({ nodes: selectedNodes, edges: selectedEdges }) => {
+                onSelectionChange={useCallback(({ nodes: selectedNodes, edges: selectedEdges }) => {
                     setSelectedNodes(selectedNodes);
                     setSelectedEdges(selectedEdges);
-                }}
+                    // If an edge is selected, trigger onEdgeClick (only if different from last selection)
+                    if (onEdgeClick && selectedEdges.length > 0 && selectedNodes.length === 0) {
+                        const edge = selectedEdges[0];
+                        if (lastSelectedEdgeRef.current !== edge.id) {
+                            lastSelectedEdgeRef.current = edge.id;
+                            lastSelectedNodeRef.current = null;
+                            const relationshipId = edge.data?.relationshipId;
+                            const relationshipName = edge.label || edge.data?.name || edge.id;
+                            const relationshipType = edge.data?.type || edge.label || 'Unknown';
+                            onEdgeClick(edge.id, relationshipId, relationshipName, relationshipType);
+                        }
+                    }
+                    // If a node is selected, trigger onNodeClick (only if different from last selection)
+                    else if (onNodeClick && selectedNodes.length > 0 && selectedEdges.length === 0) {
+                        const node = selectedNodes[0];
+                        if (lastSelectedNodeRef.current !== node.id) {
+                            lastSelectedNodeRef.current = node.id;
+                            lastSelectedEdgeRef.current = null;
+                            const elementId = node.data?.elementId;
+                            const elementName = node.data?.label || node.id;
+                            const elementType = node.data?.type || 'Unknown';
+                            onNodeClick(node.id, elementId, elementName, elementType);
+                        }
+                    }
+                    // If nothing is selected, reset refs
+                    else if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+                        lastSelectedNodeRef.current = null;
+                        lastSelectedEdgeRef.current = null;
+                    }
+                }, [onNodeClick, onEdgeClick])}
                 fitView
             >
                 <Controls />
                 <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
                 <div className="absolute top-4 right-4 z-10 flex gap-2">
+                    <ExportButton
+                        reactFlowInstance={reactFlowInstance}
+                        viewName={viewName}
+                        reactFlowWrapper={reactFlowWrapper}
+                    />
                     <LayoutOrganizer
                         nodes={nodes}
                         edges={edges}
@@ -486,6 +561,13 @@ export default function ModelingCanvas({
                 onUpdateEdges={setEdges}
                 allNodes={nodes}
                 allEdges={edges}
+            />
+            <StereotypePanel
+                selectedNodes={selectedNodes}
+                selectedEdges={selectedEdges}
+                onUpdate={() => {
+                    // Trigger a refresh if needed
+                }}
             />
         </div>
     );

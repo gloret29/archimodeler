@@ -35,25 +35,33 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 
 ### Modélisation
 
-- **Palette ArchiMate** - Tous les éléments ArchiMate 3.2 organisés par couche
+- **Palette ArchiMate** - Tous les éléments ArchiMate 3.2 organisés par couche avec symboles SVG officiels
+- **Palette Configurable** - Personnalisez les éléments visibles dans la palette via les paramètres admin
 - **Drag & Drop** - Glissez-déposez des éléments sur le canvas
-- **Smart Connectors** - Validation automatique des relations
-- **Menu Contextuel** - Actions rapides par clic droit
+- **Smart Connectors** - Validation automatique des relations selon les règles ArchiMate
+- **Menu Contextuel** - Actions rapides par clic droit sur les éléments et les dossiers
 - **Renommage Élégant** - Dialog moderne pour renommer les éléments
+- **Mise en Forme** - Panneau de personnalisation des styles (couleurs, bordures, polices, opacité)
+- **Organisation Automatique** - Layouts automatiques (circular, hierarchical, grid, force-directed)
 
 ### Gestion
 
-- **Repository** - Organisation hiérarchique des éléments
-- **Vues Multiples** - Créez et gérez plusieurs diagrammes
+- **Repository** - Organisation hiérarchique des éléments avec dossiers imbriqués
+- **Repository Redimensionnable** - Ajustez la largeur du panneau repository selon vos besoins
+- **Miniatures** - Visualisation des objets avec leurs symboles ArchiMate dans le repository
+- **Tooltips Informatifs** - Informations détaillées sur les objets au survol
+- **Menu Contextuel Dossiers** - Créez des sous-dossiers et des éléments directement depuis le menu contextuel
+- **Vues Multiples** - Créez et gérez plusieurs diagrammes avec onglets
 - **Recherche** - Trouvez rapidement vos éléments
-- **Dossiers** - Organisez vos modèles
+- **Dossiers** - Organisez vos modèles de manière hiérarchique
 
 ### Édition
 
-- **Double-clic pour Renommer** - Renommage rapide
-- **Suppression Intelligente** - Supprimez de la vue ou du repository
+- **Double-clic pour Renommer** - Renommage rapide des éléments
+- **Suppression Intelligente** - Supprimez de la vue ou du repository avec confirmation
+- **Sauvegarde des Vues** - Sauvegarde automatique du contenu du canvas (positions, styles, relations)
+- **Personnalisation Visuelle** - Personnalisez l'apparence de vos diagrammes (couleurs, styles, opacité)
 - **Undo/Redo** - Annulez vos actions (roadmap)
-- **Auto-save** - Sauvegarde automatique (roadmap)
 
 ## 🏗️ Architecture
 
@@ -173,16 +181,37 @@ L'application sera accessible à :
 
 ### Sauvegarder une Vue
 
-1. Cliquez sur "Save View" en haut à droite
-2. Donnez un nom à votre vue
-3. La vue est sauvegardée et accessible depuis le repository
+1. Cliquez sur l'icône "Save" (disquette) en haut à droite
+2. Le contenu actuel du canvas (éléments, positions, styles, relations) est sauvegardé
+3. La vue est mise à jour et accessible depuis le repository
+
+### Personnaliser l'Apparence
+
+1. Sélectionnez un ou plusieurs éléments sur le canvas
+2. Le panneau de mise en forme apparaît automatiquement en bas
+3. Personnalisez les couleurs, bordures, polices et opacité
+4. Les modifications sont appliquées en temps réel
+
+### Organiser Automatiquement
+
+1. Cliquez sur le bouton "Auto Layout" en haut à droite du canvas
+2. Choisissez un algorithme de layout :
+   - **Circular** : Disposition en cercle
+   - **Hierarchical** : Organisation hiérarchique selon les connexions
+   - **Grid** : Disposition en grille régulière
+   - **Force-Directed** : Simulation de forces pour une disposition naturelle
+3. Les éléments sont automatiquement réorganisés
 
 ### Menu Contextuel
 
-Clic droit sur un élément pour :
+**Sur un élément** (clic droit) :
 - **Rename** - Renommer l'élément
 - **Remove from View** - Retirer de la vue actuelle
 - **Delete from Repository** - Supprimer complètement
+
+**Sur un dossier** (clic droit) :
+- **New Folder** - Créer un sous-dossier
+- **Create ArchiMate Element** - Créer directement un élément dans le dossier (organisé par couche)
 
 ## 📚 Documentation
 

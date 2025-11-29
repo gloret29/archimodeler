@@ -123,6 +123,9 @@ model ConceptType {
   // Relation Rules
   sourceRules RelationType[] @relation("SourceRules")
   targetRules RelationType[] @relation("TargetRules")
+  
+  // Stereotypes applicable to this concept type
+  applicableStereotypes StereotypeConceptType[]
 
   @@unique([name, metamodelId])
 }
@@ -138,6 +141,9 @@ model RelationType {
   allowedTargetTypes ConceptType[] @relation("TargetRules")
 
   relationships Relationship[]
+  
+  // Stereotypes applicable to this relation type
+  applicableStereotypes StereotypeRelationType[]
 
   @@unique([name, metamodelId])
 }
@@ -169,6 +175,9 @@ model Element {
   externalId     String?
   dataSourceId   String?
   dataSource     DataSource?  @relation(fields: [dataSourceId], references: [id])
+  
+  // Stereotypes
+  stereotypes    ElementStereotype[]
 }
 
 model DataSource {
@@ -208,6 +217,9 @@ model Relationship {
   validFrom      DateTime     @default(now())
   validTo        DateTime?
   versionId      String       @default(uuid())
+  
+  // Stereotypes
+  stereotypes    RelationshipStereotype[]
 }
 
 model Folder {
@@ -244,4 +256,87 @@ model View {
 
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+}
+
+// --- Stereotypes System ---
+
+model Stereotype {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  icon        String?  // Icon identifier or URL
+  color       String?  // Hex color code
+  
+  // Dynamic properties schema (JSON schema for extended properties)
+  propertiesSchema Json? // Schema defining allowed extended properties
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations to specific ArchiMate types
+  applicableConceptTypes StereotypeConceptType[]
+  applicableRelationTypes StereotypeRelationType[]
+  
+  // Relations to elements and relationships (instances)
+  elementStereotypes      ElementStereotype[]
+  relationshipStereotypes RelationshipStereotype[]
+}
+
+// Many-to-many relationship between Stereotype and ConceptType
+model StereotypeConceptType {
+  id            String      @id @default(uuid())
+  stereotypeId  String
+  stereotype    Stereotype  @relation(fields: [stereotypeId], references: [id], onDelete: Cascade)
+  conceptTypeId String
+  conceptType   ConceptType @relation(fields: [conceptTypeId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  
+  @@unique([stereotypeId, conceptTypeId])
+}
+
+// Many-to-many relationship between Stereotype and RelationType
+model StereotypeRelationType {
+  id            String       @id @default(uuid())
+  stereotypeId  String
+  stereotype    Stereotype   @relation(fields: [stereotypeId], references: [id], onDelete: Cascade)
+  relationTypeId String
+  relationType  RelationType @relation(fields: [relationTypeId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  
+  @@unique([stereotypeId, relationTypeId])
+}
+
+model ElementStereotype {
+  id            String   @id @default(uuid())
+  elementId     String
+  element       Element  @relation(fields: [elementId], references: [id], onDelete: Cascade)
+  stereotypeId  String
+  stereotype    Stereotype @relation(fields: [stereotypeId], references: [id], onDelete: Cascade)
+  
+  // Extended properties (dynamic based on stereotype.propertiesSchema)
+  extendedProperties Json?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([elementId, stereotypeId])
+}
+
+model RelationshipStereotype {
+  id            String       @id @default(uuid())
+  relationshipId String
+  relationship  Relationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  stereotypeId  String
+  stereotype    Stereotype   @relation(fields: [stereotypeId], references: [id], onDelete: Cascade)
+  
+  // Extended properties (dynamic based on stereotype.propertiesSchema)
+  extendedProperties Json?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([relationshipId, stereotypeId])
 }

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchService } from '../search/search.service';
-import { RelationshipsService } from '../neo4j/relationships.service';
 import { Prisma } from '@repo/database';
 
 @Injectable()
@@ -9,7 +8,6 @@ export class ModelService {
     constructor(
         private prisma: PrismaService,
         private searchService: SearchService,
-        private relationshipsService: RelationshipsService,
     ) { }
 
     async createElement(data: Prisma.ElementCreateInput) {
@@ -20,13 +18,6 @@ export class ModelService {
             },
         });
         await this.searchService.indexElement(element);
-
-        // Create element node in Neo4j
-        await this.relationshipsService.ensureElementNode(
-            element.id,
-            element.name,
-            element.conceptTypeId
-        );
 
         return element;
     }
@@ -127,13 +118,6 @@ export class ModelService {
             console.log('Element created successfully:', element.id, 'folderId:', element.folderId);
             await this.searchService.indexElement(element);
 
-            // Create element node in Neo4j
-            await this.relationshipsService.ensureElementNode(
-                element.id,
-                element.name,
-                element.conceptTypeId
-            );
-
             return element;
         } catch (error) {
             console.error('Error in createElementSimple:', error);
@@ -151,29 +135,21 @@ export class ModelService {
         });
         await this.searchService.indexElement(element);
 
-        // Update element node in Neo4j if name or conceptType changed
-        if (data.name || data.conceptType) {
-            const updatedElement = await this.prisma.element.findUnique({
-                where: { id },
-                include: { conceptType: true },
-            });
-            if (updatedElement) {
-                await this.relationshipsService.ensureElementNode(
-                    updatedElement.id,
-                    updatedElement.name,
-                    updatedElement.conceptTypeId
-                );
-            }
-        }
-
         return element;
     }
 
     async deleteElement(id: string) {
-        // Delete from Neo4j first (this will also delete all relationships)
-        await this.relationshipsService.deleteElementNode(id);
+        // Delete relationships first (cascade should handle this, but explicit is better)
+        await this.prisma.relationship.deleteMany({
+            where: {
+                OR: [
+                    { sourceId: id },
+                    { targetId: id },
+                ],
+            },
+        });
 
-        // Then delete from PostgreSQL
+        // Then delete the element
         return this.prisma.element.delete({
             where: { id },
         });
@@ -240,9 +216,12 @@ export class ModelService {
     }
 
     async findAllFolders(packageId?: string) {
-        // Fetch all folders with their elements and views
+        if (!packageId) {
+            return [];
+        }
+        // Fetch all folders with their elements and views for the specified package
         const allFolders = await this.prisma.folder.findMany({
-            where: packageId ? { modelPackageId: packageId } : undefined,
+            where: { modelPackageId: packageId },
             include: {
                 elements: {
                     include: {
@@ -354,6 +333,21 @@ export class ModelService {
 
     async findAllViews() {
         return this.prisma.view.findMany();
+    }
+
+    async findElementsByPackage(packageId: string) {
+        return this.prisma.element.findMany({
+            where: { modelPackageId: packageId },
+            include: {
+                conceptType: true,
+            },
+        });
+    }
+
+    async findViewsByPackage(packageId: string) {
+        return this.prisma.view.findMany({
+            where: { modelPackageId: packageId },
+        });
     }
 
     async deleteView(id: string) {

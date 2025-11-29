@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     ChevronRight, ChevronDown, Folder, FileText,
     Layout, Box, Search, Trash2, Edit2, FolderPlus, MoreHorizontal, AlertTriangle
@@ -48,6 +48,11 @@ interface Element {
         name: string;
         category: string;
     };
+}
+
+interface ModelTreeProps {
+    packageId: string | null;
+    onElementSelect?: (elementId: string, elementName: string, elementType: string) => void;
 }
 
 interface FolderType {
@@ -157,7 +162,7 @@ const svgMapping: Record<string, string> = {
     'Location': 'Location.svg',
 };
 
-export default function ModelTree() {
+function ModelTree({ packageId, onElementSelect }: ModelTreeProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { refreshTrigger } = useRepositoryStore();
@@ -178,31 +183,53 @@ export default function ModelTree() {
         position: null
     });
 
-    const fetchData = () => {
+    const fetchData = useCallback(() => {
+        if (!packageId) {
+            setFolders([]);
+            setElements([]);
+            setViews([]);
+            return;
+        }
+
         const token = localStorage.getItem('accessToken');
         const headers = { 'Authorization': `Bearer ${token}` };
 
-        fetch('http://localhost:3002/model/folders', { headers })
+        // Fetch folders filtered by packageId
+        fetch(`http://localhost:3002/model/packages/${packageId}/folders`, { headers })
             .then(res => res.json())
-            .then(data => setFolders(data))
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setFolders(data);
+                }
+            })
             .catch(console.error);
 
-        fetch('http://localhost:3002/model/elements', { headers })
+        // Fetch elements filtered by packageId
+        fetch(`http://localhost:3002/model/packages/${packageId}/elements`, { headers })
             .then(res => res.json())
-            .then(data => setElements(data))
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setElements(data);
+                }
+            })
             .catch(console.error);
 
-        fetch('http://localhost:3002/model/views', { headers })
+        // Fetch views filtered by packageId
+        fetch(`http://localhost:3002/model/packages/${packageId}/views`, { headers })
             .then(res => res.json())
-            .then(data => setViews(data))
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setViews(data);
+                }
+            })
             .catch(console.error);
-    };
+    }, [packageId]);
 
     useEffect(() => {
         fetchData();
         const interval = setInterval(fetchData, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchData]);
 
     // Refresh immediately when triggered
     useEffect(() => {
@@ -250,7 +277,7 @@ export default function ModelTree() {
                 body: JSON.stringify({
                     name,
                     parentId,
-                    modelPackage: { connect: { id: 'default-package-id' } }
+                    modelPackage: { connect: { id: packageId || 'default-package-id' } }
                 })
             });
             fetchData();
@@ -463,13 +490,18 @@ export default function ModelTree() {
         }
     };
 
-    const handleCreateElementInFolder = async (folderId: string, conceptType: string, layer: string, packageId?: string) => {
+    const handleCreateElementInFolder = async (folderId: string, conceptType: string, layer: string) => {
+        if (!packageId) {
+            alert('No package selected');
+            return;
+        }
+
         const name = prompt(`Enter name for ${formatConceptTypeName(conceptType)}:`);
         if (!name) return;
 
         try {
             const token = localStorage.getItem('accessToken');
-            const pkgId = packageId || 'default-package-id';
+            const pkgId = packageId;
             
             // Expand the folder so the new element is visible
             setExpanded(prev => ({ ...prev, [folderId]: true }));
@@ -654,6 +686,10 @@ export default function ModelTree() {
                                                     existingId: el.id
                                                 }));
                                             }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onElementSelect?.(el.id, el.name, el.conceptType.name);
+                                            }}
                                         >
                                     {svgFile ? (
                                         <img 
@@ -730,7 +766,7 @@ export default function ModelTree() {
                                                 key={concept.name}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleCreateElementInFolder(folder.id, concept.name, concept.layer, folder.modelPackageId);
+                                                    handleCreateElementInFolder(folder.id, concept.name, concept.layer);
                                                 }}
                                                 className="flex items-center gap-2"
                                             >
@@ -860,6 +896,10 @@ export default function ModelTree() {
                                                     existingId: el.id
                                                 }));
                                             }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onElementSelect?.(el.id, el.name, el.conceptType.name);
+                                            }}
                                         >
                                     {svgFile ? (
                                         <img 
@@ -957,3 +997,5 @@ export default function ModelTree() {
         </TooltipProvider>
     );
 }
+
+export default React.memo(ModelTree);

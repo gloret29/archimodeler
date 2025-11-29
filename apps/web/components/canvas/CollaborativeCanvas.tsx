@@ -11,6 +11,8 @@ interface CollaborativeCanvasProps {
     viewName: string;
     packageId: string | null;
     onContentChange?: (content: { nodes: Node[]; edges: Edge[] }) => void;
+    onNodeClick?: (nodeId: string, elementId: string | undefined, elementName: string, elementType: string) => void;
+    onEdgeClick?: (edgeId: string, relationshipId: string | undefined, relationshipName: string, relationshipType: string) => void;
 }
 
 // Generate a random color for the user
@@ -27,7 +29,9 @@ export default function CollaborativeCanvas({
     viewId,
     viewName,
     packageId,
-    onContentChange
+    onContentChange,
+    onNodeClick,
+    onEdgeClick
 }: CollaborativeCanvasProps) {
     const canvasRef = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
@@ -318,13 +322,16 @@ export default function CollaborativeCanvas({
         <div ref={canvasRef} className="relative h-full w-full">
             <ReactFlowProvider>
                 <ModelingCanvas 
-                    packageId={packageId} 
+                    packageId={packageId}
+                    viewName={viewName}
                     nodes={nodesWithSelection}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     setNodes={handleSetNodes}
                     setEdges={handleSetEdges}
+                    onNodeClick={onNodeClick}
+                    onEdgeClick={onEdgeClick}
                 />
             </ReactFlowProvider>
 

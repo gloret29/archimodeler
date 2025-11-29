@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RelationshipsService } from '../neo4j/relationships.service';
+import { RelationshipsService } from '../model/relationships.service';
 import { VM } from 'vm2';
 
 @Injectable()
@@ -83,7 +83,7 @@ export class ScriptingService {
 
                 element: {
                     getRelations: async (elementId: string, relationType?: string) => {
-                        // Fetch relationships from Neo4j
+                        // Fetch relationships from PostgreSQL
                         const relationships = await this.relationshipsService.getElementRelationships(elementId);
 
                         // Filter by relation type if provided

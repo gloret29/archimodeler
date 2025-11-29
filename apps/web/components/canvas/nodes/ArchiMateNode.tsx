@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import Image from 'next/image';
 
@@ -87,10 +87,11 @@ interface SelectedBy {
 }
 
 const ArchiMateNode = ({ data, selected }: NodeProps) => {
-    const { label, type, selectedBy, style } = data as { 
+    const { label, type, selectedBy, style, elementId } = data as { 
         label: string; 
         type: string; 
         layer: string;
+        elementId?: string;
         selectedBy?: SelectedBy[];
         style?: {
             backgroundColor?: string;
@@ -102,7 +103,51 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
         };
     };
 
+    const [stereotypes, setStereotypes] = useState<Array<{ name: string }>>([]);
+
+    // Fetch stereotypes for this element
+    useEffect(() => {
+        if (!elementId) return;
+
+        const fetchStereotypes = async () => {
+            try {
+                const headers: HeadersInit = {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                };
+                const response = await fetch(`http://localhost:3002/stereotypes/elements/${elementId}`, { headers });
+                if (response.ok) {
+                    const data = await response.json();
+                    setStereotypes(data.map((es: any) => ({ name: es.stereotype.name })));
+                }
+            } catch (error) {
+                console.error('Failed to fetch stereotypes:', error);
+            }
+        };
+
+        fetchStereotypes();
+
+        // Listen for stereotype updates
+        const handleUpdate = (event: CustomEvent) => {
+            if (event.detail.elementId === elementId) {
+                fetchStereotypes();
+            }
+        };
+
+        window.addEventListener('element-stereotype-updated', handleUpdate as EventListener);
+        return () => {
+            window.removeEventListener('element-stereotype-updated', handleUpdate as EventListener);
+        };
+    }, [elementId]);
+
     const svgFile = svgMapping[type];
+
+    // Format stereotype names
+    const formatStereotypes = () => {
+        if (stereotypes.length === 0) {
+            return null;
+        }
+        return stereotypes.map(s => s.name).join(', ');
+    };
 
     // Determine border style based on remote selection
     const isRemotelySelected = selectedBy && selectedBy.length > 0;
@@ -133,11 +178,75 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
                 className={`relative min-w-[150px] min-h-[60px] flex flex-col items-center justify-center transition-all`}
                 style={nodeStyle}
             >
-                {/* Anchor points on all 4 sides */}
-                <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-gray-500 opacity-0 group-hover:opacity-100 transition-opacity z-50" />
-                <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-gray-500 opacity-0 group-hover:opacity-100 transition-opacity z-50" />
-                <Handle type="target" position={Position.Bottom} className="w-2 h-2 !bg-gray-500 opacity-0 group-hover:opacity-100 transition-opacity z-50" />
-                <Handle type="source" position={Position.Left} className="w-2 h-2 !bg-gray-500 opacity-0 group-hover:opacity-100 transition-opacity z-50" />
+                {/* Anchor points on all 4 sides - each position has both source and target handles */}
+                {/* Top */}
+                <Handle 
+                    id="top-source" 
+                    type="source" 
+                    position={Position.Top} 
+                    className="w-3 h-3 !bg-blue-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}
+                    isConnectable={true}
+                />
+                <Handle 
+                    id="top-target" 
+                    type="target" 
+                    position={Position.Top} 
+                    className="w-3 h-3 !bg-green-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}
+                    isConnectable={true}
+                />
+                {/* Right */}
+                <Handle 
+                    id="right-source" 
+                    type="source" 
+                    position={Position.Right} 
+                    className="w-3 h-3 !bg-blue-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+                    isConnectable={true}
+                />
+                <Handle 
+                    id="right-target" 
+                    type="target" 
+                    position={Position.Right} 
+                    className="w-3 h-3 !bg-green-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+                    isConnectable={true}
+                />
+                {/* Bottom */}
+                <Handle 
+                    id="bottom-source" 
+                    type="source" 
+                    position={Position.Bottom} 
+                    className="w-3 h-3 !bg-blue-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ bottom: -6, left: '50%', transform: 'translateX(-50%)' }}
+                    isConnectable={true}
+                />
+                <Handle 
+                    id="bottom-target" 
+                    type="target" 
+                    position={Position.Bottom} 
+                    className="w-3 h-3 !bg-green-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ bottom: -6, left: '50%', transform: 'translateX(-50%)' }}
+                    isConnectable={true}
+                />
+                {/* Left */}
+                <Handle 
+                    id="left-source" 
+                    type="source" 
+                    position={Position.Left} 
+                    className="w-3 h-3 !bg-blue-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
+                    isConnectable={true}
+                />
+                <Handle 
+                    id="left-target" 
+                    type="target" 
+                    position={Position.Left} 
+                    className="w-3 h-3 !bg-green-500 opacity-40 hover:opacity-100 group-hover:opacity-100 transition-opacity z-50 !border-2 !border-white cursor-crosshair pointer-events-auto" 
+                    style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
+                    isConnectable={true}
+                />
                 
                 {svgFile ? (
                     <div className="relative w-full h-full flex items-center justify-center">
@@ -147,9 +256,17 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
                             className="w-full h-full object-contain max-w-[180px] max-h-[100px]"
                             draggable={false}
                         />
-                        <div className="absolute inset-0 flex items-center justify-center pt-6 px-2">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pt-6 px-2">
+                            {stereotypes.length > 0 && (
+                                <span 
+                                    className="text-[10px] font-semibold text-center break-words w-full pointer-events-none select-none opacity-80"
+                                    style={textStyle}
+                                >
+                                    &lt;&lt;{formatStereotypes()}&gt;&gt;
+                                </span>
+                            )}
                             <span 
-                                className="text-xs font-medium text-center break-words w-full line-clamp-2 pointer-events-none select-none"
+                                className={`text-xs font-medium text-center break-words w-full ${stereotypes.length > 0 ? 'line-clamp-1' : 'line-clamp-2'} pointer-events-none select-none`}
                                 style={textStyle}
                             >
                                 {label}
@@ -157,8 +274,21 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
                         </div>
                     </div>
                 ) : (
-                    <div className="border-2 border-gray-400 bg-white rounded p-2 w-full h-full flex items-center justify-center">
-                        {label}
+                    <div className="border-2 border-gray-400 bg-white rounded p-2 w-full h-full flex flex-col items-center justify-center">
+                        {stereotypes.length > 0 && (
+                            <span 
+                                className="text-[10px] font-semibold text-center break-words w-full pointer-events-none select-none opacity-80"
+                                style={textStyle}
+                            >
+                                &lt;&lt;{formatStereotypes()}&gt;&gt;
+                            </span>
+                        )}
+                        <span 
+                            className="text-xs font-medium text-center break-words w-full pointer-events-none select-none"
+                            style={textStyle}
+                        >
+                            {label}
+                        </span>
                     </div>
                 )}
             </div>

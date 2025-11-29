@@ -5,6 +5,8 @@ import Stencil from '@/components/canvas/Stencil';
 import CoachChat from '@/components/ai/CoachChat';
 import { useSearchParams } from 'next/navigation';
 import ModelTree from '@/components/studio/ModelTree';
+import PropertiesPanel from '@/components/studio/PropertiesPanel';
+import PackageSelector from '@/components/studio/PackageSelector';
 import { useTranslations } from 'next-intl';
 import { useTabsStore } from '@/store/useTabsStore';
 import ViewTabs from '@/components/studio/ViewTabs';
@@ -12,7 +14,7 @@ import CollaborativeCanvas from '@/components/canvas/CollaborativeCanvas';
 import ActiveUsers from '@/components/collaboration/ActiveUsers';
 import { useCollaboration } from '@/hooks/useCollaboration';
 
-import { Home, Save } from 'lucide-react';
+import { Home, Save, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useRouter } from '@/navigation';
 
@@ -24,6 +26,13 @@ function StudioContent() {
     const [repositoryWidth, setRepositoryWidth] = React.useState(320); // Default width: 320px (w-80)
     const [isResizing, setIsResizing] = React.useState(false);
     const [currentCanvasContent, setCurrentCanvasContent] = React.useState<{ nodes: any[]; edges: any[] } | null>(null);
+    const [selectedElement, setSelectedElement] = React.useState<{ id: string; name: string; type: string } | null>(null);
+    const [selectedRelationship, setSelectedRelationship] = React.useState<{ id: string; name: string; type: string } | null>(null);
+
+    const handleElementSelect = React.useCallback((id: string, name: string, type: string) => {
+        setSelectedElement({ id, name, type });
+        setSelectedRelationship(null); // Deselect relationship when selecting element
+    }, []);
 
     // Get the active tab
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
@@ -63,50 +72,13 @@ function StudioContent() {
         };
     }, [isResizing]);
 
-    // Initialize with a tab if packageId is provided, or fetch/create default package
+    // Initialize with a tab if packageId is provided
     useEffect(() => {
         const packageId = searchParams.get('packageId');
 
         if (!packageId) {
-            // No packageId in URL, fetch or create a default package
-            setIsLoadingPackage(true);
-            const token = localStorage.getItem('accessToken');
-
-            fetch('http://localhost:3002/model/packages', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-                .then(res => res.json())
-                .then(packages => {
-                    if (packages && packages.length > 0) {
-                        // Use the first available package
-                        const defaultPackage = packages[0];
-                        router.push(`/studio?packageId=${defaultPackage.id}`);
-                    } else {
-                        // Create a default package
-                        return fetch('http://localhost:3002/model/packages', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({
-                                name: 'Default Package',
-                                description: 'Automatically created default package'
-                            })
-                        })
-                            .then(res => res.json())
-                            .then(newPackage => {
-                                router.push(`/studio?packageId=${newPackage.id}`);
-                            });
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to fetch/create package:', err);
-                    alert('Failed to initialize workspace. Please try again or contact support.');
-                })
-                .finally(() => {
-                    setIsLoadingPackage(false);
-                });
+            // No packageId in URL, show package selector
+            setIsLoadingPackage(false);
             return;
         }
 
@@ -206,29 +178,10 @@ function StudioContent() {
         }
     };
 
-    // Show loading state while initializing workspace
-    if (isLoadingPackage) {
-        return (
-            <div className="flex flex-col h-screen w-full overflow-hidden bg-muted/40">
-                <header className="h-14 border-b border-border bg-background flex items-center px-4 justify-between shrink-0">
-                    <div className="flex items-center gap-4">
-                        <Link href="/home">
-                            <Button variant="ghost" size="icon" title={t('backToHome')}>
-                                <Home className="h-5 w-5" />
-                            </Button>
-                        </Link>
-                        <div className="h-6 w-px bg-border" />
-                        <h1 className="font-semibold text-sm">{t('title')}</h1>
-                    </div>
-                </header>
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                        <p className="text-muted-foreground">Initializing workspace...</p>
-                    </div>
-                </div>
-            </div>
-        );
+    // Show package selector if no packageId is selected
+    const packageId = searchParams.get('packageId');
+    if (!packageId) {
+        return <PackageSelector />;
     }
 
     return (
@@ -274,6 +227,27 @@ function StudioContent() {
                             viewName={activeTab.viewName}
                             packageId={activeTab.packageId}
                             onContentChange={setCurrentCanvasContent}
+                            onNodeClick={(nodeId, elementId, elementName, elementType) => {
+                                if (elementId && nodeId) {
+                                    setSelectedElement({ id: elementId, name: elementName, type: elementType });
+                                    setSelectedRelationship(null); // Deselect relationship when selecting element
+                                } else {
+                                    // Deselect when clicking on empty canvas
+                                    setSelectedElement(null);
+                                }
+                            }}
+                            onEdgeClick={(edgeId, relationshipId, relationshipName, relationshipType) => {
+                                console.log('Edge clicked:', { edgeId, relationshipId, relationshipName, relationshipType });
+                                if (edgeId) {
+                                    // Use edgeId as relationshipId if relationshipId is not available
+                                    const id = relationshipId || edgeId;
+                                    setSelectedRelationship({ id, name: relationshipName, type: relationshipType });
+                                    setSelectedElement(null); // Deselect element when selecting relationship
+                                } else {
+                                    // Deselect when clicking on empty canvas
+                                    setSelectedRelationship(null);
+                                }
+                            }}
                         />
                     ) : (
                         <div className="flex items-center justify-center h-full">
@@ -299,8 +273,21 @@ function StudioContent() {
                     style={{ userSelect: 'none' }}
                 />
                 <Suspense fallback={<div className="bg-background border-l border-border" style={{ width: `${repositoryWidth}px` }} />}>
-                    <div style={{ width: `${repositoryWidth}px` }} className="bg-background border-l border-border h-full flex-shrink-0">
-                        <ModelTree />
+                    <div style={{ width: `${repositoryWidth}px` }} className="bg-background border-l border-border h-full flex-shrink-0 flex flex-col">
+                        <div className="flex-1 overflow-hidden">
+                            <ModelTree 
+                                packageId={packageId}
+                                onElementSelect={handleElementSelect} 
+                            />
+                        </div>
+                        <PropertiesPanel
+                            selectedElementId={selectedElement?.id || null}
+                            selectedElementName={selectedElement?.name}
+                            selectedElementType={selectedElement?.type}
+                            selectedRelationshipId={selectedRelationship?.id || null}
+                            selectedRelationshipName={selectedRelationship?.name}
+                            selectedRelationshipType={selectedRelationship?.type}
+                        />
                     </div>
                 </Suspense>
             </div>

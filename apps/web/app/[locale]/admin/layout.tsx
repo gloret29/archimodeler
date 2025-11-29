@@ -5,7 +5,7 @@ import { useRouter, Link } from "@/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag } from "lucide-react";
 
 export default function AdminLayout({
     children,
@@ -64,6 +64,12 @@ export default function AdminLayout({
                             <Button variant="ghost" className="w-full justify-start">
                                 <Settings className="mr-2 h-4 w-4" />
                                 Settings
+                            </Button>
+                        </Link>
+                        <Link href="/admin/stereotypes">
+                            <Button variant="ghost" className="w-full justify-start">
+                                <Tag className="mr-2 h-4 w-4" />
+                                Stereotypes
                             </Button>
                         </Link>
                         <div className="pt-4">
