@@ -303,6 +303,7 @@ export default function ModelTree() {
                                 className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm group"
                                 draggable
                                 onDragStart={(e) => {
+                                    e.stopPropagation();
                                     e.dataTransfer.setData('application/reactflow', JSON.stringify({
                                         type: el.conceptType.name,
                                         layer: el.conceptType.category,
@@ -377,6 +378,7 @@ export default function ModelTree() {
                             className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm ml-2 group"
                             draggable
                             onDragStart={(e) => {
+                                e.stopPropagation();
                                 e.dataTransfer.setData('application/reactflow', JSON.stringify({
                                     type: el.conceptType.name,
                                     layer: el.conceptType.category,
