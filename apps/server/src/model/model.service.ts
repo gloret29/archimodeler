@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchService } from '../search/search.service';
+import { RelationshipsService } from '../neo4j/relationships.service';
 import { Prisma } from '@repo/database';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class ModelService {
     constructor(
         private prisma: PrismaService,
         private searchService: SearchService,
+        private relationshipsService: RelationshipsService,
     ) { }
 
     async createElement(data: Prisma.ElementCreateInput) {
@@ -18,6 +20,14 @@ export class ModelService {
             },
         });
         await this.searchService.indexElement(element);
+        
+        // Create element node in Neo4j
+        await this.relationshipsService.ensureElementNode(
+            element.id,
+            element.name,
+            element.conceptTypeId
+        );
+        
         return element;
     }
 
@@ -99,6 +109,14 @@ export class ModelService {
 
             console.log('Element created successfully:', element.id);
             await this.searchService.indexElement(element);
+            
+            // Create element node in Neo4j
+            await this.relationshipsService.ensureElementNode(
+                element.id,
+                element.name,
+                element.conceptTypeId
+            );
+            
             return element;
         } catch (error) {
             console.error('Error in createElementSimple:', error);
@@ -115,11 +133,30 @@ export class ModelService {
             },
         });
         await this.searchService.indexElement(element);
+        
+        // Update element node in Neo4j if name or conceptType changed
+        if (data.name || data.conceptType) {
+            const updatedElement = await this.prisma.element.findUnique({
+                where: { id },
+                include: { conceptType: true },
+            });
+            if (updatedElement) {
+                await this.relationshipsService.ensureElementNode(
+                    updatedElement.id,
+                    updatedElement.name,
+                    updatedElement.conceptTypeId
+                );
+            }
+        }
+        
         return element;
     }
 
     async deleteElement(id: string) {
-        // Ideally we should also remove from search index
+        // Delete from Neo4j first (this will also delete all relationships)
+        await this.relationshipsService.deleteElementNode(id);
+        
+        // Then delete from PostgreSQL
         return this.prisma.element.delete({
             where: { id },
         });

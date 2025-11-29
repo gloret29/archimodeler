@@ -13,7 +13,7 @@ Ce fichier suit l'implémentation des fonctionnalités définies dans `NEW_ROADM
 ## Phase 1 : Fondations et Infrastructure
 
 ### 1.1 Intégration Neo4j pour les relations
-**Statut**: 🔴 **À faire**  
+**Statut**: 🟢 **Terminé**  
 **Priorité**: Haute  
 **Description**: 
 - La base PostgreSQL doit rester le référentiel des objets et des vues
@@ -23,11 +23,11 @@ Ce fichier suit l'implémentation des fonctionnalités définies dans `NEW_ROADM
 - Migrer les relations existantes vers Neo4j (si applicable)
 
 **Tâches**:
-- [ ] Installer et configurer Neo4j (docker-compose)
-- [ ] Créer un module Neo4j dans le backend
-- [ ] Créer un service pour gérer les relations (CRUD)
-- [ ] Adapter les endpoints existants pour utiliser Neo4j pour les relations
-- [ ] Créer des migrations pour transférer les relations existantes
+- [x] Installer et configurer Neo4j (docker-compose)
+- [x] Créer un module Neo4j dans le backend
+- [x] Créer un service pour gérer les relations (CRUD)
+- [x] Adapter les endpoints existants pour utiliser Neo4j pour les relations
+- [x] Créer des migrations pour transférer les relations existantes
 - [ ] Tests unitaires et d'intégration
 
 ---
