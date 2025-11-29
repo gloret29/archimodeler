@@ -12,14 +12,15 @@ import CollaborativeCanvas from '@/components/canvas/CollaborativeCanvas';
 import ActiveUsers from '@/components/collaboration/ActiveUsers';
 import { useCollaboration } from '@/hooks/useCollaboration';
 
-import { Home } from 'lucide-react';
+import { Home, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useRouter } from '@/navigation';
 
 function StudioContent() {
     const searchParams = useSearchParams();
     const t = useTranslations('Studio');
-    const { tabs, activeTabId, addTab, addTabWithPersistence } = useTabsStore();
+    const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab } = useTabsStore();
+    const [isSaving, setIsSaving] = React.useState(false);
 
     // Get the active tab
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
@@ -129,6 +130,34 @@ function StudioContent() {
         }
     };
 
+    const handleSave = async () => {
+        if (!activeTab) {
+            return;
+        }
+
+        if (!activeTab.isPersisted) {
+            alert('This view is not saved. Please create a new view with the + button.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // TODO: Get actual canvas content from React Flow
+            const content = {
+                nodes: [],
+                edges: [],
+                savedAt: new Date().toISOString(),
+            };
+
+            await saveActiveTab(content);
+        } catch (error: any) {
+            console.error('Failed to save view:', error);
+            alert(`Failed to save: ${error.message}`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     // Show loading state while initializing workspace
     if (isLoadingPackage) {
         return (
@@ -167,6 +196,17 @@ function StudioContent() {
                     <h1 className="font-semibold text-sm">{t('title')}</h1>
                 </div>
                 <div className="flex items-center gap-2">
+                    {activeTab && activeTab.isPersisted && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            title={`Save ${activeTab.viewName}`}
+                        >
+                            <Save className={`h-5 w-5 ${isSaving ? 'animate-pulse' : ''}`} />
+                        </Button>
+                    )}
                     {activeTab && (
                         <ActiveUsers users={users} isConnected={isConnected} />
                     )}

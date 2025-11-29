@@ -21,6 +21,7 @@ interface TabsStore {
     setActiveTab: (tabId: string) => void;
     updateTabName: (tabId: string, newName: string) => Promise<void>;
     updateTabFolder: (tabId: string, folderId: string | null) => Promise<void>;
+    saveActiveTab: (content: any) => Promise<void>;
     closeAllTabs: () => void;
     openViewFromRepository: (viewId: string, viewName: string, packageId: string, folderId?: string) => void;
 }
@@ -164,6 +165,28 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
                 console.error('Failed to move view:', error);
                 throw error;
             }
+        }
+    },
+
+    saveActiveTab: async (content) => {
+        const state = get();
+        const activeTab = state.tabs.find((t) => t.id === state.activeTabId);
+
+        if (!activeTab) {
+            throw new Error('No active tab to save');
+        }
+
+        if (!activeTab.isPersisted) {
+            throw new Error('Cannot save non-persisted tab');
+        }
+
+        try {
+            // Update view content in database
+            await viewsApi.update(activeTab.viewId, { content });
+            console.log('✓ View saved:', activeTab.viewName);
+        } catch (error) {
+            console.error('Failed to save view:', error);
+            throw error;
         }
     },
 
