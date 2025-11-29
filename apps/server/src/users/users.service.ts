@@ -13,9 +13,37 @@ export class UsersService {
         });
     }
 
+    async findAll(): Promise<User[]> {
+        return this.prisma.user.findMany({
+            include: { roles: true },
+        });
+    }
+
+    async findById(id: string): Promise<User | null> {
+        return this.prisma.user.findUnique({
+            where: { id },
+            include: { roles: true },
+        });
+    }
+
     async create(data: Prisma.UserCreateInput): Promise<User> {
         return this.prisma.user.create({
             data,
+            include: { roles: true },
+        });
+    }
+
+    async update(id: string, data: Prisma.UserUpdateInput): Promise<User> {
+        return this.prisma.user.update({
+            where: { id },
+            data,
+            include: { roles: true },
+        });
+    }
+
+    async delete(id: string): Promise<User> {
+        return this.prisma.user.delete({
+            where: { id },
         });
     }
 }

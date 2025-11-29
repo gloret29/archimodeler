@@ -82,7 +82,7 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 
 ---
 
-## 🟡 Phase 9 : Infrastructure Hybride et Administration (En cours)
+## ✅ Phase 9 : Infrastructure Hybride et Administration (Terminé)
 
 ### 9.1 Intégration Neo4j
 **Statut**: 🟢 **Terminé**
@@ -99,10 +99,10 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [x] Configuration des connecteurs (GitHub, Neo4j)
 
 ### 9.3 Gestion Utilisateurs et Rôles
-**Statut**: 🔴 **À faire**
-- [ ] CRUD Utilisateurs
-- [ ] CRUD Rôles et Permissions
-- [ ] Assignation des rôles
+**Statut**: � **Terminé**
+- [x] CRUD Utilisateurs (Backend & Frontend)
+- [x] CRUD Rôles et Permissions (Backend & Frontend)
+- [x] Assignation des rôles (Via User Edit)
 
 ## 🔴 Phase 10 : Personnalisation (À faire)
 

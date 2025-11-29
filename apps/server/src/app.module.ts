@@ -12,10 +12,12 @@ import { ModelModule } from './model/model.module';
 import { WorkflowModule } from './workflow/workflow.module';
 import { ConnectorsModule } from './connectors/connectors.module';
 import { AiModule } from './ai/ai.module';
+import { Neo4jModule } from './neo4j/neo4j.module';
 import { SettingsModule } from './settings/settings.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, Neo4jModule, SettingsModule],
+  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, Neo4jModule, SettingsModule, RolesModule],
   controllers: [AppController],
   providers: [AppService],
 })
