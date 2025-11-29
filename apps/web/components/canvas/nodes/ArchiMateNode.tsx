@@ -1,27 +1,111 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { User, Server, Database, Box } from 'lucide-react';
+import {
+    User, Server, Database, Box, Layers,
+    Zap, Target, Flag, Shield, FileText,
+    Briefcase, Cpu, HardDrive, Truck,
+    GitMerge, GitCommit, Folder, MapPin,
+    Activity, Anchor, Award, Book, Circle, Hexagon
+} from 'lucide-react';
 
 const layerColors: Record<string, string> = {
+    'Strategy': '#ffebd9', // Orange
     'Business': '#ffffb5', // Yellow
     'Application': '#b5ffff', // Cyan
     'Technology': '#b5ffb5', // Green
+    'Physical': '#ccffcc', // Emerald/Green
+    'Motivation': '#e6ccff', // Purple
+    'Implementation & Migration': '#ffcccc', // Pink
+    'Composite': '#f0f0f0', // Grey
 };
 
 const layerBorders: Record<string, string> = {
+    'Strategy': '#ff9933',
     'Business': '#e6e600',
     'Application': '#00e6e6',
     'Technology': '#00e600',
+    'Physical': '#00cc66',
+    'Motivation': '#9933ff',
+    'Implementation & Migration': '#ff6666',
+    'Composite': '#999999',
 };
 
 const icons: Record<string, any> = {
+    // Strategy
+    'Resource': Database,
+    'Capability': Zap,
+    'CourseOfAction': Activity,
+    'ValueStream': GitMerge,
+
+    // Business
     'BusinessActor': User,
     'BusinessRole': User,
-    'BusinessProcess': Box,
+    'BusinessCollaboration': User,
+    'BusinessInterface': Circle,
+    'BusinessProcess': Activity,
+    'BusinessFunction': Box,
+    'BusinessInteraction': GitMerge,
+    'BusinessEvent': Flag,
+    'BusinessService': Briefcase,
+    'BusinessObject': FileText,
+    'Contract': FileText,
+    'Representation': FileText,
+    'Product': Box,
+
+    // Application
     'ApplicationComponent': Box,
+    'ApplicationCollaboration': Box,
+    'ApplicationInterface': Circle,
+    'ApplicationFunction': Box,
+    'ApplicationInteraction': GitMerge,
+    'ApplicationProcess': Activity,
+    'ApplicationEvent': Flag,
     'ApplicationService': Server,
+    'DataObject': FileText,
+
+    // Technology
     'Node': Server,
-    'Device': Database,
+    'Device': HardDrive,
+    'SystemSoftware': Cpu,
+    'TechnologyCollaboration': Server,
+    'TechnologyInterface': Circle,
+    'Path': GitMerge,
+    'CommunicationNetwork': GitMerge,
+    'TechnologyFunction': Box,
+    'TechnologyProcess': Activity,
+    'TechnologyInteraction': GitMerge,
+    'TechnologyEvent': Flag,
+    'TechnologyService': Server,
+    'Artifact': FileText,
+
+    // Physical
+    'Equipment': HardDrive,
+    'Facility': Box,
+    'DistributionNetwork': GitMerge,
+    'Material': Box,
+
+    // Motivation
+    'Stakeholder': User,
+    'Driver': Target,
+    'Assessment': FileText,
+    'Goal': Target,
+    'Outcome': Award,
+    'Principle': Shield,
+    'Requirement': FileText,
+    'Constraint': Shield,
+    'Meaning': Book,
+    'Value': Award,
+
+    // Implementation
+    'WorkPackage': Briefcase,
+    'Deliverable': Box,
+    'ImplementationEvent': Flag,
+    'Plateau': Layers,
+    'Gap': Circle,
+
+    // Composite
+    'Grouping': Folder,
+    'Location': MapPin,
 };
 
 const ArchiMateNode = ({ data, selected }: NodeProps) => {
