@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from '@/navigation';
 import { useSearchParams } from 'next/navigation';
+import { useTabsStore } from '@/store/useTabsStore';
+import { useRepositoryStore } from '@/store/useRepositoryStore';
 
 interface Element {
     id: string;
@@ -37,6 +39,7 @@ interface ViewType {
 export default function ModelTree() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { refreshTrigger } = useRepositoryStore();
 
     const [folders, setFolders] = useState<FolderType[]>([]);
     const [elements, setElements] = useState<Element[]>([]);
@@ -65,6 +68,13 @@ export default function ModelTree() {
         const interval = setInterval(fetchData, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    // Refresh immediately when triggered
+    useEffect(() => {
+        if (refreshTrigger > 0) {
+            fetchData();
+        }
+    }, [refreshTrigger]);
 
     const toggleExpand = (key: string) => {
         setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
@@ -143,6 +153,7 @@ export default function ModelTree() {
 
         const elementDataStr = e.dataTransfer.getData('application/reactflow');
         const folderDataStr = e.dataTransfer.getData('application/archimodeler-folder');
+        const viewDataStr = e.dataTransfer.getData('application/archimodeler-view');
 
         if (elementDataStr) {
             const { existingId } = JSON.parse(elementDataStr);
@@ -178,6 +189,44 @@ export default function ModelTree() {
             } catch (err) {
                 console.error(err);
             }
+        } else if (viewDataStr) {
+            const { viewId } = JSON.parse(viewDataStr);
+            if (!viewId) return;
+
+            try {
+                await fetch(`http://localhost:3002/model/views/${viewId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                    },
+                    body: JSON.stringify({ folder: { connect: { id: targetFolderId } } })
+                });
+                fetchData();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    };
+
+    const handleRenameView = async (viewId: string, currentName: string) => {
+        const newName = prompt('New view name:', currentName);
+        if (!newName || newName === currentName) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            await fetch(`http://localhost:3002/model/views/${viewId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ name: newName })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to rename view');
         }
     };
 
@@ -290,11 +339,36 @@ export default function ModelTree() {
                         {folder.views?.map((view: ViewType) => (
                             <div
                                 key={view.id}
-                                className="flex items-center gap-2 p-1.5 rounded-md cursor-pointer text-sm hover:bg-accent"
-                                onClick={() => router.push(`/studio?viewId=${view.id}`)}
+                                className="flex items-center gap-2 p-1.5 rounded-md cursor-pointer text-sm hover:bg-accent group"
+                                draggable
+                                onDragStart={(e) => {
+                                    e.stopPropagation();
+                                    e.dataTransfer.setData('application/archimodeler-view', JSON.stringify({ viewId: view.id }));
+                                }}
+                                onClick={() => {
+                                    const packageId = searchParams.get('packageId') || 'default';
+                                    useTabsStore.getState().openViewFromRepository(
+                                        view.id,
+                                        view.name,
+                                        packageId,
+                                        folder.id
+                                    );
+                                }}
                             >
                                 <Layout className="h-3.5 w-3.5 text-primary" />
-                                <span className="truncate">{view.name}</span>
+                                <span className="truncate flex-1">{view.name}</span>
+                                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                                    <button
+                                        className="p-0.5 hover:bg-accent rounded"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRenameView(view.id, view.name);
+                                        }}
+                                        title="Rename"
+                                    >
+                                        <Edit2 className="h-3 w-3 text-muted-foreground" />
+                                    </button>
+                                </div>
                             </div>
                         ))}
 

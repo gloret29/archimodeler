@@ -11,10 +11,58 @@
         "welcome": "Welcome to ArchiModeler",
         "recentPackages": "Recent Model Packages",
         "openStudio": "Open Studio",
-        "settings": "Settings"
+        "settings": "Settings",
+        "logout": "Logout"
+    },
+    "Studio": {
+        "title": "ArchiModeler Studio",
+        "backToHome": "Back to Home"
+    },
+    "Settings": {
+        "title": "Settings",
+        "subtitle": "Manage your account settings and set e-mail preferences.",
+        "backToHome": "Back to Home",
+        "profile": "Profile",
+        "appearance": "Appearance",
+        "language": "Language",
+        "profileTitle": "Profile",
+        "profileDescription": "This is how others will see you on the site.",
+        "usernameLabel": "Username",
+        "usernamePlaceholder": "Your username",
+        "usernameDescription": "This is your public display name. It can be your real name or a pseudonym.",
+        "emailLabel": "Email",
+        "emailPlaceholder": "your.email@example.com",
+        "emailDescription": "You can manage verified email addresses in your email settings.",
+        "bioLabel": "Bio",
+        "bioPlaceholder": "Tell us a little bit about yourself",
+        "bioDescription": "You can @mention other users and organizations to link to them.",
+        "updateProfile": "Update profile",
+        "appearanceTitle": "Appearance",
+        "appearanceDescription": "Customize the appearance of the app. Automatically switch between day and night themes.",
+        "themeLabel": "Theme",
+        "themeDescription": "Select the theme for the dashboard.",
+        "themeLight": "Light",
+        "themeDark": "Dark",
+        "themeSystem": "System",
+        "updatePreferences": "Update preferences",
+        "languageTitle": "Language",
+        "languageDescription": "Select your preferred language for the interface.",
+        "languageLabel": "Interface Language",
+        "languageDescription2": "This will change the language of the entire application.",
+        "updateLanguage": "Update language"
     },
     "Common": {
         "loading": "Loading...",
-        "backToHome": "Back to Home"
+        "backToHome": "Back to Home",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "update": "Update",
+        "search": "Search",
+        "filter": "Filter",
+        "export": "Export",
+        "import": "Import"
     }
 }

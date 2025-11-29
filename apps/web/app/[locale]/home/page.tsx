@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from '@/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Layout, BarChart3, ArrowRight, Box, Settings } from 'lucide-react';
+import { Plus, Layout, BarChart3, ArrowRight, Box, Settings, LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface ModelPackage {
@@ -63,6 +63,11 @@ export default function HomePage() {
         }
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('accessToken');
+        router.push('/');
+    };
+
     return (
         <div className="container mx-auto p-8 space-y-8">
             <div className="flex justify-between items-center">
@@ -71,6 +76,10 @@ export default function HomePage() {
                     <p className="text-muted-foreground mt-2">Manage your enterprise architecture models and views.</p>
                 </div>
                 <div className="flex gap-4">
+                    <Button variant="ghost" onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        {t('logout')}
+                    </Button>
                     <Button variant="outline" onClick={() => router.push('/settings/profile')}>
                         <Settings className="mr-2 h-4 w-4" />
                         {t('settings')}

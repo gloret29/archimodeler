@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { useTranslations } from "next-intl";
 
 const profileFormSchema = z.object({
     username: z
@@ -38,6 +39,8 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfileSettingsPage() {
     const [userId, setUserId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const t = useTranslations('Settings');
+    const tCommon = useTranslations('Common');
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -105,15 +108,15 @@ export default function ProfileSettingsPage() {
     }
 
     if (isLoading) {
-        return <div>Loading...</div>;
+        return <div>{tCommon('loading')}</div>;
     }
 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-medium">Profile</h3>
+                <h3 className="text-lg font-medium">{t('profileTitle')}</h3>
                 <p className="text-sm text-muted-foreground">
-                    This is how others will see you on the site.
+                    {t('profileDescription')}
                 </p>
             </div>
             <Separator />
@@ -124,12 +127,12 @@ export default function ProfileSettingsPage() {
                         name="username"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Username</FormLabel>
+                                <FormLabel>{t('usernameLabel')}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Your name" {...field} />
+                                    <Input placeholder={t('usernamePlaceholder')} {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                    This is your public display name.
+                                    {t('usernameDescription')}
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>
@@ -140,18 +143,18 @@ export default function ProfileSettingsPage() {
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Email</FormLabel>
+                                <FormLabel>{t('emailLabel')}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Your email" {...field} />
+                                    <Input placeholder={t('emailPlaceholder')} {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                    You can manage verified email addresses in your email settings.
+                                    {t('emailDescription')}
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-                    <Button type="submit">Update profile</Button>
+                    <Button type="submit">{t('updateProfile')}</Button>
                 </form>
             </Form>
         </div>

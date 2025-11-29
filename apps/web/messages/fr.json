@@ -11,10 +11,58 @@
         "welcome": "Bienvenue sur ArchiModeler",
         "recentPackages": "Packages de modèles récents",
         "openStudio": "Ouvrir le Studio",
-        "settings": "Paramètres"
+        "settings": "Paramètres",
+        "logout": "Se déconnecter"
+    },
+    "Studio": {
+        "title": "ArchiModeler Studio",
+        "backToHome": "Retour à l'accueil"
+    },
+    "Settings": {
+        "title": "Paramètres",
+        "subtitle": "Gérez les paramètres de votre compte et définissez vos préférences.",
+        "backToHome": "Retour à l'accueil",
+        "profile": "Profil",
+        "appearance": "Apparence",
+        "language": "Langue",
+        "profileTitle": "Profil",
+        "profileDescription": "C'est ainsi que les autres vous verront sur le site.",
+        "usernameLabel": "Nom d'utilisateur",
+        "usernamePlaceholder": "Votre nom d'utilisateur",
+        "usernameDescription": "C'est votre nom d'affichage public. Il peut s'agir de votre vrai nom ou d'un pseudonyme.",
+        "emailLabel": "Email",
+        "emailPlaceholder": "votre.email@exemple.com",
+        "emailDescription": "Vous pouvez gérer les adresses e-mail vérifiées dans vos paramètres de messagerie.",
+        "bioLabel": "Biographie",
+        "bioPlaceholder": "Parlez-nous un peu de vous",
+        "bioDescription": "Vous pouvez @mentionner d'autres utilisateurs et organisations pour créer un lien vers eux.",
+        "updateProfile": "Mettre à jour le profil",
+        "appearanceTitle": "Apparence",
+        "appearanceDescription": "Personnalisez l'apparence de l'application. Basculez automatiquement entre les thèmes jour et nuit.",
+        "themeLabel": "Thème",
+        "themeDescription": "Sélectionnez le thème pour le tableau de bord.",
+        "themeLight": "Clair",
+        "themeDark": "Sombre",
+        "themeSystem": "Système",
+        "updatePreferences": "Mettre à jour les préférences",
+        "languageTitle": "Langue",
+        "languageDescription": "Sélectionnez votre langue préférée pour l'interface.",
+        "languageLabel": "Langue de l'interface",
+        "languageDescription2": "Cela changera la langue de toute l'application.",
+        "updateLanguage": "Mettre à jour la langue"
     },
     "Common": {
         "loading": "Chargement...",
-        "backToHome": "Retour à l'accueil"
+        "backToHome": "Retour à l'accueil",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "create": "Créer",
+        "update": "Mettre à jour",
+        "search": "Rechercher",
+        "filter": "Filtrer",
+        "export": "Exporter",
+        "import": "Importer"
     }
 }

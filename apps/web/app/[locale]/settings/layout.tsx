@@ -5,6 +5,7 @@ import { Link, usePathname } from '@/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { User, Palette, Globe, Home } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
     items: {
@@ -44,38 +45,40 @@ function SidebarNav({ className, items, ...props }: SidebarNavProps) {
     );
 }
 
-const sidebarNavItems = [
-    {
-        title: "Profile",
-        href: "/settings/profile",
-        icon: <User className="h-4 w-4" />,
-    },
-    {
-        title: "Appearance",
-        href: "/settings/appearance",
-        icon: <Palette className="h-4 w-4" />,
-    },
-    // {
-    //     title: "Language",
-    //     href: "/settings/language",
-    //     icon: <Globe className="h-4 w-4" />,
-    // },
-];
-
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+    const t = useTranslations('Settings');
+
+    const sidebarNavItems = [
+        {
+            title: t('profile'),
+            href: "/settings/profile",
+            icon: <User className="h-4 w-4" />,
+        },
+        {
+            title: t('appearance'),
+            href: "/settings/appearance",
+            icon: <Palette className="h-4 w-4" />,
+        },
+        {
+            title: t('language'),
+            href: "/settings/language",
+            icon: <Globe className="h-4 w-4" />,
+        },
+    ];
+
     return (
         <div className="hidden space-y-6 p-10 pb-16 md:block">
             <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                    <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
+                    <h2 className="text-2xl font-bold tracking-tight">{t('title')}</h2>
                     <p className="text-muted-foreground">
-                        Manage your account settings and set e-mail preferences.
+                        {t('subtitle')}
                     </p>
                 </div>
                 <Link href="/home">
                     <Button variant="outline" size="sm" className="gap-2">
                         <Home className="h-4 w-4" />
-                        Back to Home
+                        {t('backToHome')}
                     </Button>
                 </Link>
             </div>

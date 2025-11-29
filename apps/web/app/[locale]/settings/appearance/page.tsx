@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 const appearanceFormSchema = z.object({
     theme: z.enum(["light", "dark", "system"]),
@@ -26,6 +27,7 @@ type AppearanceFormValues = z.infer<typeof appearanceFormSchema>;
 
 export default function AppearanceSettingsPage() {
     const { theme, setTheme } = useTheme();
+    const t = useTranslations('Settings');
 
     const form = useForm<AppearanceFormValues>({
         resolver: zodResolver(appearanceFormSchema),
@@ -48,10 +50,9 @@ export default function AppearanceSettingsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-medium">Appearance</h3>
+                <h3 className="text-lg font-medium">{t('appearanceTitle')}</h3>
                 <p className="text-sm text-muted-foreground">
-                    Customize the appearance of the app. Automatically switch between day
-                    and night themes.
+                    {t('appearanceDescription')}
                 </p>
             </div>
             <Separator />
@@ -62,9 +63,9 @@ export default function AppearanceSettingsPage() {
                         name="theme"
                         render={({ field }) => (
                             <FormItem className="space-y-1">
-                                <FormLabel>Theme</FormLabel>
+                                <FormLabel>{t('themeLabel')}</FormLabel>
                                 <FormDescription>
-                                    Select the theme for the dashboard.
+                                    {t('themeDescription')}
                                 </FormDescription>
                                 <FormMessage />
                                 <RadioGroup
@@ -98,7 +99,7 @@ export default function AppearanceSettingsPage() {
                                                 </div>
                                             </div>
                                             <span className="block w-full p-2 text-center font-normal">
-                                                Light
+                                                {t('themeLight')}
                                             </span>
                                         </FormLabel>
                                     </FormItem>
@@ -124,7 +125,7 @@ export default function AppearanceSettingsPage() {
                                                 </div>
                                             </div>
                                             <span className="block w-full p-2 text-center font-normal">
-                                                Dark
+                                                {t('themeDark')}
                                             </span>
                                         </FormLabel>
                                     </FormItem>
@@ -133,7 +134,7 @@ export default function AppearanceSettingsPage() {
                         )}
                     />
 
-                    {/* <Button type="submit">Update preferences</Button> */}
+                    {/* <Button type="submit">{t('updatePreferences')}</Button> */}
                 </form>
             </Form>
         </div>

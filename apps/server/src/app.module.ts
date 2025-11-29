@@ -15,9 +15,10 @@ import { AiModule } from './ai/ai.module';
 import { Neo4jModule } from './neo4j/neo4j.module';
 import { SettingsModule } from './settings/settings.module';
 import { RolesModule } from './roles/roles.module';
+import { CollaborationModule } from './collaboration/collaboration.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, Neo4jModule, SettingsModule, RolesModule],
+  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, Neo4jModule, SettingsModule, RolesModule, CollaborationModule],
   controllers: [AppController],
   providers: [AppService],
 })
