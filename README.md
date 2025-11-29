@@ -249,7 +249,7 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 - **TypeScript** : Utilisez des types stricts
 
 ## 🗺️ Roadmap
-(Voir [BACKLOG.md](./packages/BACKLOG.md) pour le suivi détaillé)
+(Voir [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) pour le suivi détaillé)
 
 ### Phase 1 : Architecture & Données (En cours)
 - [ ] Intégration Neo4j pour les relations

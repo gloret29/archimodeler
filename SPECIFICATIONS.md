@@ -169,7 +169,7 @@ model Role {
 
 ## 4. Roadmap d'Implémentation
 
-Voir le fichier [BACKLOG.md](./packages/BACKLOG.md) pour le suivi détaillé des tâches et l'ordre de priorité.
+Voir le fichier [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) pour le suivi détaillé des tâches et l'ordre de priorité.
 
 ---
 **Version**: 2.0.0
