@@ -74,6 +74,38 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
         });
     }, []);
 
+    const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+        if (!node.data.elementId) return;
+
+        const newName = prompt('New name:', String(node.data.label));
+        if (!newName) return;
+
+        // Update in backend
+        const token = localStorage.getItem('accessToken');
+        fetch(`http://localhost:3002/model/elements/${node.data.elementId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name: newName })
+        })
+            .then(() => {
+                // Update node label locally
+                setNodes((nds) =>
+                    nds.map((n) =>
+                        n.id === node.id
+                            ? { ...n, data: { ...n.data, label: newName } }
+                            : n
+                    )
+                );
+            })
+            .catch((err) => {
+                console.error(err);
+                alert('Failed to rename element');
+            });
+    }, [setNodes]);
+
     const handleRenameNode = async () => {
         if (!nodeContextMenu.nodeId || !nodeContextMenu.nodeData.elementId) return;
 
@@ -300,6 +332,7 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onNodeContextMenu={onNodeContextMenu}
+                onNodeDoubleClick={onNodeDoubleClick}
                 onInit={setReactFlowInstance}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
