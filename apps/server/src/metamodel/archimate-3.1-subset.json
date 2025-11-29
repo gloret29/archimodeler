@@ -1,0 +1,69 @@
+{
+    "name": "ArchiMate 3.1",
+    "version": "3.1",
+    "concepts": [
+        {
+            "name": "BusinessActor",
+            "category": "Business Layer"
+        },
+        {
+            "name": "BusinessRole",
+            "category": "Business Layer"
+        },
+        {
+            "name": "BusinessProcess",
+            "category": "Business Layer"
+        },
+        {
+            "name": "ApplicationComponent",
+            "category": "Application Layer"
+        },
+        {
+            "name": "ApplicationService",
+            "category": "Application Layer"
+        },
+        {
+            "name": "Node",
+            "category": "Technology Layer"
+        },
+        {
+            "name": "Device",
+            "category": "Technology Layer"
+        }
+    ],
+    "relations": [
+        {
+            "name": "Assignment"
+        },
+        {
+            "name": "Realization"
+        },
+        {
+            "name": "Serving"
+        },
+        {
+            "name": "Access"
+        },
+        {
+            "name": "Influence"
+        },
+        {
+            "name": "Triggering"
+        },
+        {
+            "name": "Flow"
+        },
+        {
+            "name": "Composition"
+        },
+        {
+            "name": "Aggregation"
+        },
+        {
+            "name": "Specialization"
+        },
+        {
+            "name": "Association"
+        }
+    ]
+}

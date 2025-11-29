@@ -1,0 +1,21 @@
+"use client";
+
+import React from 'react';
+import { ReactFlowProvider } from '@xyflow/react';
+import ModelingCanvas from '@/components/canvas/ModelingCanvas';
+import Stencil from '@/components/canvas/Stencil';
+import CoachChat from '@/components/ai/CoachChat';
+
+export default function StudioPage() {
+    return (
+        <div className="flex h-screen w-full overflow-hidden bg-gray-50">
+            <ReactFlowProvider>
+                <Stencil />
+                <main className="flex-1 relative">
+                    <ModelingCanvas />
+                    <CoachChat />
+                </main>
+            </ReactFlowProvider>
+        </div>
+    );
+}

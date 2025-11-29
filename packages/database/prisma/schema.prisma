@@ -1,0 +1,199 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles     Role[]
+  groups    Group[]
+
+  requestedChanges ChangeRequest[] @relation("Requester")
+  reviewedChanges  ChangeRequest[] @relation("Reviewer")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique // Consumer, Contributor, Designer, Lead Designer, System Administrator
+  description String?
+  users       User[]
+  permissions Permission[]
+}
+
+model Permission {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String?
+  roles       Role[]
+}
+
+model Group {
+  id    String @id @default(uuid())
+  name  String @unique
+  users User[]
+}
+
+// --- Metamodel Engine ---
+
+model ModelPackage {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  elements      Element[]
+  relationships Relationship[]
+  
+  status        WorkflowStatus @default(DRAFT)
+  changeRequests ChangeRequest[]
+}
+
+enum WorkflowStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+model ChangeRequest {
+  id             String         @id @default(uuid())
+  title          String
+  description    String?
+  status         WorkflowStatus @default(IN_REVIEW)
+  
+  modelPackageId String
+  modelPackage   ModelPackage   @relation(fields: [modelPackageId], references: [id])
+  
+  requesterId    String
+  requester      User           @relation("Requester", fields: [requesterId], references: [id])
+  
+  reviewerId     String?
+  reviewer       User?          @relation("Reviewer", fields: [reviewerId], references: [id])
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Metamodel {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g., "ArchiMate 3.1"
+  version     String
+  description String?
+  
+  conceptTypes  ConceptType[]
+  relationTypes RelationType[]
+}
+
+model ConceptType {
+  id          String    @id @default(uuid())
+  name        String    // e.g., "BusinessActor"
+  category    String?   // e.g., "Business Layer"
+  metamodelId String
+  metamodel   Metamodel @relation(fields: [metamodelId], references: [id])
+
+  elements Element[]
+
+  // Relation Rules
+  sourceRules RelationType[] @relation("SourceRules")
+  targetRules RelationType[] @relation("TargetRules")
+
+  @@unique([name, metamodelId])
+}
+
+model RelationType {
+  id          String    @id @default(uuid())
+  name        String    // e.g., "Assignment"
+  metamodelId String
+  metamodel   Metamodel @relation(fields: [metamodelId], references: [id])
+  
+  // Validity Rules
+  allowedSourceTypes ConceptType[] @relation("SourceRules")
+  allowedTargetTypes ConceptType[] @relation("TargetRules")
+
+  relationships Relationship[]
+
+  @@unique([name, metamodelId])
+}
+
+model Element {
+  id             String       @id @default(uuid())
+  name           String
+  documentation  String?
+  properties     Json?        // JSONB for flexible attributes
+  
+  conceptTypeId  String
+  conceptType    ConceptType  @relation(fields: [conceptTypeId], references: [id])
+  
+  modelPackageId String
+  modelPackage   ModelPackage @relation(fields: [modelPackageId], references: [id])
+
+  // Versioning (Time Travel)
+  validFrom      DateTime     @default(now())
+  validTo        DateTime?    // Null means current version
+  versionId      String       @default(uuid()) // Grouping versions of the same logical element
+
+  sourceRelationships Relationship[] @relation("SourceElement")
+  targetRelationships Relationship[] @relation("TargetElement")
+
+  // External Data Source
+  externalId     String?
+  dataSourceId   String?
+  dataSource     DataSource?  @relation(fields: [dataSourceId], references: [id])
+}
+
+model DataSource {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        String   // 'ServiceNow', 'Excel', 'CSV'
+  config      Json     // URL, Credentials, etc.
+  mapping     Json?    // Column mapping configuration
+  schedule    String?  // Cron expression for auto-sync
+  lastSync    DateTime?
+  
+  elements    Element[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Relationship {
+  id             String       @id @default(uuid())
+  name           String?
+  documentation  String?
+  properties     Json?
+  
+  relationTypeId String
+  relationType   RelationType @relation(fields: [relationTypeId], references: [id])
+  
+  sourceId       String
+  source         Element      @relation("SourceElement", fields: [sourceId], references: [id])
+  
+  targetId       String
+  target         Element      @relation("TargetElement", fields: [targetId], references: [id])
+
+  modelPackageId String
+  modelPackage   ModelPackage @relation(fields: [modelPackageId], references: [id])
+
+  // Versioning (Time Travel)
+  validFrom      DateTime     @default(now())
+  validTo        DateTime?
+  versionId      String       @default(uuid())
+}
