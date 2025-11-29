@@ -1,135 +1,295 @@
-# Turborepo starter
+# ArchiModeler 🏗️
 
-This Turborepo starter is maintained by the Turborepo core team.
+> Plateforme collaborative de modélisation d'architecture d'entreprise basée sur ArchiMate 3.2
 
-## Using this example
+[![Next.js](https://img.shields.io/badge/Next.js-16.0.5-black)](https://nextjs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-Latest-red)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-5.22.0-2D3748)](https://www.prisma.io/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Run the following command:
+## 📋 Table des Matières
 
-```sh
-npx create-turbo@latest
-```
+- [Vue d'ensemble](#-vue-densemble)
+- [Fonctionnalités](#-fonctionnalités)
+- [Architecture](#-architecture)
+- [Installation](#-installation)
+- [Utilisation](#-utilisation)
+- [Documentation](#-documentation)
+- [Contribution](#-contribution)
 
-## What's inside?
+## 🎯 Vue d'ensemble
 
-This Turborepo includes the following packages/apps:
+ArchiModeler est une application web moderne pour créer, gérer et visualiser des modèles d'architecture d'entreprise conformes au standard ArchiMate 3.2. Elle offre une expérience utilisateur intuitive avec des fonctionnalités avancées de modélisation collaborative.
 
-### Apps and Packages
+### Pourquoi ArchiModeler ?
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- ✅ **Conforme ArchiMate 3.2** - Respect strict du métamodèle
+- 🎨 **Interface Moderne** - UI/UX inspirée de Figma
+- 🚀 **Performance** - Architecture optimisée avec React Flow
+- 🔒 **Sécurisé** - Authentification JWT et RBAC
+- 📱 **Responsive** - Fonctionne sur tous les appareils
+- 🌐 **Collaboratif** - Édition multi-utilisateurs (roadmap)
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## ✨ Fonctionnalités
 
-### Utilities
+### Modélisation
 
-This Turborepo has some additional tools already setup for you:
+- **Palette ArchiMate** - Tous les éléments ArchiMate 3.2 organisés par couche
+- **Drag & Drop** - Glissez-déposez des éléments sur le canvas
+- **Smart Connectors** - Validation automatique des relations
+- **Menu Contextuel** - Actions rapides par clic droit
+- **Renommage Élégant** - Dialog moderne pour renommer les éléments
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+### Gestion
 
-### Build
+- **Repository** - Organisation hiérarchique des éléments
+- **Vues Multiples** - Créez et gérez plusieurs diagrammes
+- **Recherche** - Trouvez rapidement vos éléments
+- **Dossiers** - Organisez vos modèles
 
-To build all apps and packages, run the following command:
+### Édition
 
-```
-cd my-turborepo
+- **Double-clic pour Renommer** - Renommage rapide
+- **Suppression Intelligente** - Supprimez de la vue ou du repository
+- **Undo/Redo** - Annulez vos actions (roadmap)
+- **Auto-save** - Sauvegarde automatique (roadmap)
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+## 🏗️ Architecture
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
+### Stack Technologique
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+┌─────────────────────────────────────────┐
+│           Frontend (Next.js)            │
+│  - React 18 + TypeScript                │
+│  - React Flow (diagramming)             │
+│  - Tailwind CSS + shadcn/ui             │
+│  - Zustand (state management)           │
+└─────────────────────────────────────────┘
+                    ↕ HTTP/REST
+┌─────────────────────────────────────────┐
+│           Backend (NestJS)              │
+│  - TypeScript                           │
+│  - Prisma ORM                           │
+│  - JWT Authentication                   │
+│  - Search Service                       │
+└─────────────────────────────────────────┘
+                    ↕
+┌─────────────────────────────────────────┐
+│         Database (PostgreSQL)           │
+│  - Metamodel                            │
+│  - Elements & Relations                 │
+│  - Views & Packages                     │
+└─────────────────────────────────────────┘
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### Structure du Projet
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+archimodeler/
+├── apps/
+│   ├── web/              # Frontend Next.js
+│   │   ├── app/          # Pages (App Router)
+│   │   ├── components/   # Composants React
+│   │   │   ├── canvas/   # Composants de diagramming
+│   │   │   ├── studio/   # Composants du studio
+│   │   │   └── ui/       # Composants UI réutilisables
+│   │   └── lib/          # Utilitaires et helpers
+│   ├── server/           # Backend NestJS
+│   │   └── src/
+│   │       ├── model/    # Gestion des modèles
+│   │       ├── search/   # Service de recherche
+│   │       └── auth/     # Authentification
+│   └── docs/             # Documentation
+├── packages/
+│   ├── database/         # Schéma Prisma
+│   ├── types/            # Types TypeScript partagés
+│   └── ui/               # Composants UI partagés
+└── turbo.json            # Configuration Turborepo
 ```
 
-### Remote Caching
+## 🚀 Installation
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+### Prérequis
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+- Node.js 22.17.0 ou supérieur
+- PostgreSQL 14 ou supérieur
+- npm ou pnpm
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+### Étapes
 
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+1. **Cloner le repository**
+```bash
+git clone https://github.com/gloret29/archimodeler.git
+cd archimodeler
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+2. **Installer les dépendances**
+```bash
+npm install
 ```
 
-## Useful Links
+3. **Configurer la base de données**
 
-Learn more about the power of Turborepo:
+Créez un fichier `.env` dans `packages/database/` :
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/archimodeler"
+```
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+4. **Initialiser la base de données**
+```bash
+cd packages/database
+npx prisma generate
+npx prisma migrate dev
+npx ts-node prisma/seed.ts
+cd ../..
+```
+
+5. **Lancer l'application**
+```bash
+npm run dev
+```
+
+L'application sera accessible à :
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3002
+- Documentation: http://localhost:3001
+
+## 📖 Utilisation
+
+### Créer un Élément
+
+1. Glissez un élément depuis la palette (gauche) vers le canvas
+2. L'élément est automatiquement créé dans le repository
+3. Double-cliquez pour renommer
+
+### Créer une Relation
+
+1. Cliquez sur le point de connexion d'un élément source
+2. Glissez vers l'élément cible
+3. Si plusieurs relations sont possibles, choisissez dans le menu
+4. La relation est créée avec validation ArchiMate
+
+### Sauvegarder une Vue
+
+1. Cliquez sur "Save View" en haut à droite
+2. Donnez un nom à votre vue
+3. La vue est sauvegardée et accessible depuis le repository
+
+### Menu Contextuel
+
+Clic droit sur un élément pour :
+- **Rename** - Renommer l'élément
+- **Remove from View** - Retirer de la vue actuelle
+- **Delete from Repository** - Supprimer complètement
+
+## 📚 Documentation
+
+- [Spécifications Techniques](./SPECIFICATIONS.md) - Architecture et implémentation détaillée
+- [Guide de Développement](./DEV_GUIDE.md) - Guide pour les développeurs
+- [Status d'Implémentation](./IMPLEMENTATION_STATUS.md) - Fonctionnalités implémentées
+
+## 🛠️ Développement
+
+### Commandes Utiles
+
+```bash
+# Développement
+npm run dev              # Lance tous les services
+
+# Build
+npm run build            # Build tous les packages
+
+# Linting
+npm run lint             # Lint tous les packages
+
+# Base de données
+cd packages/database
+npx prisma studio        # Interface graphique Prisma
+npx prisma migrate dev   # Créer une migration
+npx prisma generate      # Générer le client Prisma
+```
+
+### Tests
+
+```bash
+# Tests unitaires
+npm run test
+
+# Tests E2E
+npm run test:e2e
+
+# Coverage
+npm run test:coverage
+```
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! Voici comment contribuer :
+
+1. Fork le projet
+2. Créez une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrez une Pull Request
+
+### Conventions
+
+- **Commits** : Utilisez les [Conventional Commits](https://www.conventionalcommits.org/)
+  - `feat:` - Nouvelle fonctionnalité
+  - `fix:` - Correction de bug
+  - `docs:` - Documentation
+  - `style:` - Formatage
+  - `refactor:` - Refactoring
+  - `test:` - Tests
+  - `chore:` - Maintenance
+
+- **Code** : Suivez les règles ESLint du projet
+- **TypeScript** : Utilisez des types stricts
+
+## 🗺️ Roadmap
+
+### Version 1.1 (Q1 2026)
+- [ ] Collaboration temps réel avec Yjs
+- [ ] Export PNG/SVG/PDF
+- [ ] Import/Export ArchiMate XML
+- [ ] Undo/Redo complet
+
+### Version 1.2 (Q2 2026)
+- [ ] Templates de modèles
+- [ ] Analyse d'impact
+- [ ] Génération de documentation
+- [ ] Thèmes personnalisables
+
+### Version 2.0 (Q3 2026)
+- [ ] IA pour suggestions
+- [ ] Versioning des modèles
+- [ ] API publique
+- [ ] Plugins système
+
+## 📄 Licence
+
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## 👥 Équipe
+
+- **Gaël Loret** - Développeur Principal - [@gloret29](https://github.com/gloret29)
+
+## 🙏 Remerciements
+
+- [ArchiMate®](https://www.opengroup.org/archimate-forum) - The Open Group
+- [React Flow](https://reactflow.dev/) - Diagramming library
+- [shadcn/ui](https://ui.shadcn.com/) - UI components
+- [Prisma](https://www.prisma.io/) - ORM
+- [NestJS](https://nestjs.com/) - Backend framework
+
+## 📞 Support
+
+- 📧 Email: support@archimodeler.com
+- 💬 Discord: [Rejoindre notre serveur](https://discord.gg/archimodeler)
+- 🐛 Issues: [GitHub Issues](https://github.com/gloret29/archimodeler/issues)
+
+---
+
+**Fait avec ❤️ par l'équipe ArchiModeler**
