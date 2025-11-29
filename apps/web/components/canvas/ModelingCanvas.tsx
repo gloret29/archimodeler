@@ -29,7 +29,11 @@ const initialNodes: Node[] = [];
 let id = 0;
 const getId = () => `dndnode_${id++}`;
 
-export default function ModelingCanvas() {
+interface ModelingCanvasProps {
+    packageId?: string | null;
+}
+
+export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -99,29 +103,60 @@ export default function ModelingCanvas() {
     }, []);
 
     const onDrop = useCallback(
-        (event: React.DragEvent) => {
+        async (event: React.DragEvent) => {
             event.preventDefault();
 
             if (!reactFlowWrapper.current || !reactFlowInstance) {
                 return;
             }
 
-            const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
             const dataStr = event.dataTransfer.getData('application/reactflow');
-
             if (!dataStr) return;
 
             const { type, layer, label, existingId } = JSON.parse(dataStr);
 
-            // check if the dropped element is valid
-            if (typeof type === 'undefined' || !type) {
-                return;
-            }
+            if (!type) return;
 
             const position = reactFlowInstance.screenToFlowPosition({
                 x: event.clientX,
                 y: event.clientY,
             });
+
+            let elementId = existingId;
+
+            // If it's a new element (from Stencil), create it in the backend
+            if (!elementId) {
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const res = await fetch('http://localhost:3002/model/elements', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            name: label || type,
+                            conceptType: {
+                                connectOrCreate: {
+                                    where: { name_metamodelId: { name: type, metamodelId: 'default' } }, // Assuming default metamodel for now
+                                    create: { name: type, category: layer, metamodel: { connect: { name: 'ArchiMate 3.1' } } } // Fallback
+                                }
+                            },
+                            modelPackage: { connect: { id: packageId || 'default-package-id' } }
+                        })
+                    });
+
+                    if (res.ok) {
+                        const newElement = await res.json();
+                        elementId = newElement.id;
+                    } else {
+                        console.error('Failed to create element');
+                        // Fallback to visual-only if backend fails (or handle error appropriately)
+                    }
+                } catch (err) {
+                    console.error('Error creating element:', err);
+                }
+            }
 
             const newNode: Node = {
                 id: getId(),
@@ -131,7 +166,7 @@ export default function ModelingCanvas() {
                     label: label || `${type}`,
                     type,
                     layer,
-                    elementId: existingId
+                    elementId: elementId // Store the real backend ID
                 },
             };
 
