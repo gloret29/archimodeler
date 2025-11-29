@@ -18,7 +18,7 @@ export default function DiagramDescriber({ nodes, edges }: { nodes: any[], edges
     const handleGenerate = async () => {
         setLoading(true);
         try {
-            const res = await fetch("http://localhost:3001/ai/describe", {
+            const res = await fetch("http://localhost:3002/ai/describe", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

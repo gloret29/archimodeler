@@ -27,7 +27,7 @@ export default function CoachChat() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:3001/ai/coach', {
+            const res = await fetch('http://localhost:3002/ai/coach', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -80,8 +80,8 @@ export default function CoachChat() {
                             >
                                 <div
                                     className={`max-w-[80%] rounded-lg p-3 text-sm ${msg.role === 'user'
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'bg-muted'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted'
                                         }`}
                                 >
                                     {msg.content}

@@ -14,7 +14,7 @@ export default function ChangeRequestDetailPage() {
 
     useEffect(() => {
         if (params.id) {
-            fetch(`http://localhost:3001/workflow/change-requests/${params.id}`, {
+            fetch(`http://localhost:3002/workflow/change-requests/${params.id}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 }
@@ -27,7 +27,7 @@ export default function ChangeRequestDetailPage() {
 
     const handleAction = async (action: 'approve' | 'reject' | 'publish' | 'submit') => {
         try {
-            await fetch(`http://localhost:3001/workflow/change-requests/${params.id}/${action}`, {
+            await fetch(`http://localhost:3002/workflow/change-requests/${params.id}/${action}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

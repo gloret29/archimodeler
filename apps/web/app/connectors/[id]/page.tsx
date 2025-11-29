@@ -21,7 +21,7 @@ export default function ConnectorDetailPage() {
     const handleSync = async () => {
         setSyncing(true);
         try {
-            const res = await fetch(`http://localhost:3001/connectors/${params.id}/sync`, {
+            const res = await fetch(`http://localhost:3002/connectors/${params.id}/sync`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

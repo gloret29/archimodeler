@@ -7,7 +7,7 @@ export default function DashboardPage() {
     const [metrics, setMetrics] = useState<any>(null);
 
     useEffect(() => {
-        fetch('http://localhost:3001/search/dashboard')
+        fetch('http://localhost:3002/search/dashboard')
             .then(res => res.json())
             .then(data => setMetrics(data))
             .catch(err => console.error('Failed to fetch metrics', err));

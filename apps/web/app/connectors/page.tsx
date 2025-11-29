@@ -18,7 +18,7 @@ export default function ConnectorsPage() {
     const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
     useEffect(() => {
-        fetch('http://localhost:3001/connectors', {
+        fetch('http://localhost:3002/connectors', {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
             }

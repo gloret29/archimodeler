@@ -21,7 +21,7 @@ export default function GovernancePage() {
 
     useEffect(() => {
         // Fetch change requests
-        fetch('http://localhost:3001/workflow/change-requests', {
+        fetch('http://localhost:3002/workflow/change-requests', {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
             }

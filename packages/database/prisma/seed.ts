@@ -36,6 +36,28 @@ async function main() {
 
     console.log('Roles seeded successfully.');
 
+    // --- Admin User Seeding ---
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+
+    const adminRole = await prisma.role.findUnique({ where: { name: 'System Administrator' } });
+
+    if (adminRole) {
+        await prisma.user.upsert({
+            where: { email: 'admin@archimodeler.com' },
+            update: {},
+            create: {
+                email: 'admin@archimodeler.com',
+                password: hashedPassword,
+                name: 'Admin User',
+                roles: {
+                    connect: { id: adminRole.id }
+                }
+            }
+        });
+        console.log('Admin user seeded successfully.');
+    }
+
     // --- ArchiMate 3.1 Seeding ---
     const metamodelName = "ArchiMate 3.1";
     const metamodel = await prisma.metamodel.upsert({
