@@ -93,10 +93,10 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [x] Créer des migrations pour transférer les relations existantes (Endpoint /model/relationships/migrate)
 
 ### 9.2 Page d'Administration
-**Statut**: 🔴 **À faire**
-- [ ] Créer la route `/admin` protégée (Role Admin)
-- [ ] Interface de gestion des paramètres globaux
-- [ ] Configuration des connecteurs (GitHub, Neo4j)
+**Statut**: � **Terminé**
+- [x] Créer la route `/admin` protégée (Role Admin)
+- [x] Interface de gestion des paramètres globaux
+- [x] Configuration des connecteurs (GitHub, Neo4j)
 
 ### 9.3 Gestion Utilisateurs et Rôles
 **Statut**: 🔴 **À faire**

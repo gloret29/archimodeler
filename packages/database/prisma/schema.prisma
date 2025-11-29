@@ -49,6 +49,13 @@ model Group {
   users User[]
 }
 
+model SystemSetting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
 // --- Metamodel Engine ---
 
 model ModelPackage {
