@@ -3,12 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import {
     ChevronRight, ChevronDown, Folder, FileText,
-    Layout, Box, Search, Trash2, Edit2
+    Layout, Box, Search, Trash2, Edit2, FolderPlus
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Element {
@@ -37,7 +36,6 @@ interface ViewType {
 export default function ModelTree() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const currentPackageId = searchParams.get('packageId');
 
     const [folders, setFolders] = useState<FolderType[]>([]);
     const [elements, setElements] = useState<Element[]>([]);
@@ -94,26 +92,91 @@ export default function ModelTree() {
         }
     };
 
-    const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
-        e.preventDefault();
-        const dataStr = e.dataTransfer.getData('application/reactflow');
-        if (!dataStr) return;
-
-        const { existingId } = JSON.parse(dataStr);
-        if (!existingId) return;
+    const handleRenameFolder = async (folderId: string, currentName: string) => {
+        const newName = prompt('New Folder Name:', currentName);
+        if (!newName || newName === currentName) return;
 
         try {
-            await fetch(`http://localhost:3002/model/elements/${existingId}`, {
+            await fetch(`http://localhost:3002/model/folders/${folderId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 },
-                body: JSON.stringify({ folder: { connect: { id: targetFolderId } } })
+                body: JSON.stringify({ name: newName })
             });
             fetchData();
         } catch (err) {
             console.error(err);
+            alert('Failed to rename folder');
+        }
+    };
+
+    const handleDeleteFolder = async (folderId: string, folderName: string) => {
+        if (!confirm(`Delete folder "${folderName}"?`)) return;
+
+        try {
+            const res = await fetch(`http://localhost:3002/model/folders/${folderId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                }
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                alert(`Failed to delete folder: ${errorData.message || 'Unknown error'}`);
+                return;
+            }
+
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete folder');
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent bubbling to parent folders
+
+        const elementDataStr = e.dataTransfer.getData('application/reactflow');
+        const folderDataStr = e.dataTransfer.getData('application/archimodeler-folder');
+
+        if (elementDataStr) {
+            const { existingId } = JSON.parse(elementDataStr);
+            if (!existingId) return;
+
+            try {
+                await fetch(`http://localhost:3002/model/elements/${existingId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                    },
+                    body: JSON.stringify({ folder: { connect: { id: targetFolderId } } })
+                });
+                fetchData();
+            } catch (err) {
+                console.error(err);
+            }
+        } else if (folderDataStr) {
+            const { folderId } = JSON.parse(folderDataStr);
+            if (!folderId || folderId === targetFolderId) return; // Can't drop into self
+
+            try {
+                await fetch(`http://localhost:3002/model/folders/${folderId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                    },
+                    body: JSON.stringify({ parent: { connect: { id: targetFolderId } } })
+                });
+                fetchData();
+            } catch (err) {
+                console.error(err);
+            }
         }
     };
 
@@ -164,23 +227,59 @@ export default function ModelTree() {
                 <div
                     className="flex items-center gap-1 p-1.5 hover:bg-gray-100 rounded-md cursor-pointer text-sm group"
                     onClick={() => toggleExpand(folder.id)}
-                    onDragOver={(e) => e.preventDefault()}
+                    draggable
+                    onDragStart={(e) => {
+                        e.stopPropagation();
+                        e.dataTransfer.setData('application/archimodeler-folder', JSON.stringify({ folderId: folder.id }));
+                    }}
+                    onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
                     onDrop={(e) => handleDrop(e, folder.id)}
                 >
                     {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
                     <Folder className="h-4 w-4 text-yellow-500" />
-                    <span className="truncate">{folder.name}</span>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-100"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleCreateFolder(folder.id);
-                        }}
-                    >
-                        <Box className="h-3 w-3" />
-                    </Button>
+                    <span className="truncate flex-1">{folder.name}</span>
+
+                    <div className="opacity-0 group-hover:opacity-100 flex gap-1 bg-white/80 rounded px-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleCreateFolder(folder.id);
+                            }}
+                            title="New Subfolder"
+                        >
+                            <FolderPlus className="h-3.5 w-3.5 text-blue-600" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleRenameFolder(folder.id, folder.name);
+                            }}
+                            title="Rename Folder"
+                        >
+                            <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFolder(folder.id, folder.name);
+                            }}
+                            title="Delete Folder"
+                        >
+                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                        </Button>
+                    </div>
                 </div>
 
                 {isExpanded && (

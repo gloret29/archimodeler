@@ -240,6 +240,29 @@ export class ModelService {
         });
     }
 
+    async deleteFolder(id: string) {
+        const folder = await this.prisma.folder.findUnique({
+            where: { id },
+            include: {
+                children: true,
+                elements: true,
+                views: true
+            }
+        });
+
+        if (!folder) {
+            throw new Error('Folder not found');
+        }
+
+        if (folder.children.length > 0 || folder.elements.length > 0 || folder.views.length > 0) {
+            throw new Error('Folder is not empty');
+        }
+
+        return this.prisma.folder.delete({
+            where: { id }
+        });
+    }
+
     // Views
     async createView(data: Prisma.ViewCreateInput) {
         // Handle default package ID

@@ -78,6 +78,11 @@ export class FolderController {
     update(@Param('id') id: string, @Body() data: Prisma.FolderUpdateInput) {
         return this.modelService.updateFolder(id, data);
     }
+
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return this.modelService.deleteFolder(id);
+    }
 }
 
 @Controller('model/views')
