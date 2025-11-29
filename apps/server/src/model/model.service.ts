@@ -227,7 +227,11 @@ export class ModelService {
             where: packageId ? { modelPackageId: packageId } : undefined,
             include: {
                 children: true,
-                elements: true,
+                elements: {
+                    include: {
+                        conceptType: true
+                    }
+                },
                 views: true
             }
         });
