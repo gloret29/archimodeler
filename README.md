@@ -249,24 +249,26 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 - **TypeScript** : Utilisez des types stricts
 
 ## 🗺️ Roadmap
+(Voir [BACKLOG.md](./packages/BACKLOG.md) pour le suivi détaillé)
 
-### Version 1.1 (Q1 2026)
-- [ ] Collaboration temps réel avec Yjs
-- [ ] Export PNG/SVG/PDF
-- [ ] Import/Export ArchiMate XML
-- [ ] Undo/Redo complet
+### Phase 1 : Architecture & Données (En cours)
+- [ ] Intégration Neo4j pour les relations
+- [ ] Versioning via GitHub
+- [ ] Système de Backup & Export
 
-### Version 1.2 (Q2 2026)
-- [ ] Templates de modèles
-- [ ] Analyse d'impact
-- [ ] Génération de documentation
-- [ ] Thèmes personnalisables
+### Phase 2 : Administration & Utilisateurs
+- [ ] Page d'administration (Utilisateurs, Rôles, Paramètres)
+- [ ] Dashboard personnalisé
+- [ ] Système de notifications
 
-### Version 2.0 (Q3 2026)
-- [ ] IA pour suggestions
-- [ ] Versioning des modèles
-- [ ] API publique
-- [ ] Plugins système
+### Phase 3 : Modélisation Avancée
+- [ ] Édition multi-onglets
+- [ ] Collaboration temps réel
+- [ ] Stéréotypes & Propriétés étendues
+
+### Phase 4 : Analyse
+- [ ] Analyse de graphe (Neo4j)
+- [ ] Visualisation avancée des impacts
 
 ## 📄 Licence
 
