@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { User, Palette, Globe } from 'lucide-react';
+import { User, Palette, Globe, Home } from 'lucide-react';
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
     items: {
@@ -66,11 +66,19 @@ const sidebarNavItems = [
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="hidden space-y-6 p-10 pb-16 md:block">
-            <div className="space-y-0.5">
-                <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
-                <p className="text-muted-foreground">
-                    Manage your account settings and set e-mail preferences.
-                </p>
+            <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                    <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
+                    <p className="text-muted-foreground">
+                        Manage your account settings and set e-mail preferences.
+                    </p>
+                </div>
+                <Link href="/home">
+                    <Button variant="outline" size="sm" className="gap-2">
+                        <Home className="h-4 w-4" />
+                        Back to Home
+                    </Button>
+                </Link>
             </div>
             <div className="my-6 border-t border-border" />
             <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
