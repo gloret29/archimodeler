@@ -1,0 +1,25 @@
+Les fonctionnalités suivantes sont à mettre en place dans l'ordre que tu le juges le plus approprié, tu generes un fichier de suivi (BACKLOG.md) des taches a realiser :
+- On doit pouvoir éditer plusieurs vues en même temps en ouvrant un onglet par vue.
+- Une vue peut être editée en même temps par un autre utilisateur sans bloquer. Les modification d'un utilisateur doivent être visible instantanément par l'autre utilisateur.
+- il faut mettre en place un système de versioning pour les vues.
+- La base postgresql doit être le référentiel des objets et des vues. Par contre il faut que les relations entre les objets et les vues soient stockées dans une base graph de type neo4j.
+- Il faut mettre en place une page d'administration pour gérer les utilisateurs et les rôles ainsi que les paramètres de l'application.
+- Dans la page d'administration il faut pouvoir créer, modifier et supprimer des utilisateurs et des rôles.
+- la page d'administration n'est accessible que par un utilisateur ayant le rôle admin.
+- Il faut mettre en place un système de versioning pour les objets.
+- Il faut mettre en place un système d'export des vues et des objets.
+- Il faut mettre en place un système de backup de la base de données.
+- Il faut mettre en place un système de notification pour les utilisateurs, qui affiche une alerte dans l'ensemble de l'application sur un bandeau en haut de la page.
+- Chaque utilisateur doit pouvoir avoir des paramètres propres.
+- Chaque utilisateur doit pouvoir organiser sa pages d'accueil avec les vues qu'il souhaite voir en raccourci pour les consulter rapidement.
+- La suppression d'une vue doit être possible sans supprimer les objets liés et les relations entre les objets.
+- Il faut mettre en place une page permettant d'analyse les liens entre les objets qui sont dans neo4j sans connaitre le langage cypher.
+- Chaque objet archimate doit pouvoir être stéréotypé. La liste des stereotypes doit être stockée dans la base postgresql et modificable dans la page d'administration.
+- En fonction des stereotypes des objets, on doit pouvoir "augmenter" les objets avec des propriétés propres et spécifiques au stereotype et au type d'objet archimate.
+- Comme les objets, les relations entre les objets doivent pouvoir être stéréotypées.
+- Il ne faut pas de doublons de relations des mêmes types entre les objets.
+- L'affichage des relations entre les objets doit respecter la norme ArchiMate.
+- Dans une vue quand on selectionne un objet ou une relation, il faut afficher les informations de l'objet ou de la relation dans une zone dédiée à droite de la page, sous le repository.*
+- le systeme de versionning doit etre base sur github. Le dépot github doit etre parametrable dans la page d'administration. Si il n'est pas paramétré, le systeme de versionning ne doit pas etre actif.
+- Pour le versionning, un clic droit sur un objet ou une vue doit permettre de voir l'historique des modifications, de faire un commit ou un rollback en informant avant validant les objets, vue et relations qui seront modifiés.
+- 
