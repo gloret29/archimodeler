@@ -45,7 +45,9 @@ async function main() {
     if (adminRole) {
         await prisma.user.upsert({
             where: { email: 'admin@archimodeler.com' },
-            update: {},
+            update: {
+                password: hashedPassword,
+            },
             create: {
                 email: 'admin@archimodeler.com',
                 password: hashedPassword,
