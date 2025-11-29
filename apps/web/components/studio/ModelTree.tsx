@@ -11,19 +11,27 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-interface ModelPackage {
-    id: string;
-    name: string;
-    status: string;
-}
-
 interface Element {
     id: string;
     name: string;
     conceptType: {
         name: string;
-        category: string; // Layer
+        category: string;
     };
+}
+
+interface FolderType {
+    id: string;
+    name: string;
+    parentId: string | null;
+    children: FolderType[];
+    elements: Element[];
+    views: ViewType[];
+}
+
+interface ViewType {
+    id: string;
+    name: string;
 }
 
 export default function ModelTree() {
@@ -31,54 +39,167 @@ export default function ModelTree() {
     const searchParams = useSearchParams();
     const currentPackageId = searchParams.get('packageId');
 
-    const [packages, setPackages] = useState<ModelPackage[]>([]);
+    const [folders, setFolders] = useState<FolderType[]>([]);
     const [elements, setElements] = useState<Element[]>([]);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({
-        'views': true,
         'repository': true,
     });
     const [searchTerm, setSearchTerm] = useState('');
 
-    useEffect(() => {
+    const fetchData = () => {
         const token = localStorage.getItem('accessToken');
         const headers = { 'Authorization': `Bearer ${token}` };
 
-        // Fetch Packages
-        fetch('http://localhost:3002/model/packages', { headers })
+        fetch('http://localhost:3002/model/folders', { headers })
             .then(res => res.json())
-            .then(data => setPackages(data))
+            .then(data => setFolders(data))
             .catch(console.error);
 
-        // Fetch Elements
         fetch('http://localhost:3002/model/elements', { headers })
             .then(res => res.json())
             .then(data => setElements(data))
             .catch(console.error);
+    };
+
+    useEffect(() => {
+        fetchData();
+        const interval = setInterval(fetchData, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     const toggleExpand = (key: string) => {
         setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    // Group elements by Layer
-    const elementsByLayer = elements.reduce((acc, el) => {
-        const layer = el.conceptType?.category || 'Uncategorized';
-        if (!acc[layer]) acc[layer] = [];
-        acc[layer].push(el);
-        return acc;
-    }, {} as Record<string, Element[]>);
+    const handleCreateFolder = async (parentId?: string) => {
+        const name = prompt('Folder Name:');
+        if (!name) return;
 
-    const filteredPackages = packages.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        try {
+            await fetch('http://localhost:3002/model/folders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify({
+                    name,
+                    parentId,
+                    modelPackage: { connect: { id: 'default-package-id' } }
+                })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
+        e.preventDefault();
+        const dataStr = e.dataTransfer.getData('application/reactflow');
+        if (!dataStr) return;
+
+        const { existingId } = JSON.parse(dataStr);
+        if (!existingId) return;
+
+        try {
+            await fetch(`http://localhost:3002/model/elements/${existingId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify({ folder: { connect: { id: targetFolderId } } })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const renderFolder = (folder: FolderType): JSX.Element => {
+        const isExpanded = expanded[folder.id];
+
+        return (
+            <div key={folder.id} className="ml-4">
+                <div
+                    className="flex items-center gap-1 p-1.5 hover:bg-gray-100 rounded-md cursor-pointer text-sm group"
+                    onClick={() => toggleExpand(folder.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleDrop(e, folder.id)}
+                >
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
+                    <Folder className="h-4 w-4 text-yellow-500" />
+                    <span className="truncate">{folder.name}</span>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-100"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateFolder(folder.id);
+                        }}
+                    >
+                        <Box className="h-3 w-3" />
+                    </Button>
+                </div>
+
+                {isExpanded && (
+                    <div className="border-l border-gray-200 ml-2 pl-2">
+                        {folder.children?.map(renderFolder)}
+
+                        {folder.views?.map((view: ViewType) => (
+                            <div
+                                key={view.id}
+                                className="flex items-center gap-2 p-1.5 rounded-md cursor-pointer text-sm hover:bg-gray-100"
+                                onClick={() => router.push(`/studio?viewId=${view.id}`)}
+                            >
+                                <Layout className="h-3.5 w-3.5 text-blue-500" />
+                                <span className="truncate">{view.name}</span>
+                            </div>
+                        ))}
+
+                        {folder.elements?.map((el: Element) => (
+                            <div
+                                key={el.id}
+                                className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm group"
+                                draggable
+                                onDragStart={(e) => {
+                                    e.dataTransfer.setData('application/reactflow', JSON.stringify({
+                                        type: el.conceptType.name,
+                                        layer: el.conceptType.category,
+                                        label: el.name,
+                                        existingId: el.id
+                                    }));
+                                }}
+                            >
+                                <Box className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="truncate">{el.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const rootElements = elements.filter((el: Element) => !folders.some((f: FolderType) => f.elements?.some((fe: Element) => fe.id === el.id)));
 
     return (
         <aside className="w-80 bg-white border-l border-gray-200 h-full flex flex-col">
-            <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold mb-2">Model Explorer</h2>
-                <div className="relative">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Repository</h2>
+                <Button variant="outline" size="sm" onClick={() => handleCreateFolder()}>
+                    <Folder className="h-4 w-4 mr-1" /> New Folder
+                </Button>
+            </div>
+
+            <div className="p-2">
+                <div className="relative mb-2">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search..."
-                        className="pl-8"
+                        className="pl-8 h-8"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -86,94 +207,28 @@ export default function ModelTree() {
             </div>
 
             <ScrollArea className="flex-1 p-2">
-                {/* Views Section */}
-                <div className="mb-4">
-                    <div
-                        className="flex items-center gap-1 p-2 hover:bg-gray-100 rounded-md cursor-pointer font-medium text-sm"
-                        onClick={() => toggleExpand('views')}
-                    >
-                        {expanded['views'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        <Folder className="h-4 w-4 text-blue-500" />
-                        <span>Views</span>
-                    </div>
+                {folders.map(renderFolder)}
 
-                    {expanded['views'] && (
-                        <div className="ml-6 space-y-1 mt-1">
-                            {filteredPackages.map(pkg => (
-                                <div
-                                    key={pkg.id}
-                                    className={`flex items-center gap-2 p-1.5 rounded-md cursor-pointer text-sm ${currentPackageId === pkg.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}
-                                    onClick={() => router.push(`/studio?packageId=${pkg.id}`)}
-                                >
-                                    <Layout className="h-3.5 w-3.5" />
-                                    <span className="truncate">{pkg.name}</span>
-                                </div>
-                            ))}
+                <div className="mt-4">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-2">Uncategorized Elements</h3>
+                    {rootElements.map((el: Element) => (
+                        <div
+                            key={el.id}
+                            className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm ml-2"
+                            draggable
+                            onDragStart={(e) => {
+                                e.dataTransfer.setData('application/reactflow', JSON.stringify({
+                                    type: el.conceptType.name,
+                                    layer: el.conceptType.category,
+                                    label: el.name,
+                                    existingId: el.id
+                                }));
+                            }}
+                        >
+                            <Box className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="truncate">{el.name}</span>
                         </div>
-                    )}
-                </div>
-
-                <Separator className="my-2" />
-
-                {/* Repository Section */}
-                <div>
-                    <div
-                        className="flex items-center gap-1 p-2 hover:bg-gray-100 rounded-md cursor-pointer font-medium text-sm"
-                        onClick={() => toggleExpand('repository')}
-                    >
-                        {expanded['repository'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        <Folder className="h-4 w-4 text-orange-500" />
-                        <span>Repository</span>
-                    </div>
-
-                    {expanded['repository'] && (
-                        <div className="ml-4 mt-1 space-y-2">
-                            {Object.entries(elementsByLayer).sort().map(([layer, items]) => {
-                                const layerKey = `layer-${layer}`;
-                                const isLayerExpanded = expanded[layerKey];
-                                const filteredItems = items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-                                if (searchTerm && filteredItems.length === 0) return null;
-
-                                return (
-                                    <div key={layer}>
-                                        <div
-                                            className="flex items-center gap-1 p-1.5 hover:bg-gray-100 rounded-md cursor-pointer text-xs font-semibold text-gray-500 uppercase tracking-wider"
-                                            onClick={() => toggleExpand(layerKey)}
-                                        >
-                                            {isLayerExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                            {layer}
-                                        </div>
-
-                                        {isLayerExpanded && (
-                                            <div className="ml-4 border-l border-gray-200 pl-2 space-y-1">
-                                                {filteredItems.map(el => (
-                                                    <div
-                                                        key={el.id}
-                                                        className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 cursor-grab text-sm group"
-                                                        draggable
-                                                        onDragStart={(e) => {
-                                                            e.dataTransfer.setData('application/reactflow', JSON.stringify({
-                                                                type: el.conceptType.name,
-                                                                layer: el.conceptType.category,
-                                                                label: el.name,
-                                                                existingId: el.id // Pass ID to link to existing element
-                                                            }));
-                                                            e.dataTransfer.effectAllowed = 'copy';
-                                                        }}
-                                                    >
-                                                        <Box className="h-3.5 w-3.5 text-gray-400" />
-                                                        <span className="truncate">{el.name}</span>
-                                                        <MoreHorizontal className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 text-gray-400" />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                    ))}
                 </div>
             </ScrollArea>
         </aside>

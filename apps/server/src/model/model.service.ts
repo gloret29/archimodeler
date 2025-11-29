@@ -70,4 +70,45 @@ export class ModelService {
     async createPackage(data: Prisma.ModelPackageCreateInput) {
         return this.prisma.modelPackage.create({ data });
     }
+
+    // Folders
+    async createFolder(data: Prisma.FolderCreateInput) {
+        return this.prisma.folder.create({ data });
+    }
+
+    async findAllFolders(packageId?: string) {
+        return this.prisma.folder.findMany({
+            where: packageId ? { modelPackageId: packageId } : undefined,
+            include: {
+                children: true,
+                elements: true,
+                views: true
+            }
+        });
+    }
+
+    async updateFolder(id: string, data: Prisma.FolderUpdateInput) {
+        return this.prisma.folder.update({
+            where: { id },
+            data
+        });
+    }
+
+    // Views
+    async createView(data: Prisma.ViewCreateInput) {
+        return this.prisma.view.create({ data });
+    }
+
+    async updateView(id: string, data: Prisma.ViewUpdateInput) {
+        return this.prisma.view.update({
+            where: { id },
+            data
+        });
+    }
+
+    async getView(id: string) {
+        return this.prisma.view.findUnique({
+            where: { id }
+        });
+    }
 }

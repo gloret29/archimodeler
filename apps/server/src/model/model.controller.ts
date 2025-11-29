@@ -46,3 +46,43 @@ export class ModelPackageController {
         return this.modelService.createPackage(data);
     }
 }
+
+@Controller('model/folders')
+export class FolderController {
+    constructor(private readonly modelService: ModelService) { }
+
+    @Get()
+    findAll() {
+        return this.modelService.findAllFolders();
+    }
+
+    @Post()
+    create(@Body() data: Prisma.FolderCreateInput) {
+        return this.modelService.createFolder(data);
+    }
+
+    @Put(':id')
+    update(@Param('id') id: string, @Body() data: Prisma.FolderUpdateInput) {
+        return this.modelService.updateFolder(id, data);
+    }
+}
+
+@Controller('model/views')
+export class ViewController {
+    constructor(private readonly modelService: ModelService) { }
+
+    @Post()
+    create(@Body() data: Prisma.ViewCreateInput) {
+        return this.modelService.createView(data);
+    }
+
+    @Get(':id')
+    findOne(@Param('id') id: string) {
+        return this.modelService.getView(id);
+    }
+
+    @Put(':id')
+    update(@Param('id') id: string, @Body() data: Prisma.ViewUpdateInput) {
+        return this.modelService.updateView(id, data);
+    }
+}

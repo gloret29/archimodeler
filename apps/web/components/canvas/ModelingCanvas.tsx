@@ -175,6 +175,36 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
         [reactFlowInstance, setNodes],
     );
 
+    const onSave = async () => {
+        const name = prompt('View Name:');
+        if (!name) return;
+
+        const content = {
+            nodes,
+            edges,
+        };
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            await fetch('http://localhost:3002/model/views', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name,
+                    content,
+                    modelPackage: { connect: { id: packageId || 'default-package-id' } }
+                })
+            });
+            alert('View saved!');
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save view');
+        }
+    };
+
     return (
         <div className="w-full h-full" ref={reactFlowWrapper}>
             <ReactFlow
@@ -191,7 +221,13 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
             >
                 <Controls />
                 <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                <div className="absolute top-4 right-4 z-10">
+                <div className="absolute top-4 right-4 z-10 flex gap-2">
+                    <button
+                        onClick={onSave}
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm hover:bg-blue-700"
+                    >
+                        Save View
+                    </button>
                     <DiagramDescriber nodes={nodes} edges={edges} />
                 </div>
             </ReactFlow>

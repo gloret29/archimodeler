@@ -60,6 +60,8 @@ model ModelPackage {
 
   elements      Element[]
   relationships Relationship[]
+  folders       Folder[]
+  views         View[]
   
   status        WorkflowStatus @default(DRAFT)
   changeRequests ChangeRequest[]
@@ -145,6 +147,9 @@ model Element {
   modelPackageId String
   modelPackage   ModelPackage @relation(fields: [modelPackageId], references: [id])
 
+  folderId       String?
+  folder         Folder?      @relation(fields: [folderId], references: [id])
+
   // Versioning (Time Travel)
   validFrom      DateTime     @default(now())
   validTo        DateTime?    // Null means current version
@@ -196,4 +201,40 @@ model Relationship {
   validFrom      DateTime     @default(now())
   validTo        DateTime?
   versionId      String       @default(uuid())
+}
+
+model Folder {
+  id             String         @id @default(uuid())
+  name           String
+  
+  parentId       String?
+  parent         Folder?        @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children       Folder[]       @relation("FolderHierarchy")
+
+  modelPackageId String
+  modelPackage   ModelPackage   @relation(fields: [modelPackageId], references: [id])
+  
+  elements       Element[]
+  views          View[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model View {
+  id             String         @id @default(uuid())
+  name           String
+  description    String?
+  
+  // Layout data (nodes, edges, positions)
+  content        Json?
+
+  modelPackageId String
+  modelPackage   ModelPackage   @relation(fields: [modelPackageId], references: [id])
+
+  folderId       String?
+  folder         Folder?        @relation(fields: [folderId], references: [id])
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
