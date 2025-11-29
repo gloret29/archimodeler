@@ -17,6 +17,7 @@ export interface CursorPosition {
 export interface CollaborationState {
     users: User[];
     cursors: Record<string, CursorPosition>;
+    selections: Record<string, string[]>; // userId -> nodeIds
     isConnected: boolean;
 }
 
@@ -43,6 +44,7 @@ export function useCollaboration({
     const [state, setState] = useState<CollaborationState>({
         users: [],
         cursors: {},
+        selections: {},
         isConnected: false,
     });
 
@@ -108,10 +110,15 @@ export function useCollaboration({
             setState((prev) => {
                 const newCursors = { ...prev.cursors };
                 delete newCursors[data.userId];
+                
+                const newSelections = { ...prev.selections };
+                delete newSelections[data.userId];
+
                 return {
                     ...prev,
                     users: data.users,
                     cursors: newCursors,
+                    selections: newSelections,
                 };
             });
         });
@@ -130,7 +137,17 @@ export function useCollaboration({
         socket.on('edge-changed', onEdgeChanged || (() => { }));
         socket.on('node-deleted', onNodeDeleted || (() => { }));
         socket.on('edge-deleted', onEdgeDeleted || (() => { }));
-        socket.on('selection-changed', onSelectionChanged || (() => { }));
+        
+        socket.on('selection-changed', (data: { userId: string; selectedNodes: string[] }) => {
+            setState((prev) => ({
+                ...prev,
+                selections: {
+                    ...prev.selections,
+                    [data.userId]: data.selectedNodes,
+                },
+            }));
+            if (onSelectionChanged) onSelectionChanged(data);
+        });
 
         return () => {
             if (socket.connected) {

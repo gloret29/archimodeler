@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from '@/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Layout, BarChart3, ArrowRight, Box, Settings, LogOut } from 'lucide-react';
+import { Plus, Layout, BarChart3, ArrowRight, Box, Settings, LogOut, Shield } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface ModelPackage {
@@ -83,6 +83,10 @@ export default function HomePage() {
                     <Button variant="outline" onClick={() => router.push('/settings/profile')}>
                         <Settings className="mr-2 h-4 w-4" />
                         {t('settings')}
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push('/admin/settings')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin
                     </Button>
                     <Button variant="outline" onClick={() => router.push('/dashboard')}>
                         <BarChart3 className="mr-2 h-4 w-4" />

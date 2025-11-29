@@ -19,7 +19,8 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
             console.log('Neo4j connection established');
         } catch (error) {
             console.error('Failed to connect to Neo4j:', error);
-            throw error;
+            console.warn('Neo4j is not available. The application will continue but Neo4j features will not work.');
+            // Don't throw error to allow app to start without Neo4j
         }
     }
 

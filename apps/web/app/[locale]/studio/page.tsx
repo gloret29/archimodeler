@@ -21,11 +21,47 @@ function StudioContent() {
     const t = useTranslations('Studio');
     const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab } = useTabsStore();
     const [isSaving, setIsSaving] = React.useState(false);
+    const [repositoryWidth, setRepositoryWidth] = React.useState(320); // Default width: 320px (w-80)
+    const [isResizing, setIsResizing] = React.useState(false);
+    const [currentCanvasContent, setCurrentCanvasContent] = React.useState<{ nodes: any[]; edges: any[] } | null>(null);
 
     // Get the active tab
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
     const [isLoadingPackage, setIsLoadingPackage] = React.useState(false);
     const router = useRouter();
+
+    // Handle repository resizing
+    React.useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing) return;
+            
+            const newWidth = window.innerWidth - e.clientX;
+            const minWidth = 200;
+            const maxWidth = window.innerWidth * 0.6;
+            
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+                setRepositoryWidth(newWidth);
+            }
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+        };
+
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, [isResizing]);
 
     // Initialize with a tab if packageId is provided, or fetch/create default package
     useEffect(() => {
@@ -142,17 +178,29 @@ function StudioContent() {
 
         setIsSaving(true);
         try {
-            // TODO: Get actual canvas content from React Flow
+            // Get actual canvas content
+            if (!currentCanvasContent) {
+                alert('No content to save. Please add some elements to the view first.');
+                setIsSaving(false);
+                return;
+            }
+
             const content = {
-                nodes: [],
-                edges: [],
+                nodes: currentCanvasContent.nodes,
+                edges: currentCanvasContent.edges,
                 savedAt: new Date().toISOString(),
             };
 
+            console.log('Saving view with content:', {
+                nodesCount: content.nodes.length,
+                edgesCount: content.edges.length
+            });
             await saveActiveTab(content);
+            console.log('✓ View saved successfully');
+            // Show success feedback (you could use a toast notification here)
         } catch (error: any) {
             console.error('Failed to save view:', error);
-            alert(`Failed to save: ${error.message}`);
+            alert(`Failed to save: ${error.message || 'Unknown error'}`);
         } finally {
             setIsSaving(false);
         }
@@ -225,6 +273,7 @@ function StudioContent() {
                             viewId={activeTab.viewId}
                             viewName={activeTab.viewName}
                             packageId={activeTab.packageId}
+                            onContentChange={setCurrentCanvasContent}
                         />
                     ) : (
                         <div className="flex items-center justify-center h-full">
@@ -238,8 +287,21 @@ function StudioContent() {
                     )}
                     <CoachChat />
                 </main>
-                <Suspense fallback={<div className="w-80 bg-background border-l border-border" />}>
-                    <ModelTree />
+                {/* Resizer */}
+                <div
+                    className={`w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors ${
+                        isResizing ? 'bg-primary' : ''
+                    }`}
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        setIsResizing(true);
+                    }}
+                    style={{ userSelect: 'none' }}
+                />
+                <Suspense fallback={<div className="bg-background border-l border-border" style={{ width: `${repositoryWidth}px` }} />}>
+                    <div style={{ width: `${repositoryWidth}px` }} className="bg-background border-l border-border h-full flex-shrink-0">
+                        <ModelTree />
+                    </div>
                 </Suspense>
             </div>
         </div>

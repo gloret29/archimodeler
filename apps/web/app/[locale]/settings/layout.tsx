@@ -4,7 +4,7 @@ import React from 'react';
 import { Link, usePathname } from '@/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { User, Palette, Globe, Home } from 'lucide-react';
+import { User, Palette, Globe, Home, Layers } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
@@ -63,6 +63,11 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             title: t('language'),
             href: "/settings/language",
             icon: <Globe className="h-4 w-4" />,
+        },
+        {
+            title: t('paletteConfig'),
+            href: "/admin/settings",
+            icon: <Layers className="h-4 w-4" />,
         },
     ];
 

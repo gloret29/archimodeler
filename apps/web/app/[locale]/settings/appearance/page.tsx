@@ -16,7 +16,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 const appearanceFormSchema = z.object({
@@ -28,23 +28,33 @@ type AppearanceFormValues = z.infer<typeof appearanceFormSchema>;
 export default function AppearanceSettingsPage() {
     const { theme, setTheme } = useTheme();
     const t = useTranslations('Settings');
+    const [mounted, setMounted] = useState(false);
 
     const form = useForm<AppearanceFormValues>({
         resolver: zodResolver(appearanceFormSchema),
         defaultValues: {
-            theme: (theme as "light" | "dark" | "system") || "system",
+            theme: "system",
         },
     });
 
+    // Wait for mount to avoid hydration mismatch
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     // Update form value when theme changes externally (e.g. initial load)
     useEffect(() => {
-        if (theme) {
+        if (mounted && theme) {
             form.setValue("theme", theme as "light" | "dark" | "system");
         }
-    }, [theme, form]);
+    }, [theme, form, mounted]);
 
     function onSubmit(data: AppearanceFormValues) {
         setTheme(data.theme);
+    }
+
+    if (!mounted) {
+        return null; // or a skeleton loader
     }
 
     return (
@@ -133,8 +143,6 @@ export default function AppearanceSettingsPage() {
                             </FormItem>
                         )}
                     />
-
-                    {/* <Button type="submit">{t('updatePreferences')}</Button> */}
                 </form>
             </Form>
         </div>

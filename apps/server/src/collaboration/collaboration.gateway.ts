@@ -96,6 +96,11 @@ export class CollaborationGateway
         }
 
         const session = this.viewSessions.get(viewId);
+        if (!session) {
+            this.logger.error(`Session not found for view ${viewId}`);
+            return;
+        }
+
         session.users.set(client.id, user);
 
         // Notify all users in the view

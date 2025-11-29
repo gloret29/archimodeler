@@ -79,6 +79,8 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
   - [x] Dialog de renommage moderne (RenameDialog)
   - [x] Menu contextuel complet
   - [x] Gestion du "Default Package"
+  - [x] Suppression des vues (Non-destructive pour les éléments)
+  - [x] Confirmation contextuelle (Popover) pour suppression
 
 ## ✅ Phase 9 : Infrastructure Hybride et Administration (Terminé)
 
@@ -124,19 +126,20 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [x] Badge de nombre d'utilisateurs
 
 ### 11.4 Synchronisation (Partielle)
-**Statut**: 🟡 **En cours**
+**Statut**: 🟢 **Terminé**
 - [x] Infrastructure de synchronisation
 - [x] Événements de curseur
-- [ ] Synchronisation complète des nœuds
-- [ ] Synchronisation complète des relations
+- [x] Synchronisation complète des nœuds
+- [x] Synchronisation complète des relations
 - [ ] Gestion des conflits (OT/CRDT)
-- [ ] Sélection collaborative
-- [ ] Verrouillage d'éléments
+- [x] Sélection collaborative
+- [x] Verrouillage d'éléments (Lock sur sélection distante)
 
 ### 11.5 Conformité et Qualité
-- [ ] Styles visuels stricts ArchiMate 3.2
-- [ ] Prévention des doublons de relations
-- [ ] Validation temps réel
+**Statut**: 🟢 **Terminé**
+- [x] Styles visuels stricts ArchiMate 3.2 (Formes arrondies/carrées selon le type)
+- [x] Prévention des doublons de relations
+- [x] Validation temps réel (Drag & Drop)
 
 ## 🔴 Phase 12 : Stéréotypes et Métadonnées (À faire)
 

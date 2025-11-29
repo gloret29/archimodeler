@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Link } from '@/navigation';
+import { Button } from '@/components/ui/button';
+import { Home } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export default function DashboardPage() {
+    const t = useTranslations('Home');
     const [metrics, setMetrics] = useState<any>(null);
 
     useEffect(() => {
@@ -22,7 +27,15 @@ export default function DashboardPage() {
 
     return (
         <div className="p-8">
-            <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">Dashboard</h1>
+                <Link href="/home">
+                    <Button variant="outline" title={t('backToHome')}>
+                        <Home className="mr-2 h-4 w-4" />
+                        {t('backToHome')}
+                    </Button>
+                </Link>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-card p-6 rounded-lg shadow border">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, Dispatch, SetStateAction, useEffect } from 'react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -13,6 +13,8 @@ import {
     Edge,
     Node,
     BackgroundVariant,
+    OnNodesChange,
+    OnEdgesChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -20,6 +22,8 @@ import ArchiMateNode from './nodes/ArchiMateNode';
 import ConnectionMenu from './ConnectionMenu';
 import NodeContextMenu from './NodeContextMenu';
 import RenameDialog from '../ui/RenameDialog';
+import FormattingPanel from './FormattingPanel';
+import LayoutOrganizer from './LayoutOrganizer';
 import { getValidRelations } from '@/lib/metamodel';
 import DiagramDescriber from '../ai/DiagramDescriber';
 
@@ -31,15 +35,63 @@ const initialNodes: Node[] = [];
 let id = 0;
 const getId = () => `dndnode_${id++}`;
 
-interface ModelingCanvasProps {
+export interface ModelingCanvasProps {
     packageId?: string | null;
+    // Controlled state props
+    nodes?: Node[];
+    edges?: Edge[];
+    onNodesChange?: OnNodesChange;
+    onEdgesChange?: OnEdgesChange;
+    setNodes?: Dispatch<SetStateAction<Node[]>>;
+    setEdges?: Dispatch<SetStateAction<Edge[]>>;
 }
 
-export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
+export default function ModelingCanvas({
+    packageId,
+    nodes: controlledNodes,
+    edges: controlledEdges,
+    onNodesChange: controlledOnNodesChange,
+    onEdgesChange: controlledOnEdgesChange,
+    setNodes: controlledSetNodes,
+    setEdges: controlledSetEdges,
+}: ModelingCanvasProps) {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+    
+    // Internal state (used if not controlled)
+    const [internalNodes, setInternalNodes, onInternalNodesChange] = useNodesState(initialNodes);
+    const [internalEdges, setInternalEdges, onInternalEdgesChange] = useEdgesState<Edge>([]);
+
+    // Determine whether to use controlled or internal state
+    const isControlled = controlledNodes !== undefined && controlledEdges !== undefined;
+    
+    const nodes = isControlled ? controlledNodes : internalNodes;
+    const edges = isControlled ? controlledEdges : internalEdges;
+    const onNodesChange = isControlled ? controlledOnNodesChange : onInternalNodesChange;
+    const onEdgesChange = isControlled ? controlledOnEdgesChange : onInternalEdgesChange;
+    
+    // For setNodes/setEdges, we need to handle both cases carefully
+    // Since useNodesState returns a setter that accepts functional updates, we need to match that if possible
+    // However, passing setters directly is tricky with hooks.
+    // Let's define helper setters.
+    const setNodes = useCallback((action: SetStateAction<Node[]>) => {
+        if (isControlled && controlledSetNodes) {
+            controlledSetNodes(action);
+        } else {
+            setInternalNodes(action);
+        }
+    }, [isControlled, controlledSetNodes, setInternalNodes]);
+
+    const setEdges = useCallback((action: SetStateAction<Edge[]>) => {
+        if (isControlled && controlledSetEdges) {
+            controlledSetEdges(action);
+        } else {
+            setInternalEdges(action);
+        }
+    }, [isControlled, controlledSetEdges, setInternalEdges]);
+
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+    const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
+    const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
 
     const [connectionMenu, setConnectionMenu] = useState<{
         isOpen: boolean;
@@ -174,6 +226,18 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
         }
     };
 
+    const isValidConnection = useCallback((connection: Connection) => {
+        const sourceNode = nodes.find((n) => n.id === connection.source);
+        const targetNode = nodes.find((n) => n.id === connection.target);
+        if (!sourceNode || !targetNode) return false;
+
+        const sourceType = sourceNode.data.type as string;
+        const targetType = targetNode.data.type as string;
+        
+        const valid = getValidRelations(sourceType, targetType);
+        return valid.length > 0;
+    }, [nodes]);
+
     const onConnect = useCallback(
         (params: Connection) => {
             const sourceNode = nodes.find((n) => n.id === params.source);
@@ -190,12 +254,22 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                     return;
                 }
 
+                // Prevent duplicates for single relation case
                 if (validRelations.length === 1) {
                     const relation = validRelations[0];
+                    
+                    const duplicate = edges.find(
+                        (e) => e.source === params.source && e.target === params.target && e.label === relation
+                    );
+                    
+                    if (duplicate) {
+                        alert('This relationship already exists.');
+                        return;
+                    }
+
                     setEdges((eds) => addEdge({ ...params, label: relation, type: 'default' } as Edge, eds));
                 } else {
                     // Calculate position for the menu
-                    // We'll place it near the target node
                     const position = reactFlowInstance.flowToScreenPosition({
                         x: targetNode.position.x + (targetNode.measured?.width ?? 150) / 2,
                         y: targetNode.position.y + (targetNode.measured?.height ?? 50) / 2,
@@ -210,12 +284,23 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                 }
             }
         },
-        [nodes, setEdges, reactFlowInstance],
+        [nodes, edges, setEdges, reactFlowInstance],
     );
 
     const onRelationSelect = (relation: string) => {
         if (connectionMenu.params) {
-            setEdges((eds) => addEdge({ ...connectionMenu.params!, label: relation, type: 'default' } as Edge, eds));
+            // Check for duplicates in menu selection
+            const duplicate = edges.find(
+                (e) => e.source === connectionMenu.params!.source && 
+                       e.target === connectionMenu.params!.target && 
+                       e.label === relation
+            );
+            
+            if (duplicate) {
+                alert('This relationship already exists.');
+            } else {
+                setEdges((eds) => addEdge({ ...connectionMenu.params!, label: relation, type: 'default' } as Edge, eds));
+            }
         }
         setConnectionMenu((prev) => ({ ...prev, isOpen: false }));
     };
@@ -297,7 +382,7 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
 
             setNodes((nds) => nds.concat(newNode));
         },
-        [reactFlowInstance, setNodes],
+        [reactFlowInstance, setNodes, packageId],
     );
 
     const onSave = async () => {
@@ -343,17 +428,27 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                 onInit={setReactFlowInstance}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
+                isValidConnection={isValidConnection}
                 nodeTypes={nodeTypes}
+                onSelectionChange={({ nodes: selectedNodes, edges: selectedEdges }) => {
+                    setSelectedNodes(selectedNodes);
+                    setSelectedEdges(selectedEdges);
+                }}
                 fitView
             >
                 <Controls />
                 <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
                 <div className="absolute top-4 right-4 z-10 flex gap-2">
+                    <LayoutOrganizer
+                        nodes={nodes}
+                        edges={edges}
+                        onUpdateNodes={setNodes}
+                    />
                     <button
                         onClick={onSave}
                         className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm hover:bg-blue-700"
                     >
-                        Save View
+                        Save As...
                     </button>
                     <DiagramDescriber nodes={nodes} edges={edges} />
                 </div>
@@ -384,6 +479,14 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
                     onCancel={() => setRenameDialog({ isOpen: false, nodeId: null, currentName: '', elementId: null })}
                 />
             )}
+            <FormattingPanel
+                selectedNodes={selectedNodes}
+                selectedEdges={selectedEdges}
+                onUpdateNodes={setNodes}
+                onUpdateEdges={setEdges}
+                allNodes={nodes}
+                allEdges={edges}
+            />
         </div>
     );
 }

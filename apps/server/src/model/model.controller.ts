@@ -8,6 +8,7 @@ interface CreateElementDto {
     type: string;
     layer: string;
     packageId: string;
+    folderId?: string;
 }
 
 @Controller('model/elements')
@@ -94,6 +95,11 @@ export class ViewController {
         return this.modelService.createView(data);
     }
 
+    @Get()
+    findAll() {
+        return this.modelService.findAllViews();
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.modelService.getView(id);
@@ -102,5 +108,10 @@ export class ViewController {
     @Put(':id')
     update(@Param('id') id: string, @Body() data: Prisma.ViewUpdateInput) {
         return this.modelService.updateView(id, data);
+    }
+
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return this.modelService.deleteView(id);
     }
 }

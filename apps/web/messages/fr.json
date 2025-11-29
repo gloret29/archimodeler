@@ -12,7 +12,8 @@
         "recentPackages": "Packages de modèles récents",
         "openStudio": "Ouvrir le Studio",
         "settings": "Paramètres",
-        "logout": "Se déconnecter"
+        "logout": "Se déconnecter",
+        "backToHome": "Retour à l'accueil"
     },
     "Studio": {
         "title": "ArchiModeler Studio",
@@ -49,7 +50,8 @@
         "languageDescription": "Sélectionnez votre langue préférée pour l'interface.",
         "languageLabel": "Langue de l'interface",
         "languageDescription2": "Cela changera la langue de toute l'application.",
-        "updateLanguage": "Mettre à jour la langue"
+        "updateLanguage": "Mettre à jour la langue",
+        "paletteConfig": "Configuration de la palette"
     },
     "Common": {
         "loading": "Chargement...",

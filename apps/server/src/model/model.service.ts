@@ -31,7 +31,7 @@ export class ModelService {
         return element;
     }
 
-    async createElementSimple(dto: { name: string; type: string; layer: string; packageId: string }) {
+    async createElementSimple(dto: { name: string; type: string; layer: string; packageId: string; folderId?: string }) {
         try {
             console.log('Creating element with DTO:', dto);
 
@@ -95,19 +95,36 @@ export class ModelService {
             }
 
             // Create the element
-            console.log('Creating element with conceptTypeId:', conceptType.id, 'packageId:', packageId);
+            console.log('Creating element with conceptTypeId:', conceptType.id, 'packageId:', packageId, 'folderId:', dto.folderId);
+            
+            // Verify folder exists if folderId is provided
+            if (dto.folderId) {
+                const folder = await this.prisma.folder.findUnique({
+                    where: { id: dto.folderId }
+                });
+                if (!folder) {
+                    throw new Error(`Folder with id ${dto.folderId} not found`);
+                }
+            }
+            
+            const elementData: any = {
+                name: dto.name,
+                conceptTypeId: conceptType.id,
+                modelPackageId: packageId
+            };
+            
+            if (dto.folderId) {
+                elementData.folderId = dto.folderId;
+            }
+            
             const element = await this.prisma.element.create({
-                data: {
-                    name: dto.name,
-                    conceptTypeId: conceptType.id,
-                    modelPackageId: packageId
-                },
+                data: elementData,
                 include: {
                     conceptType: true
                 }
             });
 
-            console.log('Element created successfully:', element.id);
+            console.log('Element created successfully:', element.id, 'folderId:', element.folderId);
             await this.searchService.indexElement(element);
 
             // Create element node in Neo4j
@@ -223,10 +240,10 @@ export class ModelService {
     }
 
     async findAllFolders(packageId?: string) {
-        return this.prisma.folder.findMany({
+        // Fetch all folders with their elements and views
+        const allFolders = await this.prisma.folder.findMany({
             where: packageId ? { modelPackageId: packageId } : undefined,
             include: {
-                children: true,
                 elements: {
                     include: {
                         conceptType: true
@@ -235,6 +252,18 @@ export class ModelService {
                 views: true
             }
         });
+
+        // Build hierarchical structure recursively
+        const buildHierarchy = (parentId: string | null): any[] => {
+            return allFolders
+                .filter(folder => folder.parentId === parentId)
+                .map(folder => ({
+                    ...folder,
+                    children: buildHierarchy(folder.id)
+                }));
+        };
+
+        return buildHierarchy(null);
     }
 
     async updateFolder(id: string, data: Prisma.FolderUpdateInput) {
@@ -298,14 +327,37 @@ export class ModelService {
     }
 
     async updateView(id: string, data: Prisma.ViewUpdateInput) {
-        return this.prisma.view.update({
+        console.log('Updating view:', id, 'with data:', {
+            ...data,
+            content: data.content ? `[Content with ${(data.content as any)?.nodes?.length || 0} nodes, ${(data.content as any)?.edges?.length || 0} edges]` : undefined
+        });
+        
+        // Ensure content is properly serialized as JSON
+        if (data.content && typeof data.content === 'object') {
+            data.content = data.content as any;
+        }
+        
+        const updated = await this.prisma.view.update({
             where: { id },
             data
         });
+        
+        console.log('View updated successfully:', updated.id);
+        return updated;
     }
 
     async getView(id: string) {
         return this.prisma.view.findUnique({
+            where: { id }
+        });
+    }
+
+    async findAllViews() {
+        return this.prisma.view.findMany();
+    }
+
+    async deleteView(id: string) {
+        return this.prisma.view.delete({
             where: { id }
         });
     }
