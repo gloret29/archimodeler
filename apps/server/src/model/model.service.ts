@@ -20,14 +20,14 @@ export class ModelService {
             },
         });
         await this.searchService.indexElement(element);
-        
+
         // Create element node in Neo4j
         await this.relationshipsService.ensureElementNode(
             element.id,
             element.name,
             element.conceptTypeId
         );
-        
+
         return element;
     }
 
@@ -109,14 +109,14 @@ export class ModelService {
 
             console.log('Element created successfully:', element.id);
             await this.searchService.indexElement(element);
-            
+
             // Create element node in Neo4j
             await this.relationshipsService.ensureElementNode(
                 element.id,
                 element.name,
                 element.conceptTypeId
             );
-            
+
             return element;
         } catch (error) {
             console.error('Error in createElementSimple:', error);
@@ -133,7 +133,7 @@ export class ModelService {
             },
         });
         await this.searchService.indexElement(element);
-        
+
         // Update element node in Neo4j if name or conceptType changed
         if (data.name || data.conceptType) {
             const updatedElement = await this.prisma.element.findUnique({
@@ -148,14 +148,14 @@ export class ModelService {
                 );
             }
         }
-        
+
         return element;
     }
 
     async deleteElement(id: string) {
         // Delete from Neo4j first (this will also delete all relationships)
         await this.relationshipsService.deleteElementNode(id);
-        
+
         // Then delete from PostgreSQL
         return this.prisma.element.delete({
             where: { id },
@@ -195,6 +195,30 @@ export class ModelService {
 
     // Folders
     async createFolder(data: Prisma.FolderCreateInput) {
+        // Handle default package ID
+        if (data.modelPackage && 'connect' in data.modelPackage) {
+            const connectData = data.modelPackage.connect as any;
+            if (connectData.id === 'default-package-id') {
+                let defaultPackage = await this.prisma.modelPackage.findFirst({
+                    where: { name: 'Default Package' }
+                });
+
+                if (!defaultPackage) {
+                    defaultPackage = await this.prisma.modelPackage.create({
+                        data: {
+                            name: 'Default Package',
+                            description: 'Default model package'
+                        }
+                    });
+                }
+
+                // Update the data with the real package ID
+                data = {
+                    ...data,
+                    modelPackage: { connect: { id: defaultPackage.id } }
+                };
+            }
+        }
         return this.prisma.folder.create({ data });
     }
 
