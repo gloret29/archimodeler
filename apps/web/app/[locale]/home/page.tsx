@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Layout, BarChart3, ArrowRight, Box, Settings } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface ModelPackage {
     id: string;
@@ -19,6 +20,7 @@ interface ModelPackage {
 }
 
 export default function HomePage() {
+    const t = useTranslations('Home');
     const router = useRouter();
     const [packages, setPackages] = useState<ModelPackage[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,13 +67,13 @@ export default function HomePage() {
         <div className="container mx-auto p-8 space-y-8">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-4xl font-bold tracking-tight">Welcome to ArchiModeler</h1>
+                    <h1 className="text-4xl font-bold tracking-tight">{t('welcome')}</h1>
                     <p className="text-muted-foreground mt-2">Manage your enterprise architecture models and views.</p>
                 </div>
                 <div className="flex gap-4">
                     <Button variant="outline" onClick={() => router.push('/settings/profile')}>
                         <Settings className="mr-2 h-4 w-4" />
-                        Settings
+                        {t('settings')}
                     </Button>
                     <Button variant="outline" onClick={() => router.push('/dashboard')}>
                         <BarChart3 className="mr-2 h-4 w-4" />
@@ -79,7 +81,7 @@ export default function HomePage() {
                     </Button>
                     <Button onClick={() => router.push('/studio')}>
                         <Layout className="mr-2 h-4 w-4" />
-                        Open Studio
+                        {t('openStudio')}
                     </Button>
                 </div>
             </div>
@@ -106,7 +108,7 @@ export default function HomePage() {
 
                 <Card className="md:col-span-2">
                     <CardHeader>
-                        <CardTitle>Recent Model Packages</CardTitle>
+                        <CardTitle>{t('recentPackages')}</CardTitle>
                         <CardDescription>Your recently updated architecture packages.</CardDescription>
                     </CardHeader>
                     <CardContent>

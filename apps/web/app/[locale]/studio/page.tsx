@@ -10,7 +10,7 @@ import ModelTree from '@/components/studio/ModelTree';
 
 import { Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { Link } from '@/navigation';
 
 function StudioContent() {
     const searchParams = useSearchParams();

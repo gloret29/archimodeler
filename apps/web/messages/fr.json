@@ -1,0 +1,20 @@
+{
+    "Auth": {
+        "loginTitle": "Bon retour",
+        "loginSubtitle": "Entrez vos identifiants pour accéder à votre compte",
+        "emailLabel": "Email",
+        "passwordLabel": "Mot de passe",
+        "loginButton": "Se connecter",
+        "loggingIn": "Connexion..."
+    },
+    "Home": {
+        "welcome": "Bienvenue sur ArchiModeler",
+        "recentPackages": "Packages de modèles récents",
+        "openStudio": "Ouvrir le Studio",
+        "settings": "Paramètres"
+    },
+    "Common": {
+        "loading": "Chargement...",
+        "backToHome": "Retour à l'accueil"
+    }
+}
