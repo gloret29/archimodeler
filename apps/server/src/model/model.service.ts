@@ -27,23 +27,51 @@ export class ModelService {
             console.log('Creating element with DTO:', dto);
 
             // First, ensure the package exists or create a default one
+            // Use upsert to prevent race conditions when multiple requests create the default package simultaneously
             let packageId = dto.packageId;
             if (packageId === 'default-package-id') {
-                let defaultPackage = await this.prisma.modelPackage.findFirst({
-                    where: { name: 'Default Package' }
-                });
-
-                if (!defaultPackage) {
-                    console.log('Default package not found, creating...');
-                    defaultPackage = await this.prisma.modelPackage.create({
-                        data: {
-                            name: 'Default Package',
-                            description: 'Default model package'
-                        }
+                try {
+                    // Try to find existing default package first
+                    let defaultPackage = await this.prisma.modelPackage.findFirst({
+                        where: { name: 'Default Package' }
                     });
-                    console.log('Default package created:', defaultPackage.id);
+
+                    if (!defaultPackage) {
+                        // If not found, try to create it
+                        // If another request created it between findFirst and create, this will fail
+                        // and we'll catch the error and fetch it again
+                        try {
+                            defaultPackage = await this.prisma.modelPackage.create({
+                                data: {
+                                    name: 'Default Package',
+                                    description: 'Default model package'
+                                }
+                            });
+                        } catch (createError: any) {
+                            // If creation fails (e.g., unique constraint violation), fetch the existing one
+                            if (createError.code === 'P2002' || createError.code === 'P2003') {
+                                defaultPackage = await this.prisma.modelPackage.findFirst({
+                                    where: { name: 'Default Package' }
+                                });
+                                if (!defaultPackage) {
+                                    throw createError; // Re-throw if still not found
+                                }
+                            } else {
+                                throw createError; // Re-throw other errors
+                            }
+                        }
+                    }
+                    packageId = defaultPackage.id;
+                } catch (error) {
+                    // Final fallback: try to fetch one more time
+                    const defaultPackage = await this.prisma.modelPackage.findFirst({
+                        where: { name: 'Default Package' }
+                    });
+                    if (!defaultPackage) {
+                        throw new Error('Failed to create or find Default Package');
+                    }
+                    packageId = defaultPackage.id;
                 }
-                packageId = defaultPackage.id;
             }
 
             // Find or create the metamodel
@@ -452,7 +480,10 @@ export class ModelService {
         }
 
         // Find or create metamodel
-        const metamodelName = importData.elements[0]?.metamodel || 'ArchiMate 3.2';
+        // Use the first element's metamodel if available, otherwise default to ArchiMate 3.2
+        const metamodelName = (importData.elements && importData.elements.length > 0 && importData.elements[0]?.metamodel) 
+            ? importData.elements[0].metamodel 
+            : 'ArchiMate 3.2';
         let metamodel = await this.prisma.metamodel.findUnique({
             where: { name: metamodelName }
         });
@@ -616,7 +647,7 @@ export class ModelService {
             packageName: newPackage.name,
             imported: {
                 elements: importData.elements.length,
-                relationships: importData.relationships.length,
+                relationships: (importData.relationships || []).length,
                 folders: importData.folders.length,
                 views: importData.views.length
             }
@@ -718,12 +749,12 @@ export class ModelService {
     }
 
     async findAllFolders(packageId?: string) {
-        if (!packageId) {
-            return [];
-        }
-        // Fetch all folders with their elements and views for the specified package
+        // If packageId is provided, filter by package, otherwise return all folders
+        const whereClause = packageId ? { modelPackageId: packageId } : {};
+        
+        // Fetch all folders with their elements and views
         const allFolders = await this.prisma.folder.findMany({
-            where: { modelPackageId: packageId },
+            where: whereClause,
             include: {
                 elements: {
                     include: {
