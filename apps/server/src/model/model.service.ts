@@ -56,4 +56,18 @@ export class ModelService {
             },
         });
     }
+
+    async findAllPackages() {
+        return this.prisma.modelPackage.findMany({
+            include: {
+                _count: {
+                    select: { elements: true, relationships: true }
+                }
+            }
+        });
+    }
+
+    async createPackage(data: Prisma.ModelPackageCreateInput) {
+        return this.prisma.modelPackage.create({ data });
+    }
 }

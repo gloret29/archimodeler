@@ -33,7 +33,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       localStorage.setItem('accessToken', data.access_token);
-      router.push('/dashboard');
+      router.push('/home');
     } catch (err: any) {
       setError(err.message);
     } finally {

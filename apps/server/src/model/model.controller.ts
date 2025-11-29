@@ -31,3 +31,18 @@ export class ModelController {
         return this.modelService.deleteElement(id);
     }
 }
+
+@Controller('model/packages')
+export class ModelPackageController {
+    constructor(private readonly modelService: ModelService) { }
+
+    @Get()
+    findAll() {
+        return this.modelService.findAllPackages();
+    }
+
+    @Post()
+    create(@Body() data: Prisma.ModelPackageCreateInput) {
+        return this.modelService.createPackage(data);
+    }
+}

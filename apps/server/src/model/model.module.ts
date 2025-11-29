@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ModelService } from './model.service';
-import { ModelController } from './model.controller';
+import { ModelController, ModelPackageController } from './model.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SearchModule } from '../search/search.module';
 
 @Module({
     imports: [PrismaModule, SearchModule],
-    controllers: [ModelController],
+    controllers: [ModelController, ModelPackageController],
     providers: [ModelService],
     exports: [ModelService],
 })
