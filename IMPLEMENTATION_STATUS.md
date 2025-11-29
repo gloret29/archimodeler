@@ -75,3 +75,16 @@ Ce fichier suit la progression de l'implémentation du guide de développement `
 - [x] **Prompt 7.1 : Assistant "Diagram Describer" et Coach**
   - [x] Service Diagram Describer (GenAI)
   - [x] Chatbot Coach (RAG)
+
+## Chapitre 8 : Améliorations UX (Novembre 2025)
+
+- [x] **Renommage et Gestion des Éléments**
+  - [x] Dialog de renommage moderne (RenameDialog)
+  - [x] Menu contextuel (Rename, Remove from View, Delete from Repository)
+  - [x] Double-clic pour renommer
+  - [x] Gestion du "Default Package" automatique
+
+- [ ] **Intégration Neo4j**
+  - [x] Service Neo4j de base
+  - [ ] Stockage des relations dans Neo4j
+  - [ ] Synchronisation PostgreSQL <-> Neo4j

@@ -1,7 +1,7 @@
 ## Phase 1 : Fondations et Infrastructure
 
 ### 1.1 Intégration Neo4j pour les relations
-**Statut**: 🟢 **Terminé**  
+**Statut**: 🟡 **En cours**  
 **Priorité**: Haute  
 **Description**: 
 - La base PostgreSQL doit rester le référentiel des objets et des vues
@@ -14,8 +14,8 @@
 - [x] Installer et configurer Neo4j (docker-compose)
 - [x] Créer un module Neo4j dans le backend
 - [x] Créer un service pour gérer les relations (CRUD)
-- [x] Adapter les endpoints existants pour utiliser Neo4j pour les relations
-- [x] Créer des migrations pour transférer les relations existantes
+- [ ] Adapter les endpoints existants pour utiliser Neo4j pour les relations
+- [ ] Créer des migrations pour transférer les relations existantes
 - [ ] Tests unitaires et d'intégration
 
 ---
