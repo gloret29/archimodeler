@@ -156,7 +156,7 @@ export default function ModelTree() {
         }
     };
 
-    const renderFolder = (folder: FolderType): JSX.Element => {
+    const renderFolder = (folder: FolderType): React.ReactElement => {
         const isExpanded = expanded[folder.id];
 
         return (

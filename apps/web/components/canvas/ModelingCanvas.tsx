@@ -89,25 +89,27 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
 
 
     const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
-        if (!node.data.elementId) return;
+        const elementId = node.data?.elementId;
+        if (!elementId || typeof elementId !== 'string') return;
 
         setRenameDialog({
             isOpen: true,
             nodeId: node.id,
-            currentName: String(node.data.label),
-            elementId: node.data.elementId,
+            currentName: String(node.data?.label || ''),
+            elementId: elementId,
         });
     }, []);
 
 
     const handleRenameNode = async () => {
-        if (!nodeContextMenu.nodeId || !nodeContextMenu.nodeData.elementId) return;
+        const elementId = nodeContextMenu.nodeData?.elementId;
+        if (!nodeContextMenu.nodeId || !elementId || typeof elementId !== 'string') return;
 
         setRenameDialog({
             isOpen: true,
             nodeId: nodeContextMenu.nodeId,
-            currentName: String(nodeContextMenu.nodeData.label),
-            elementId: nodeContextMenu.nodeData.elementId,
+            currentName: String(nodeContextMenu.nodeData?.label || ''),
+            elementId: elementId,
         });
     };
 
@@ -147,16 +149,17 @@ export default function ModelingCanvas({ packageId }: ModelingCanvasProps) {
     };
 
     const handleDeleteFromRepository = async () => {
-        if (!nodeContextMenu.nodeId || !nodeContextMenu.nodeData.elementId) return;
+        const elementId = nodeContextMenu.nodeData?.elementId;
+        if (!nodeContextMenu.nodeId || !elementId || typeof elementId !== 'string') return;
 
         // TODO: Fetch views using this element
-        const confirmMsg = `Delete "${nodeContextMenu.nodeData.label}" from repository?\n\nThis will remove it from all views. This action cannot be undone.`;
+        const confirmMsg = `Delete "${nodeContextMenu.nodeData?.label || 'element'}" from repository?\n\nThis will remove it from all views. This action cannot be undone.`;
 
         if (!confirm(confirmMsg)) return;
 
         try {
             const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/elements/${nodeContextMenu.nodeData.elementId}`, {
+            await fetch(`http://localhost:3002/model/elements/${elementId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

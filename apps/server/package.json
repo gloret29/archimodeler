@@ -18,7 +18,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "migrate:neo4j": "ts-node -r tsconfig-paths/register src/neo4j/migrate-relationships.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.74",
@@ -35,6 +36,7 @@
     "ai": "^5.0.104",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
+    "neo4j-driver": "^6.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
