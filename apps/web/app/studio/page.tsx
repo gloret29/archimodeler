@@ -6,6 +6,10 @@ import ModelingCanvas from '@/components/canvas/ModelingCanvas';
 import Stencil from '@/components/canvas/Stencil';
 import CoachChat from '@/components/ai/CoachChat';
 
+import ModelTree from '@/components/studio/ModelTree';
+
+import { Suspense } from 'react';
+
 export default function StudioPage() {
     return (
         <div className="flex h-screen w-full overflow-hidden bg-gray-50">
@@ -15,6 +19,9 @@ export default function StudioPage() {
                     <ModelingCanvas />
                     <CoachChat />
                 </main>
+                <Suspense fallback={<div className="w-80 bg-white border-l border-gray-200" />}>
+                    <ModelTree />
+                </Suspense>
             </ReactFlowProvider>
         </div>
     );

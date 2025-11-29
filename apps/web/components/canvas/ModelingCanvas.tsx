@@ -111,7 +111,7 @@ export default function ModelingCanvas() {
 
             if (!dataStr) return;
 
-            const { type, layer } = JSON.parse(dataStr);
+            const { type, layer, label, existingId } = JSON.parse(dataStr);
 
             // check if the dropped element is valid
             if (typeof type === 'undefined' || !type) {
@@ -127,7 +127,12 @@ export default function ModelingCanvas() {
                 id: getId(),
                 type: 'archimate',
                 position,
-                data: { label: `${type}`, type, layer },
+                data: {
+                    label: label || `${type}`,
+                    type,
+                    layer,
+                    elementId: existingId
+                },
             };
 
             setNodes((nds) => nds.concat(newNode));
