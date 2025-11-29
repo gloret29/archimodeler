@@ -98,24 +98,6 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [x] Interface de gestion des paramètres globaux
 - [x] Configuration des connecteurs (GitHub, Neo4j)
 
-### 9.3 Gestion Utilisateurs et Rôles
-**Statut**: � **Terminé**
-- [x] CRUD Utilisateurs (Backend & Frontend)
-- [x] CRUD Rôles et Permissions (Backend & Frontend)
-- [x] Assignation des rôles (Via User Edit)
-
-## 🔴 Phase 10 : Personnalisation (À faire)
-
-### 10.1 Expérience Utilisateur
-- [ ] Paramètres utilisateur (Thème, Langue)
-- [ ] Page d'accueil personnalisable (Raccourcis Vues)
-- [ ] Panneau d'information contextuel (Détails sélection)
-
-## 🔴 Phase 11 : Modélisation Avancée (À faire)
-
-### 11.1 Édition et Collaboration
-- [ ] Système multi-onglets pour les vues
-- [ ] Collaboration temps réel (WebSocket/Socket.io)
 - [ ] Gestion des conflits et curseurs distants
 
 ### 11.2 Conformité et Qualité

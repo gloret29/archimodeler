@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Layout, BarChart3, ArrowRight, Box } from 'lucide-react';
+import { Plus, Layout, BarChart3, ArrowRight, Box, Settings } from 'lucide-react';
 
 interface ModelPackage {
     id: string;
@@ -69,6 +69,10 @@ export default function HomePage() {
                     <p className="text-muted-foreground mt-2">Manage your enterprise architecture models and views.</p>
                 </div>
                 <div className="flex gap-4">
+                    <Button variant="outline" onClick={() => router.push('/settings/profile')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                    </Button>
                     <Button variant="outline" onClick={() => router.push('/dashboard')}>
                         <BarChart3 className="mr-2 h-4 w-4" />
                         Dashboard
