@@ -112,8 +112,8 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
 
         const fetchStereotypes = async () => {
             try {
-                const data = await api.get(`/stereotypes/elements/${elementId}`);
-                setStereotypes(data.map((es: any) => ({ name: es.stereotype.name })));
+                const data = await api.get<Array<{ stereotype: { name: string } }>>(`/stereotypes/elements/${elementId}`);
+                setStereotypes(data.map((es) => ({ name: es.stereotype.name })));
             } catch (error) {
                 console.error('Failed to fetch stereotypes:', error);
             }
@@ -146,7 +146,7 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
 
     // Determine border style based on remote selection
     const isRemotelySelected = selectedBy && selectedBy.length > 0;
-    const remoteColor = isRemotelySelected ? selectedBy[0].color : undefined;
+    const remoteColor = isRemotelySelected && selectedBy[0] ? selectedBy[0].color : undefined;
     
     // Apply custom styles
     const nodeStyle: React.CSSProperties = {

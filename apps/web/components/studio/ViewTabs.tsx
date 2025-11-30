@@ -6,6 +6,7 @@ import { X, Plus, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import RenameTabDialog from './RenameTabDialog';
+import { useTranslations } from 'next-intl';
 import {
     ContextMenu,
     ContextMenuContent,
@@ -18,6 +19,7 @@ interface ViewTabsProps {
 }
 
 export default function ViewTabs({ onNewTab }: ViewTabsProps) {
+    const t = useTranslations('Studio');
     const { tabs, activeTabId, setActiveTab, removeTab, updateTabName } = useTabsStore();
     const [renameDialogOpen, setRenameDialogOpen] = useState(false);
     const [tabToRename, setTabToRename] = useState<ViewTab | null>(null);
@@ -62,7 +64,7 @@ export default function ViewTabs({ onNewTab }: ViewTabsProps) {
                                     {tab.isModified && (
                                         <span 
                                             className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0 animate-pulse" 
-                                            title="Modified - not saved"
+                                            title={t('modified')}
                                             aria-label="Modified"
                                         />
                                     )}
@@ -73,7 +75,7 @@ export default function ViewTabs({ onNewTab }: ViewTabsProps) {
                                         removeTab(tab.id);
                                     }}
                                     className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-0.5 transition-opacity"
-                                    title="Close tab"
+                                    title={t('closeTab')}
                                 >
                                     <X className="h-3 w-3" />
                                 </button>
@@ -82,14 +84,14 @@ export default function ViewTabs({ onNewTab }: ViewTabsProps) {
                         <ContextMenuContent>
                             <ContextMenuItem onClick={() => handleRename(tab.id, tab.viewName)}>
                                 <Edit2 className="h-4 w-4 mr-2" />
-                                Rename
+                                {t('rename')}
                             </ContextMenuItem>
                             <ContextMenuItem
                                 onClick={() => removeTab(tab.id)}
                                 className="text-destructive focus:text-destructive"
                             >
                                 <X className="h-4 w-4 mr-2" />
-                                Close
+                                {t('close')}
                             </ContextMenuItem>
                         </ContextMenuContent>
                     </ContextMenu>
@@ -101,7 +103,7 @@ export default function ViewTabs({ onNewTab }: ViewTabsProps) {
                         size="sm"
                         onClick={onNewTab}
                         className="h-8 w-8 p-0 ml-1"
-                        title="New view"
+                        title={t('newView')}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>

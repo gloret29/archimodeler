@@ -12,6 +12,7 @@ import { ARCHIMATE_CONCEPTS } from "@/lib/metamodel";
 import { Link } from "@/navigation";
 import { Home } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useDialog } from '@/contexts/DialogContext';
 import { api } from '@/lib/api/client';
 
 export default function AdminSettings() {
@@ -76,7 +77,11 @@ export default function AdminSettings() {
             alert(`${section} settings saved successfully!`);
         } catch (err: any) {
             console.error(`Error saving ${section} settings:`, err);
-            alert(`Failed to save ${section} settings: ${err.message || 'Unknown error'}`);
+            await alert({
+                title: 'Error',
+                message: `Failed to save ${section} settings: ${err.message || 'Unknown error'}`,
+                type: 'error',
+            });
         }
     };
 
@@ -99,7 +104,7 @@ export default function AdminSettings() {
     // Group concepts by layer for display
     const groupedConcepts = ARCHIMATE_CONCEPTS.reduce((acc, concept) => {
         if (!acc[concept.layer]) acc[concept.layer] = [];
-        acc[concept.layer].push(concept);
+        acc[concept.layer]!.push(concept);
         return acc;
     }, {} as Record<string, typeof ARCHIMATE_CONCEPTS>);
 

@@ -555,6 +555,33 @@ export class CollaborationGateway
         this.logger.log(`Chat message from ${data.from} to ${data.to} - rooms: ${room1}, ${room2}`);
     }
 
+    @SubscribeMessage('view-saved')
+    handleViewSaved(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { viewId: string; savedBy: { id: string; name: string } },
+    ) {
+        const { viewId, savedBy } = data;
+        const session = this.viewSessions.get(viewId);
+
+        if (!session) {
+            this.logger.warn(`View session not found for ${viewId}`);
+            return;
+        }
+
+        // Get user ID for this socket
+        const user = session.users.get(client.id);
+        if (!user) {
+            this.logger.warn(`User not found in session for client ${client.id}`);
+            return;
+        }
+
+        // Broadcast to all users in the view that the view was saved
+        this.server.to(viewId).emit('view-saved', {
+            viewId,
+            savedBy: savedBy || { id: user.id, name: user.name },
+        });
+    }
+
     // Method to emit notifications to specific users
     emitNotification(userId: string, notification: any) {
         // Send to user-specific notification room

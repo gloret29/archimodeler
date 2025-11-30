@@ -15,6 +15,10 @@ interface CollaborativeCanvasProps {
     onContentChange?: (content: { nodes: Node[]; edges: Edge[] }) => void;
     onNodeClick?: (nodeId: string, elementId: string | undefined, elementName: string, elementType: string) => void;
     onEdgeClick?: (edgeId: string, relationshipId: string | undefined, relationshipName: string, relationshipType: string) => void;
+    onViewSaved?: (savedBy: { id: string; name: string }) => void;
+    onSelectionChange?: (selectedNodes: Node[], selectedEdges: Edge[]) => void;
+    onSetNodesAndEdges?: (setNodes: (nodes: Node[]) => void, setEdges: (edges: Edge[]) => void) => void;
+    onRestoreSelection?: (restoreFn: () => void) => void;
 }
 
 // Generate a random color for the user
@@ -34,11 +38,15 @@ export default function CollaborativeCanvas({
     currentUser: propCurrentUser,
     onContentChange,
     onNodeClick,
-    onEdgeClick
+    onEdgeClick,
+    onViewSaved,
+    onSelectionChange,
+    onSetNodesAndEdges,
+    onRestoreSelection
 }: CollaborativeCanvasProps) {
     const canvasRef = useRef<HTMLDivElement>(null);
-    const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
-    const [edges, setEdges, onEdgesChangeInternal] = useEdgesState([]);
+    const [nodes, setNodes, onNodesChangeInternal] = useNodesState<Node>([]);
+    const [edges, setEdges, onEdgesChangeInternal] = useEdgesState<Edge>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
     // Use provided user or create a fallback (should not happen in production)
@@ -54,7 +62,7 @@ export default function CollaborativeCanvas({
             return {
                 id: propCurrentUser.id,
                 name: propCurrentUser.name,
-                color: propCurrentUser.color || colors[colorIndex],
+                color: propCurrentUser.color ?? colors[colorIndex] ?? '#4ECDC4',
             };
         }
         return null;
@@ -68,7 +76,7 @@ export default function CollaborativeCanvas({
 
         const fetchView = async () => {
             try {
-                const viewData = await api.get(`/model/views/${viewId}`);
+                const viewData = await api.get<{ content?: string }>(`/model/views/${viewId}`);
                 if (viewData && viewData.content) {
                     console.log('Loading view content:', viewData.content);
                     // Restore nodes and edges
@@ -116,6 +124,9 @@ export default function CollaborativeCanvas({
         edgesRef.current = edges;
     }, [edges]);
 
+    // State for save notification
+    const [saveNotification, setSaveNotification] = useState<{ savedBy: { id: string; name: string } } | null>(null);
+
     const {
         users,
         cursors,
@@ -130,6 +141,18 @@ export default function CollaborativeCanvas({
     } = useCollaboration({
         viewId: collaborationEnabled && currentUser ? viewId : '', // Don't connect if not enabled or no user
         user: currentUser || { id: '', name: '', color: '#4ECDC4' }, // Fallback user (will be rejected by server)
+        onViewSaved: (data) => {
+            // Show notification
+            setSaveNotification({ savedBy: data.savedBy });
+            // Hide after 5 seconds
+            setTimeout(() => {
+                setSaveNotification(null);
+            }, 5000);
+            // Call parent callback if provided
+            if (onViewSaved) {
+                onViewSaved(data.savedBy);
+            }
+        },
         onNodeChanged: (data) => {
             // This callback is only called for remote changes (filtered in useCollaboration)
             isApplyingRemoteChangeRef.current = true;
@@ -309,6 +332,27 @@ export default function CollaborativeCanvas({
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
     const lastCursorUpdateRef = useRef<{ x: number; y: number } | null>(null);
 
+    // Expose setters to parent (using refs to avoid infinite loops)
+    const onSetNodesAndEdgesRef = useRef(onSetNodesAndEdges);
+    const handleSetNodesRef = useRef(handleSetNodes);
+    const handleSetEdgesRef = useRef(handleSetEdges);
+    const hasExposedSettersRef = useRef(false);
+    
+    useEffect(() => {
+        onSetNodesAndEdgesRef.current = onSetNodesAndEdges;
+        handleSetNodesRef.current = handleSetNodes;
+        handleSetEdgesRef.current = handleSetEdges;
+        
+        // Only expose setters once to avoid infinite loops
+        if (!hasExposedSettersRef.current && onSetNodesAndEdgesRef.current) {
+            hasExposedSettersRef.current = true;
+            onSetNodesAndEdgesRef.current(
+                (nodes: Node[]) => handleSetNodesRef.current(nodes),
+                (edges: Edge[]) => handleSetEdgesRef.current(edges)
+            );
+        }
+    }, [onSetNodesAndEdges, handleSetNodes, handleSetEdges]);
+
     useEffect(() => {
         if (!isConnected || !reactFlowInstance) return;
 
@@ -444,6 +488,7 @@ export default function CollaborativeCanvas({
                     onNodeClick={onNodeClick}
                     onEdgeClick={onEdgeClick}
                     onReactFlowInit={setReactFlowInstance}
+                    onSelectionChange={onSelectionChange}
                 />
             </ReactFlowProvider>
 
@@ -453,6 +498,20 @@ export default function CollaborativeCanvas({
                     cursors={cursors}
                     reactFlowInstance={reactFlowInstance}
                 />
+            )}
+            
+            {/* Save notification */}
+            {saveNotification && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300">
+                    <div className="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-sm font-medium">
+                            Vue sauvegardée par {saveNotification.savedBy.name}
+                        </span>
+                    </div>
+                </div>
             )}
         </div>
     );

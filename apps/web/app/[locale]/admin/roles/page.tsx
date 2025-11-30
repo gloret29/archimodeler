@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Shield, Home } from "lucide-react";
 import { Link } from "@/navigation";
 import { useTranslations } from "next-intl";
+import { useDialog } from '@/contexts/DialogContext';
 
 interface Role {
     id: string;
@@ -24,6 +25,7 @@ interface Role {
 }
 
 export default function RolesPage() {
+    const { confirm } = useDialog();
     const t = useTranslations('Home');
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
@@ -34,17 +36,23 @@ export default function RolesPage() {
 
     const fetchRoles = async () => {
         try {
-            const data = await api.get('/roles');
-            setRoles(data);
+            const data = await api.get<Role[]>('/roles');
+            setRoles(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Failed to fetch roles:", error);
+            setRoles([]);
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this role?")) return;
+        const confirmed = await confirm({
+            title: "Delete Role",
+            description: "Are you sure you want to delete this role?",
+            variant: 'destructive',
+        });
+        if (!confirmed) return;
         try {
             await api.delete(`/roles/${id}`);
             fetchRoles();

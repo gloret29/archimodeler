@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Node, Edge } from '@xyflow/react';
-import { Palette, Type, Minus, X } from 'lucide-react';
+import { Type, Minus, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from 'next-intl';
 
 interface FormattingPanelProps {
     selectedNodes: Node[];
@@ -14,6 +14,7 @@ interface FormattingPanelProps {
     onUpdateEdges: (edges: Edge[]) => void;
     allNodes: Node[];
     allEdges: Edge[];
+    onMaintainSelection?: () => void;
 }
 
 interface NodeStyle {
@@ -39,9 +40,9 @@ export default function FormattingPanel({
     onUpdateEdges,
     allNodes,
     allEdges,
+    onMaintainSelection,
 }: FormattingPanelProps) {
-    const [isOpen, setIsOpen] = React.useState(false);
-
+    const t = useTranslations('Canvas');
     // Get current styles from first selected node/edge
     const currentNodeStyle: NodeStyle = selectedNodes[0]?.data?.style || {};
     const edgeStyle = selectedEdges[0]?.style || {};
@@ -108,216 +109,311 @@ export default function FormattingPanel({
         onUpdateEdges(updatedEdges);
     };
 
-    const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0;
+    const hasNodesSelection = selectedNodes.length > 0;
+    const hasEdgesSelection = selectedEdges.length > 0;
+    const hasSelection = hasNodesSelection || hasEdgesSelection;
 
-    if (!hasSelection) {
-        return null;
-    }
+    // Store selection to restore it if lost
+    const selectionRef = React.useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
+    const isInteractingRef = React.useRef(false);
+    
+    React.useEffect(() => {
+        selectionRef.current = { nodes: selectedNodes, edges: selectedEdges };
+    }, [selectedNodes, selectedEdges]);
+
+    // Monitor selection and restore if lost during toolbar interaction
+    React.useEffect(() => {
+        if (isInteractingRef.current && (selectedNodes.length === 0 && selectedEdges.length === 0) && 
+            (selectionRef.current.nodes.length > 0 || selectionRef.current.edges.length > 0)) {
+            // Selection was lost during toolbar interaction, restore it
+            if (onMaintainSelection) {
+                setTimeout(() => {
+                    onMaintainSelection();
+                    isInteractingRef.current = false;
+                }, 10);
+            }
+        }
+    }, [selectedNodes, selectedEdges, onMaintainSelection]);
+
+    // Prevent clicks from propagating to React Flow (which would deselect)
+    const handleToolbarInteraction = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        // Mark that we're interacting with toolbar
+        isInteractingRef.current = true;
+        // Maintain selection when interacting with toolbar
+        if (onMaintainSelection && (selectionRef.current.nodes.length > 0 || selectionRef.current.edges.length > 0)) {
+            // Use setTimeout to restore selection after React Flow processes the click
+            setTimeout(() => {
+                onMaintainSelection();
+            }, 10);
+        }
+    };
 
     return (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-            <div className="bg-background border border-border rounded-lg shadow-lg p-4 min-w-[400px]">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold flex items-center gap-2">
-                        <Palette className="h-4 w-4" />
-                        Formatting
-                    </h3>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setIsOpen(!isOpen)}
-                    >
-                        {isOpen ? <X className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-                    </Button>
-                </div>
+        <div 
+            className="border-b border-border bg-background px-3 py-1.5 flex items-center gap-1 relative z-50"
+            onMouseDown={handleToolbarInteraction}
+            onClick={handleToolbarInteraction}
+            onContextMenu={(e) => e.preventDefault()}
+            style={{ pointerEvents: 'auto' }}
+        >
+            {/* Font/Text Group - Only for Nodes */}
+            <div className="flex items-center gap-0.5 border-r border-border pr-1.5 mr-1.5">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    disabled={!hasNodesSelection}
+                    title={t('fontSize')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Type className="h-4 w-4 mr-1" />
+                    <Input
+                        type="number"
+                        min="8"
+                        max="24"
+                        value={currentNodeStyle.fontSize || 12}
+                        onChange={(e) => updateNodeStyle({ fontSize: parseInt(e.target.value) || 12 })}
+                        className="h-5 w-10 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
+                        disabled={!hasNodesSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Button>
+            </div>
 
-                {isOpen && (
-                    <div className="space-y-4">
-                        {selectedNodes.length > 0 && (
-                            <div className="space-y-3 border-b border-border pb-3">
-                                <h4 className="text-xs font-semibold text-muted-foreground uppercase">
-                                    Nodes ({selectedNodes.length})
-                                </h4>
-                                
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="node-bg-color" className="text-xs">Background Color</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="node-bg-color"
-                                                type="color"
-                                                value={currentNodeStyle.backgroundColor || '#ffffff'}
-                                                onChange={(e) => updateNodeStyle({ backgroundColor: e.target.value })}
-                                                className="h-8 w-16 p-1 cursor-pointer"
-                                            />
-                                            <Input
-                                                type="text"
-                                                value={currentNodeStyle.backgroundColor || '#ffffff'}
-                                                onChange={(e) => updateNodeStyle({ backgroundColor: e.target.value })}
-                                                className="h-8 text-xs"
-                                                placeholder="#ffffff"
-                                            />
-                                        </div>
-                                    </div>
+            {/* Colors Group */}
+            <div className="flex items-center gap-0.5 border-r border-border pr-1.5 mr-1.5">
+                {/* Text Color - Only for Nodes */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 relative"
+                    disabled={!hasNodesSelection}
+                    title={t('textColor')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasNodesSelection) {
+                            document.getElementById('node-font-color-picker')?.click();
+                        }
+                    }}
+                >
+                    <Type className="h-4 w-4" />
+                    <div
+                        className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 w-3 h-0.5"
+                        style={{ backgroundColor: currentNodeStyle.fontColor || '#000000' }}
+                    />
+                    <Input
+                        id="node-font-color-picker"
+                        type="color"
+                        value={currentNodeStyle.fontColor || '#000000'}
+                        onChange={(e) => updateNodeStyle({ fontColor: e.target.value })}
+                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                        disabled={!hasNodesSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Button>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="node-border-color" className="text-xs">Border Color</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="node-border-color"
-                                                type="color"
-                                                value={currentNodeStyle.borderColor || '#000000'}
-                                                onChange={(e) => updateNodeStyle({ borderColor: e.target.value })}
-                                                className="h-8 w-16 p-1 cursor-pointer"
-                                            />
-                                            <Input
-                                                type="text"
-                                                value={currentNodeStyle.borderColor || '#000000'}
-                                                onChange={(e) => updateNodeStyle({ borderColor: e.target.value })}
-                                                className="h-8 text-xs"
-                                                placeholder="#000000"
-                                            />
-                                        </div>
-                                    </div>
+                {/* Background Color - Only for Nodes */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 relative"
+                    disabled={!hasNodesSelection}
+                    title={t('backgroundColor')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasNodesSelection) {
+                            document.getElementById('node-bg-color-picker')?.click();
+                        }
+                    }}
+                >
+                    <div
+                        className="w-4 h-4 border border-border rounded"
+                        style={{ backgroundColor: currentNodeStyle.backgroundColor || '#ffffff' }}
+                    />
+                    <Input
+                        id="node-bg-color-picker"
+                        type="color"
+                        value={currentNodeStyle.backgroundColor || '#ffffff'}
+                        onChange={(e) => updateNodeStyle({ backgroundColor: e.target.value })}
+                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                        disabled={!hasNodesSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Button>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="node-font-color" className="text-xs">Text Color</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="node-font-color"
-                                                type="color"
-                                                value={currentNodeStyle.fontColor || '#000000'}
-                                                onChange={(e) => updateNodeStyle({ fontColor: e.target.value })}
-                                                className="h-8 w-16 p-1 cursor-pointer"
-                                            />
-                                            <Input
-                                                type="text"
-                                                value={currentNodeStyle.fontColor || '#000000'}
-                                                onChange={(e) => updateNodeStyle({ fontColor: e.target.value })}
-                                                className="h-8 text-xs"
-                                                placeholder="#000000"
-                                            />
-                                        </div>
-                                    </div>
+                {/* Border Color - Only for Nodes */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 relative"
+                    disabled={!hasNodesSelection}
+                    title={t('borderColor')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasNodesSelection) {
+                            document.getElementById('node-border-color-picker')?.click();
+                        }
+                    }}
+                >
+                    <div
+                        className="w-4 h-4 border-2 rounded"
+                        style={{ borderColor: currentNodeStyle.borderColor || '#000000' }}
+                    />
+                    <Input
+                        id="node-border-color-picker"
+                        type="color"
+                        value={currentNodeStyle.borderColor || '#000000'}
+                        onChange={(e) => updateNodeStyle({ borderColor: e.target.value })}
+                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                        disabled={!hasNodesSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Button>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="node-border-width" className="text-xs">Border Width</Label>
-                                        <Input
-                                            id="node-border-width"
-                                            type="number"
-                                            min="0"
-                                            max="10"
-                                            value={currentNodeStyle.borderWidth || 0}
-                                            onChange={(e) => updateNodeStyle({ borderWidth: parseInt(e.target.value) || 0 })}
-                                            className="h-8 text-xs"
-                                        />
-                                    </div>
+                {/* Stroke Color - Only for Edges */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 relative"
+                    disabled={!hasEdgesSelection}
+                    title={t('strokeColor')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasEdgesSelection) {
+                            document.getElementById('edge-stroke-color-picker')?.click();
+                        }
+                    }}
+                >
+                    <Minus className="h-4 w-4" />
+                    <div
+                        className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 w-3 h-0.5"
+                        style={{ backgroundColor: currentEdgeStyle.strokeColor || '#000000' }}
+                    />
+                    <Input
+                        id="edge-stroke-color-picker"
+                        type="color"
+                        value={currentEdgeStyle.strokeColor || '#000000'}
+                        onChange={(e) => updateEdgeStyle({ strokeColor: e.target.value })}
+                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                        disabled={!hasEdgesSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Button>
+            </div>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="node-font-size" className="text-xs">Font Size</Label>
-                                        <Input
-                                            id="node-font-size"
-                                            type="number"
-                                            min="8"
-                                            max="24"
-                                            value={currentNodeStyle.fontSize || 12}
-                                            onChange={(e) => updateNodeStyle({ fontSize: parseInt(e.target.value) || 12 })}
-                                            className="h-8 text-xs"
-                                        />
-                                    </div>
+            {/* Border/Stroke Style Group */}
+            <div className="flex items-center gap-0.5 border-r border-border pr-1.5 mr-1.5">
+                {/* Border Width - Only for Nodes */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    disabled={!hasNodesSelection}
+                    title={t('borderWidth')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Input
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={currentNodeStyle.borderWidth || 0}
+                        onChange={(e) => updateNodeStyle({ borderWidth: parseInt(e.target.value) || 0 })}
+                        className="h-5 w-10 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
+                        disabled={!hasNodesSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder={t('zero')}
+                    />
+                    <span className="text-xs ml-1">px</span>
+                </Button>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="node-opacity" className="text-xs">Opacity</Label>
-                                        <Input
-                                            id="node-opacity"
-                                            type="number"
-                                            min="0"
-                                            max="1"
-                                            step="0.1"
-                                            value={currentNodeStyle.opacity ?? 1}
-                                            onChange={(e) => updateNodeStyle({ opacity: parseFloat(e.target.value) || 1 })}
-                                            className="h-8 text-xs"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                {/* Stroke Width - Only for Edges */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    disabled={!hasEdgesSelection}
+                    title={t('strokeWidth')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Minus className="h-3 w-3 mr-1" />
+                    <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={currentEdgeStyle.strokeWidth || 2}
+                        onChange={(e) => updateEdgeStyle({ strokeWidth: parseInt(e.target.value) || 2 })}
+                        className="h-5 w-10 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
+                        disabled={!hasEdgesSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Button>
 
-                        {selectedEdges.length > 0 && (
-                            <div className="space-y-3">
-                                <h4 className="text-xs font-semibold text-muted-foreground uppercase">
-                                    Edges ({selectedEdges.length})
-                                </h4>
-                                
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="edge-stroke-color" className="text-xs">Stroke Color</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="edge-stroke-color"
-                                                type="color"
-                                                value={currentEdgeStyle.strokeColor || '#000000'}
-                                                onChange={(e) => updateEdgeStyle({ strokeColor: e.target.value })}
-                                                className="h-8 w-16 p-1 cursor-pointer"
-                                            />
-                                            <Input
-                                                type="text"
-                                                value={currentEdgeStyle.strokeColor || '#000000'}
-                                                onChange={(e) => updateEdgeStyle({ strokeColor: e.target.value })}
-                                                className="h-8 text-xs"
-                                                placeholder="#000000"
-                                            />
-                                        </div>
-                                    </div>
+                {/* Stroke Style - Only for Edges */}
+                <select
+                    value={currentEdgeStyle.strokeStyle || 'solid'}
+                    onChange={(e) => updateEdgeStyle({ strokeStyle: e.target.value as 'solid' | 'dashed' | 'dotted' })}
+                    className="h-7 px-2 text-xs rounded-md border border-input bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!hasEdgesSelection}
+                    title={t('strokeStyle')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <option value="solid">{t('solid')}</option>
+                    <option value="dashed">{t('dashed')}</option>
+                    <option value="dotted">{t('dotted')}</option>
+                </select>
+            </div>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="edge-stroke-width" className="text-xs">Stroke Width</Label>
-                                        <Input
-                                            id="edge-stroke-width"
-                                            type="number"
-                                            min="1"
-                                            max="10"
-                                            value={currentEdgeStyle.strokeWidth || 2}
-                                            onChange={(e) => updateEdgeStyle({ strokeWidth: parseInt(e.target.value) || 2 })}
-                                            className="h-8 text-xs"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="edge-stroke-style" className="text-xs">Stroke Style</Label>
-                                        <select
-                                            id="edge-stroke-style"
-                                            value={currentEdgeStyle.strokeStyle || 'solid'}
-                                            onChange={(e) => updateEdgeStyle({ strokeStyle: e.target.value as 'solid' | 'dashed' | 'dotted' })}
-                                            className="h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
-                                        >
-                                            <option value="solid">Solid</option>
-                                            <option value="dashed">Dashed</option>
-                                            <option value="dotted">Dotted</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="edge-opacity" className="text-xs">Opacity</Label>
-                                        <Input
-                                            id="edge-opacity"
-                                            type="number"
-                                            min="0"
-                                            max="1"
-                                            step="0.1"
-                                            value={currentEdgeStyle.opacity ?? 1}
-                                            onChange={(e) => updateEdgeStyle({ opacity: parseFloat(e.target.value) || 1 })}
-                                            className="h-8 text-xs"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+            {/* Opacity Group */}
+            <div className="flex items-center gap-0.5">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    disabled={!hasSelection}
+                    title={t('opacity')}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Circle className="h-3 w-3 mr-1" />
+                    <Input
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={hasNodesSelection ? (currentNodeStyle.opacity ?? 1) : (currentEdgeStyle.opacity ?? 1)}
+                        onChange={(e) => {
+                            const value = parseFloat(e.target.value) || 1;
+                            if (hasNodesSelection) {
+                                updateNodeStyle({ opacity: value });
+                            }
+                            if (hasEdgesSelection) {
+                                updateEdgeStyle({ opacity: value });
+                            }
+                        }}
+                        className="h-5 w-10 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
+                        disabled={!hasSelection}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Button>
             </div>
         </div>
     );
 }
-

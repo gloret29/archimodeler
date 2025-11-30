@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { ARCHIMATE_CONCEPTS, ConceptDefinition } from '@/lib/metamodel';
 import { api } from '@/lib/api/client';
+import { useTranslations } from 'next-intl';
 
 // Map ArchiMate types to their SVG filenames (same as ArchiMateNode)
 const svgMapping: Record<string, string> = {
@@ -100,6 +101,7 @@ const layerColors: Record<string, string> = {
 };
 
 export default function Stencil() {
+    const t = useTranslations('Stencil');
     const [searchTerm, setSearchTerm] = useState('');
     const [enabledConcepts, setEnabledConcepts] = useState<string[]>([]);
 
@@ -142,10 +144,16 @@ export default function Stencil() {
         return acc;
     }, {} as Record<string, ConceptDefinition[]>);
 
-    // Order layers
+    // Order layers with translations
     const layerOrder = [
-        'Strategy', 'Business', 'Application', 'Technology',
-        'Physical', 'Motivation', 'Implementation & Migration', 'Composite'
+        { key: 'Strategy', label: t('layerStrategy') },
+        { key: 'Business', label: t('layerBusiness') },
+        { key: 'Application', label: t('layerApplication') },
+        { key: 'Technology', label: t('layerTechnology') },
+        { key: 'Physical', label: t('layerPhysical') },
+        { key: 'Motivation', label: t('layerMotivation') },
+        { key: 'Implementation & Migration', label: t('layerImplementationMigration') },
+        { key: 'Composite', label: t('layerComposite') }
     ];
 
     return (
@@ -153,34 +161,34 @@ export default function Stencil() {
             <div className="p-4 border-b border-border">
                 <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
                     <Layers className="w-5 h-5" />
-                    Palette
+                    {t('palette')}
                 </h2>
                 <input
                     type="text"
-                    placeholder="Search elements..."
+                    placeholder={t('searchElements')}
                     className="w-full px-3 py-1 text-sm border rounded-md bg-background text-foreground"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {layerOrder.map(layer => {
-                    const items = groupedConcepts[layer];
+                {layerOrder.map(({ key, label }) => {
+                    const items = groupedConcepts[key];
                     if (!items || items.length === 0) return null;
 
                     return (
-                        <div key={layer}>
-                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 pl-1">{layer} Layer</h3>
+                        <div key={key}>
+                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 pl-1">{label}</h3>
                             <div className="grid grid-cols-2 gap-2">
                                 {items.map((item) => {
                                     const svgFile = svgMapping[item.name];
-                                    const colorClass = layerColors[layer] || 'bg-muted border-border hover:bg-muted/80';
+                                    const colorClass = layerColors[key] || 'bg-muted border-border hover:bg-muted/80';
 
                                     return (
                                         <div
                                             key={item.name}
                                             className={`flex flex-col items-center justify-center gap-1 p-2 rounded-md border cursor-grab transition-all ${colorClass}`}
-                                            onDragStart={(event) => onDragStart(event, item.name, layer)}
+                                            onDragStart={(event) => onDragStart(event, item.name, item.layer)}
                                             draggable
                                             title={item.name}
                                         >

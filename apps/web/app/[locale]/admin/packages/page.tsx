@@ -25,8 +25,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Edit, Package, Download, Upload, Checkbox, Copy, Home } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, Download, Upload, Copy, Home } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useDialog } from '@/contexts/DialogContext';
 
 interface ModelPackage {
     id: string;
@@ -44,6 +45,7 @@ interface ModelPackage {
 }
 
 export default function PackagesPage() {
+    const { alert } = useDialog();
     const router = useRouter();
     const t = useTranslations('Home');
     const [packages, setPackages] = useState<ModelPackage[]>([]);
@@ -104,7 +106,11 @@ export default function PackagesPage() {
             setNewPackageDescription('');
         } catch (error) {
             console.error('Failed to create package:', error);
-            alert('Failed to create package');
+            await alert({
+                title: 'Error',
+                message: 'Failed to create package',
+                type: 'error',
+            });
         }
     };
 
@@ -130,7 +136,11 @@ export default function PackagesPage() {
             setEditPackageDescription('');
         } catch (error: any) {
             console.error('Failed to update package:', error);
-            alert(`Failed to update package: ${error.message || 'Unknown error'}`);
+            await alert({
+                title: 'Error',
+                message: `Failed to update package: ${error.message || 'Unknown error'}`,
+                type: 'error',
+            });
         }
     };
 
@@ -149,7 +159,11 @@ export default function PackagesPage() {
             setPackageToDelete(null);
         } catch (error: any) {
             console.error('Failed to delete package:', error);
-            alert(`Failed to delete package: ${error.message || 'Unknown error'}`);
+            await alert({
+                title: 'Error',
+                message: `Failed to delete package: ${error.message || 'Unknown error'}`,
+                type: 'error',
+            });
         }
     };
 
@@ -166,8 +180,8 @@ export default function PackagesPage() {
                 const a = document.createElement('a');
                 a.href = url;
                 const contentDisposition = res.headers.get('Content-Disposition');
-                const filename = contentDisposition
-                    ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+                const filename = contentDisposition && contentDisposition.includes('filename=')
+                    ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') || `package-export-${Date.now()}.json`
                     : `package-export-${Date.now()}.json`;
                 a.download = filename;
                 document.body.appendChild(a);
@@ -175,17 +189,29 @@ export default function PackagesPage() {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } else {
-                alert('Failed to export package');
+                await alert({
+                    title: 'Error',
+                    message: 'Failed to export package',
+                    type: 'error',
+                });
             }
         } catch (error) {
             console.error('Failed to export package:', error);
-            alert('Failed to export package');
+            await alert({
+                title: 'Error',
+                message: 'Failed to export package',
+                type: 'error',
+            });
         }
     };
 
     const handleExportSelected = async () => {
         if (selectedPackagesForExport.size === 0) {
-            alert('Please select at least one package to export');
+            await alert({
+                title: 'Warning',
+                message: 'Please select at least one package to export',
+                type: 'warning',
+            });
             return;
         }
 
@@ -201,8 +227,8 @@ export default function PackagesPage() {
                 const a = document.createElement('a');
                 a.href = url;
                 const contentDisposition = res.headers.get('Content-Disposition');
-                const filename = contentDisposition
-                    ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+                const filename = contentDisposition && contentDisposition.includes('filename=')
+                    ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') || `packages-export-${Date.now()}.json`
                     : `packages-export-${Date.now()}.json`;
                 a.download = filename;
                 document.body.appendChild(a);
@@ -212,17 +238,29 @@ export default function PackagesPage() {
                 setExportDialogOpen(false);
                 setSelectedPackagesForExport(new Set());
             } else {
-                alert('Failed to export packages');
+                await alert({
+                    title: 'Error',
+                    message: 'Failed to export packages',
+                    type: 'error',
+                });
             }
         } catch (error) {
             console.error('Failed to export packages:', error);
-            alert('Failed to export packages');
+            await alert({
+                title: 'Error',
+                message: 'Failed to export packages',
+                type: 'error',
+            });
         }
     };
 
     const handleImport = async () => {
         if (!importFile) {
-            alert('Please select a file to import');
+            await alert({
+                title: 'Warning',
+                message: 'Please select a file to import',
+                type: 'warning',
+            });
             return;
         }
 
@@ -244,8 +282,12 @@ export default function PackagesPage() {
             });
 
             if (res.ok) {
-                const result = await res.json();
-                alert(`Package imported successfully!\n\nImported:\n- ${result.imported.elements} elements\n- ${result.imported.relationships} relationships\n- ${result.imported.folders} folders\n- ${result.imported.views} views`);
+                const result = await res.json() as { imported: { elements: number; relationships: number; folders: number; views: number } };
+                await alert({
+                    title: 'Success',
+                    message: `Package imported successfully!\n\nImported:\n- ${result.imported.elements} elements\n- ${result.imported.relationships} relationships\n- ${result.imported.folders} folders\n- ${result.imported.views} views`,
+                    type: 'success',
+                });
                 await fetchPackages();
                 setImportDialogOpen(false);
                 setImportFile(null);
@@ -253,11 +295,19 @@ export default function PackagesPage() {
                 setImportNewName('');
             } else {
                 const error = await res.json();
-                alert(`Failed to import package: ${error.error || 'Unknown error'}`);
+                await alert({
+                    title: 'Error',
+                    message: `Failed to import package: ${error.error || 'Unknown error'}`,
+                    type: 'error',
+                });
             }
         } catch (error) {
             console.error('Failed to import package:', error);
-            alert('Failed to import package');
+            await alert({
+                title: 'Error',
+                message: 'Failed to import package',
+                type: 'error',
+            });
         } finally {
             setImporting(false);
         }
@@ -274,17 +324,25 @@ export default function PackagesPage() {
 
         setDuplicating(true);
         try {
-            const result = await api.post(`/model/packages/${packageToDuplicate.id}/duplicate`, {
+            const result = await api.post<{ imported: { elements: number; relationships: number; folders: number; views: number } }>(`/model/packages/${packageToDuplicate.id}/duplicate`, {
                 name: duplicatePackageName.trim()
             });
-            alert(`Package duplicated successfully!\n\nDuplicated:\n- ${result.imported.elements} elements\n- ${result.imported.relationships} relationships\n- ${result.imported.folders} folders\n- ${result.imported.views} views`);
+            await alert({
+                title: 'Success',
+                message: `Package duplicated successfully!\n\nDuplicated:\n- ${result.imported.elements} elements\n- ${result.imported.relationships} relationships\n- ${result.imported.folders} folders\n- ${result.imported.views} views`,
+                type: 'success',
+            });
             await fetchPackages();
             setDuplicateDialogOpen(false);
             setPackageToDuplicate(null);
             setDuplicatePackageName('');
         } catch (error: any) {
             console.error('Failed to duplicate package:', error);
-            alert(`Failed to duplicate package: ${error.error || error.message || 'Unknown error'}`);
+            await alert({
+                title: 'Error',
+                message: `Failed to duplicate package: ${error.error || error.message || 'Unknown error'}`,
+                type: 'error',
+            });
         } finally {
             setDuplicating(false);
         }

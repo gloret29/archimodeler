@@ -18,6 +18,7 @@ model User {
   email     String   @unique
   password  String
   name      String?
+  locale    String?  @default("en") // User's preferred language (en, fr)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -8,11 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Home } from 'lucide-react';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
+import { useDialog } from '@/contexts/DialogContext';
 import { api } from '@/lib/api/client';
 
 export default function ConnectorDetailPage() {
     const params = useParams();
     const t = useTranslations('Home');
+    const { alert } = useDialog();
     const [dataSource, setDataSource] = useState<any>(null);
     const [syncing, setSyncing] = useState(false);
 
@@ -26,11 +28,19 @@ export default function ConnectorDetailPage() {
     const handleSync = async () => {
         setSyncing(true);
         try {
-            const result = await api.post(`/connectors/${params.id}/sync`, {});
-            alert(`Sync complete! Synced ${result.synced} elements.`);
+            const result = await api.post<{ synced: number }>(`/connectors/${params.id}/sync`, {});
+            await alert({
+                title: t('success'),
+                message: t('syncComplete', { synced: result.synced }),
+                type: 'success',
+            });
         } catch (err) {
             console.error(err);
-            alert('Sync failed');
+            await alert({
+                title: t('error'),
+                message: t('syncFailed'),
+                type: 'error',
+            });
         } finally {
             setSyncing(false);
         }

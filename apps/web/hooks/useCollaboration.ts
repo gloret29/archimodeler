@@ -31,6 +31,7 @@ interface UseCollaborationOptions {
     onNodeDeleted?: (data: { userId: string; nodeId: string }) => void;
     onEdgeDeleted?: (data: { userId: string; edgeId: string }) => void;
     onSelectionChanged?: (data: { userId: string; selectedNodes: string[] }) => void;
+    onViewSaved?: (data: { viewId: string; savedBy: { id: string; name: string } }) => void;
 }
 
 export function useCollaboration({
@@ -41,6 +42,7 @@ export function useCollaboration({
     onNodeDeleted,
     onEdgeDeleted,
     onSelectionChanged,
+    onViewSaved,
 }: UseCollaborationOptions) {
     const socketRef = useRef<Socket | null>(null);
     const socketIdRef = useRef<string | null>(null);
@@ -49,6 +51,7 @@ export function useCollaboration({
     const onNodeDeletedRef = useRef(onNodeDeleted);
     const onEdgeDeletedRef = useRef(onEdgeDeleted);
     const onSelectionChangedRef = useRef(onSelectionChanged);
+    const onViewSavedRef = useRef(onViewSaved);
     const userRef = useRef(user);
     
     // Update refs when callbacks change
@@ -58,8 +61,9 @@ export function useCollaboration({
         onNodeDeletedRef.current = onNodeDeleted;
         onEdgeDeletedRef.current = onEdgeDeleted;
         onSelectionChangedRef.current = onSelectionChanged;
+        onViewSavedRef.current = onViewSaved;
         userRef.current = user;
-    }, [onNodeChanged, onEdgeChanged, onNodeDeleted, onEdgeDeleted, onSelectionChanged, user]);
+    }, [onNodeChanged, onEdgeChanged, onNodeDeleted, onEdgeDeleted, onSelectionChanged, onViewSaved, user]);
     
     const [state, setState] = useState<CollaborationState>({
         users: [],
@@ -88,7 +92,7 @@ export function useCollaboration({
         socketRef.current = socket;
 
         socket.on('connect', () => {
-            socketIdRef.current = socket.id;
+            socketIdRef.current = socket.id ?? null;
             setState((prev) => ({ ...prev, isConnected: true }));
 
             // Join the view
@@ -265,6 +269,12 @@ export function useCollaboration({
             }
         });
 
+        socket.on('view-saved', (data: { viewId: string; savedBy: { id: string; name: string } }) => {
+            if (onViewSavedRef.current) {
+                onViewSavedRef.current(data);
+            }
+        });
+
         return () => {
             if (socket.connected) {
                 socket.emit('leave-view', { viewId });
@@ -300,6 +310,12 @@ export function useCollaboration({
         socketRef.current?.emit('selection-change', { viewId, selectedNodes });
     }, [viewId]);
 
+    const notifyViewSaved = useCallback((savedBy: { id: string; name: string }) => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('view-saved', { viewId, savedBy });
+        }
+    }, [viewId]);
+
     return {
         ...state,
         updateCursor,
@@ -308,5 +324,6 @@ export function useCollaboration({
         deleteNode,
         deleteEdge,
         updateSelection,
+        notifyViewSaved,
     };
 }

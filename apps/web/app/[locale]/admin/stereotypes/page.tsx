@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Edit, Trash2, Home, Settings2 } from "lucide-react";
 import { Link } from "@/navigation";
 import { useTranslations } from "next-intl";
+import { useDialog } from '@/contexts/DialogContext';
 import { api } from '@/lib/api/client';
 
 interface ConceptType {
@@ -52,6 +53,7 @@ interface PropertyAttribute {
 }
 
 export default function StereotypesAdminPage() {
+    const { alert, confirm } = useDialog();
     const t = useTranslations("Home");
     const [stereotypes, setStereotypes] = useState<Stereotype[]>([]);
     const [conceptTypes, setConceptTypes] = useState<ConceptType[]>([]);
@@ -82,8 +84,8 @@ export default function StereotypesAdminPage() {
 
     const fetchConceptTypes = async () => {
         try {
-            const data = await api.get('/stereotypes/types/concept-types');
-            setConceptTypes(data);
+            const data = await api.get<ConceptType[]>('/stereotypes/types/concept-types');
+            setConceptTypes(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to fetch concept types:', error);
         }
@@ -91,8 +93,8 @@ export default function StereotypesAdminPage() {
 
     const fetchRelationTypes = async () => {
         try {
-            const data = await api.get('/stereotypes/types/relation-types');
-            setRelationTypes(data);
+            const data = await api.get<RelationType[]>('/stereotypes/types/relation-types');
+            setRelationTypes(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to fetch relation types:', error);
         }
@@ -100,8 +102,8 @@ export default function StereotypesAdminPage() {
 
     const fetchStereotypes = async () => {
         try {
-            const data = await api.get('/stereotypes');
-            setStereotypes(data);
+            const data = await api.get<Stereotype[]>('/stereotypes');
+            setStereotypes(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to fetch stereotypes:', error);
         } finally {
@@ -222,7 +224,7 @@ export default function StereotypesAdminPage() {
                 });
             } else {
                 // Create stereotype
-                const newStereotype = await api.post('/stereotypes', payload);
+                const newStereotype = await api.post<Stereotype>('/stereotypes', payload);
                 
                 // Update applicable concept types
                 await api.put(`/stereotypes/${newStereotype.id}/applicable-concept-types`, {
@@ -239,12 +241,21 @@ export default function StereotypesAdminPage() {
             fetchStereotypes();
         } catch (error: any) {
             console.error('Failed to save stereotype:', error);
-            alert(`Failed to ${editingStereotype ? 'update' : 'create'} stereotype: ${error.message || 'Unknown error'}`);
+            await alert({
+                title: 'Error',
+                message: `Failed to ${editingStereotype ? 'update' : 'create'} stereotype: ${error.message || 'Unknown error'}`,
+                type: 'error',
+            });
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this stereotype?')) {
+        const confirmed = await confirm({
+            title: 'Delete Stereotype',
+            description: 'Are you sure you want to delete this stereotype?',
+            variant: 'destructive',
+        });
+        if (!confirmed) {
             return;
         }
 
@@ -253,7 +264,11 @@ export default function StereotypesAdminPage() {
             fetchStereotypes();
         } catch (error) {
             console.error('Failed to delete stereotype:', error);
-            alert('Failed to delete stereotype');
+            await alert({
+                title: 'Error',
+                message: 'Failed to delete stereotype',
+                type: 'error',
+            });
         }
     };
 
@@ -668,8 +683,10 @@ export default function StereotypesAdminPage() {
                         onSave={(options) => {
                             if (currentAttributeIndex !== null) {
                                 const newAttributes = [...formData.attributes];
-                                newAttributes[currentAttributeIndex].options = options;
-                                setFormData({ ...formData, attributes: newAttributes });
+                                if (newAttributes[currentAttributeIndex]) {
+                                    newAttributes[currentAttributeIndex].options = options;
+                                    setFormData({ ...formData, attributes: newAttributes });
+                                }
                             }
                             setIsOptionsDialogOpen(false);
                             setCurrentAttributeIndex(null);
@@ -704,10 +721,14 @@ function AttributeForm({
         defaultValue: attribute?.defaultValue || "",
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.key || !formData.label) {
-            alert("Key and Label are required");
+            await alert({
+                title: 'Warning',
+                message: "Key and Label are required",
+                type: 'warning',
+            });
             return;
         }
         onSave(formData);
@@ -836,15 +857,21 @@ function OptionsManager({
 
     const updateOption = (index: number, field: 'value' | 'label', newValue: string) => {
         const newOptions = [...localOptions];
-        newOptions[index] = { ...newOptions[index], [field]: newValue };
-        setLocalOptions(newOptions);
+        if (newOptions[index]) {
+            newOptions[index] = { ...newOptions[index], [field]: newValue };
+            setLocalOptions(newOptions);
+        }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         // Validate that all options have both value and label
-        const validOptions = localOptions.filter(opt => opt.value && opt.label);
+        const validOptions = localOptions.filter((opt): opt is { value: string; label: string } => !!(opt.value && opt.label));
         if (validOptions.length !== localOptions.length) {
-            alert("All options must have both a value and a label");
+            await alert({
+                title: 'Warning',
+                message: "All options must have both a value and a label",
+                type: 'warning',
+            });
             return;
         }
         onSave(validOptions);

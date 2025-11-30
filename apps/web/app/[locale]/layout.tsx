@@ -6,6 +6,8 @@ import { getMessages } from 'next-intl/server';
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ChatProvider } from "@/contexts/ChatContext"
+import { DialogProvider } from "@/contexts/DialogContext"
+import { LocaleSync } from "@/components/common/LocaleSync"
 
 const geistSans = localFont({
     src: "../fonts/GeistVF.woff",
@@ -42,8 +44,11 @@ export default async function RootLayout({
                         disableTransitionOnChange
                     >
                         <ChatProvider>
-                            {children}
-                            <Toaster />
+                            <DialogProvider>
+                                <LocaleSync />
+                                {children}
+                                <Toaster />
+                            </DialogProvider>
                         </ChatProvider>
                     </ThemeProvider>
                 </NextIntlClientProvider>

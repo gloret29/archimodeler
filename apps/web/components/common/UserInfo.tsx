@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { User, LogOut, Settings, MessageCircle } from 'lucide-react';
+import { useEffect, useState, useTransition } from 'react';
+import { User, LogOut, Settings, MessageCircle, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api/client';
 import {
@@ -11,10 +11,14 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useRouter } from '@/navigation';
-import { useTranslations } from 'next-intl';
+import { useRouter, usePathname } from '@/navigation';
+import { useTranslations, useLocale } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { useChatSenders } from '@/hooks/useChatSenders';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +36,10 @@ export function UserInfo() {
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const locale = useLocale();
+    const [isPending, startTransition] = useTransition();
     const t = useTranslations('Home');
     const { getUnreadCount, getAllUnreadCount } = useUnreadMessages();
     const { getAllSenders } = useChatSenders();
@@ -46,7 +54,7 @@ export function UserInfo() {
                     return;
                 }
 
-                const userData = await api.get('/users/me');
+                const userData = await api.get<UserData>('/users/me');
                 setUser(userData);
             } catch (error: any) {
                 // Ne logger l'erreur que si ce n'est pas une erreur d'authentification attendue
@@ -72,6 +80,47 @@ export function UserInfo() {
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
         router.push('/');
+    };
+
+    const handleLanguageChange = async (newLocale: 'en' | 'fr') => {
+        if (newLocale === locale) return; // Already on this locale
+
+        try {
+            // Save locale preference to backend
+            await api.put('/users/me/locale', { locale: newLocale });
+            
+            // Build the new URL with search params preserved
+            const searchString = searchParams.toString();
+            const newPath = searchString ? `${pathname}?${searchString}` : pathname;
+            
+            // Change locale immediately, preserving search params
+            // Use window.location to ensure query params are preserved
+            if (typeof window !== 'undefined') {
+                const currentPath = window.location.pathname;
+                const newPathWithLocale = currentPath.replace(`/${locale}`, `/${newLocale}`);
+                const fullUrl = newPathWithLocale + (searchString ? `?${searchString}` : '');
+                window.location.href = fullUrl;
+            } else {
+                startTransition(() => {
+                    router.replace(newPath, { locale: newLocale });
+                });
+            }
+        } catch (error) {
+            console.error('Failed to change language:', error);
+            // Still try to change locale even if save fails
+            const searchString = searchParams.toString();
+            if (typeof window !== 'undefined') {
+                const currentPath = window.location.pathname;
+                const newPathWithLocale = currentPath.replace(`/${locale}`, `/${newLocale}`);
+                const fullUrl = newPathWithLocale + (searchString ? `?${searchString}` : '');
+                window.location.href = fullUrl;
+            } else {
+                const newPath = searchString ? `${pathname}?${searchString}` : pathname;
+                startTransition(() => {
+                    router.replace(newPath, { locale: newLocale });
+                });
+            }
+        }
     };
 
     const getInitials = (name: string) => {
@@ -192,6 +241,31 @@ export function UserInfo() {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>{t('settings')}</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                        <Languages className="mr-2 h-4 w-4" />
+                        <span>{locale === 'fr' ? 'Français' : 'English'}</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                        <DropdownMenuItem 
+                            onClick={() => handleLanguageChange('fr')}
+                            className={locale === 'fr' ? 'bg-accent' : ''}
+                        >
+                            <span className="mr-2">🇫🇷</span>
+                            <span>Français</span>
+                            {locale === 'fr' && <span className="ml-auto text-xs">✓</span>}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                            onClick={() => handleLanguageChange('en')}
+                            className={locale === 'en' ? 'bg-accent' : ''}
+                        >
+                            <span className="mr-2">🇬🇧</span>
+                            <span>English</span>
+                            {locale === 'en' && <span className="ml-auto text-xs">✓</span>}
+                        </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />

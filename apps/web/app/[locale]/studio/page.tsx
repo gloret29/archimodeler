@@ -17,25 +17,34 @@ import { useChatNotifications } from '@/hooks/useChatNotifications';
 import { useChatContext } from '@/contexts/ChatContext';
 import { UserChat } from '@/components/collaboration/UserChat';
 import { API_CONFIG } from '@/lib/api/config';
+import { useDialog } from '@/contexts/DialogContext';
 
 import { Home, Save, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useRouter } from '@/navigation';
 import { UserInfo } from '@/components/common/UserInfo';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import FormattingPanel from '@/components/canvas/FormattingPanel';
+import { Node, Edge } from '@xyflow/react';
 
 function StudioContent() {
     const searchParams = useSearchParams();
     const packageId = searchParams.get('packageId');
     const t = useTranslations('Studio');
     const router = useRouter();
-    const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab, markTabAsModified } = useTabsStore();
+    const { alert } = useDialog();
+    const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab, markTabAsModified, markTabAsSaved } = useTabsStore();
     const [isSaving, setIsSaving] = React.useState(false);
     const [repositoryWidth, setRepositoryWidth] = React.useState(320); // Default width: 320px (w-80)
     const [isResizing, setIsResizing] = React.useState(false);
     const [currentCanvasContent, setCurrentCanvasContent] = React.useState<{ nodes: any[]; edges: any[] } | null>(null);
     const [selectedElement, setSelectedElement] = React.useState<{ id: string; name: string; type: string } | null>(null);
     const [selectedRelationship, setSelectedRelationship] = React.useState<{ id: string; name: string; type: string } | null>(null);
+    const [selectedNodes, setSelectedNodes] = React.useState<any[]>([]);
+    const [selectedEdges, setSelectedEdges] = React.useState<any[]>([]);
+    const canvasSetNodesRef = React.useRef<((nodes: Node[]) => void) | null>(null);
+    const canvasSetEdgesRef = React.useRef<((edges: Edge[]) => void) | null>(null);
+    const restoreSelectionRef = React.useRef<(() => void) | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
     const isInitialLoadRef = React.useRef<boolean>(true);
     const lastContentRef = React.useRef<string>('');
@@ -170,7 +179,7 @@ function StudioContent() {
                     setCurrentUser({
                         id: user.id,
                         name: user.name || user.email || 'User',
-                        color: colors[colorIndex],
+                        color: colors[colorIndex] ?? colors[0] ?? '#4ECDC4',
                     });
                 } else if (res.status === 401) {
                     console.error('Unauthorized - token may be expired');
@@ -186,7 +195,7 @@ function StudioContent() {
         fetchCurrentUser();
     }, [router]);
 
-    const { users, isConnected } = useCollaboration({
+    const { users, isConnected, notifyViewSaved } = useCollaboration({
         viewId: activeTab?.viewId || '',
         user: currentUser && currentUser.name && currentUser.name !== 'User' && currentUser.id
             ? currentUser 
@@ -207,7 +216,11 @@ function StudioContent() {
 
         if (!packageId) {
             console.error('No packageId provided in URL');
-            alert('Error: No package ID found. Please open the studio with a valid package.');
+            await alert({
+                title: t('error') || 'Error',
+                message: t('noPackageId'),
+                type: 'error',
+            });
             return;
         }
 
@@ -219,7 +232,11 @@ function StudioContent() {
         } catch (error: any) {
             console.error('Failed to create new view:', error);
             const errorMessage = error.message || 'Unknown error';
-            alert(`Failed to create view: ${errorMessage}\n\nPlease check the console for details.`);
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToCreateView', { error: errorMessage }),
+                type: 'error',
+            });
 
             // Fallback to non-persisted tab
             addTab({
@@ -239,7 +256,11 @@ function StudioContent() {
         }
 
         if (!activeTab.isPersisted) {
-            alert('This view is not saved. Please create a new view with the + button.');
+            await alert({
+                title: t('warning') || 'Warning',
+                message: t('viewNotSaved'),
+                type: 'warning',
+            });
             return;
         }
 
@@ -247,7 +268,11 @@ function StudioContent() {
         try {
             // Get actual canvas content
             if (!currentCanvasContent) {
-                alert('No content to save. Please add some elements to the view first.');
+                await alert({
+                    title: t('warning') || 'Warning',
+                    message: t('noContentToSave'),
+                    type: 'warning',
+                });
                 setIsSaving(false);
                 return;
             }
@@ -264,10 +289,21 @@ function StudioContent() {
             });
             await saveActiveTab(content);
             console.log('✓ View saved successfully');
-            // Show success feedback (you could use a toast notification here)
+            
+            // Notify other users via WebSocket
+            if (currentUser && notifyViewSaved) {
+                notifyViewSaved({
+                    id: currentUser.id,
+                    name: currentUser.name,
+                });
+            }
         } catch (error: any) {
             console.error('Failed to save view:', error);
-            alert(`Failed to save: ${error.message || 'Unknown error'}`);
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToSave', { error: error.message || 'Unknown error' }),
+                type: 'error',
+            });
         } finally {
             setIsSaving(false);
         }
@@ -281,7 +317,7 @@ function StudioContent() {
             return (
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center">
-                        <p className="text-muted-foreground">Redirecting to login...</p>
+                        <p className="text-muted-foreground">{t('redirectingToLogin')}</p>
                     </div>
                 </div>
             );
@@ -290,13 +326,13 @@ function StudioContent() {
 
     // Don't render anything until we've checked authentication
     if (isAuthenticated === null) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <p className="text-muted-foreground">Checking authentication...</p>
+            return (
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <p className="text-muted-foreground">{t('checkingAuth')}</p>
+                    </div>
                 </div>
-            </div>
-        );
+            );
     }
 
     // Show package selector if no packageId is selected
@@ -323,7 +359,7 @@ function StudioContent() {
                             size="icon"
                             onClick={handleSave}
                             disabled={isSaving}
-                            title={`Save ${activeTab.viewName}`}
+                            title={t('saveView', { viewName: activeTab.viewName })}
                         >
                             <Save className={`h-5 w-5 ${isSaving ? 'animate-pulse' : ''}`} />
                         </Button>
@@ -339,6 +375,33 @@ function StudioContent() {
             {/* Tab bar */}
             <ViewTabs onNewTab={handleNewTab} />
 
+            {/* Formatting Toolbar */}
+                        {currentCanvasContent && canvasSetNodesRef.current && canvasSetEdgesRef.current && (
+                            <FormattingPanel
+                                selectedNodes={selectedNodes}
+                                selectedEdges={selectedEdges}
+                                onUpdateNodes={(nodes) => {
+                                    if (canvasSetNodesRef.current) {
+                                        canvasSetNodesRef.current(nodes);
+                                    }
+                                    setCurrentCanvasContent({ nodes, edges: currentCanvasContent.edges });
+                                }}
+                                onUpdateEdges={(edges) => {
+                                    if (canvasSetEdgesRef.current) {
+                                        canvasSetEdgesRef.current(edges);
+                                    }
+                                    setCurrentCanvasContent({ nodes: currentCanvasContent.nodes, edges });
+                                }}
+                                allNodes={currentCanvasContent.nodes}
+                                allEdges={currentCanvasContent.edges}
+                                onMaintainSelection={() => {
+                                    if (restoreSelectionRef.current) {
+                                        restoreSelectionRef.current();
+                                    }
+                                }}
+                            />
+                        )}
+
             <div className="flex flex-1 overflow-hidden">
                 <Stencil />
                 <main className="flex-1 relative">
@@ -350,6 +413,21 @@ function StudioContent() {
                             packageId={activeTab.packageId}
                             currentUser={currentUser}
                             onContentChange={handleContentChange}
+                            onViewSaved={(savedBy) => {
+                                // Mark tab as saved for all users
+                                markTabAsSaved(activeTab.id);
+                            }}
+                            onSelectionChange={(selectedNodes, selectedEdges) => {
+                                setSelectedNodes(selectedNodes);
+                                setSelectedEdges(selectedEdges);
+                            }}
+                            onSetNodesAndEdges={(setNodes, setEdges) => {
+                                canvasSetNodesRef.current = setNodes;
+                                canvasSetEdgesRef.current = setEdges;
+                            }}
+                            onRestoreSelection={(restoreFn) => {
+                                restoreSelectionRef.current = restoreFn;
+                            }}
                             onNodeClick={(nodeId, elementId, elementName, elementType) => {
                                 if (elementId && nodeId) {
                                     setSelectedElement({ id: elementId, name: elementName, type: elementType });
@@ -374,12 +452,12 @@ function StudioContent() {
                         />
                     ) : (
                         <div className="flex items-center justify-center h-full">
-                            <div className="text-center space-y-4">
-                                <p className="text-muted-foreground">No view open</p>
-                                <Button onClick={handleNewTab}>
-                                    Open a new view
-                                </Button>
-                            </div>
+                        <div className="text-center space-y-4">
+                            <p className="text-muted-foreground">{t('noViewOpen')}</p>
+                            <Button onClick={handleNewTab}>
+                                {t('openNewView')}
+                            </Button>
+                        </div>
                         </div>
                     )}
                     <CoachChat />

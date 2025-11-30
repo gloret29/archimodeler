@@ -28,6 +28,8 @@ import LayoutOrganizer from './LayoutOrganizer';
 import ExportButton from './ExportButton';
 import { getValidRelations } from '@/lib/metamodel';
 import DiagramDescriber from '../ai/DiagramDescriber';
+import { useDialog } from '@/contexts/DialogContext';
+import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api/client';
 
 const nodeTypes = {
@@ -51,6 +53,8 @@ export interface ModelingCanvasProps {
     onNodeClick?: (nodeId: string, elementId: string | undefined, elementName: string, elementType: string) => void;
     onEdgeClick?: (edgeId: string, relationshipId: string | undefined, relationshipName: string, relationshipType: string) => void;
     onReactFlowInit?: (instance: any) => void;
+    onSelectionChange?: (selectedNodes: Node[], selectedEdges: Edge[]) => void;
+    onRestoreSelection?: (restoreFn: () => void) => void;
 }
 
 export default function ModelingCanvas({
@@ -65,7 +69,11 @@ export default function ModelingCanvas({
     onNodeClick,
     onEdgeClick,
     onReactFlowInit,
+    onSelectionChange,
+    onRestoreSelection,
 }: ModelingCanvasProps) {
+    const { alert, confirm, prompt: promptDialog } = useDialog();
+    const t = useTranslations('Canvas');
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     
     // Internal state (used if not controlled)
@@ -107,12 +115,42 @@ export default function ModelingCanvas({
     const lastSelectedEdgeRef = useRef<string | null>(null);
     const onNodeClickRef = useRef(onNodeClick);
     const onEdgeClickRef = useRef(onEdgeClick);
+    const preservedSelectionRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
     
     // Update refs when callbacks change
     useEffect(() => {
         onNodeClickRef.current = onNodeClick;
         onEdgeClickRef.current = onEdgeClick;
     }, [onNodeClick, onEdgeClick]);
+
+    // Function to restore selection
+    const restoreSelection = useCallback(() => {
+        if (reactFlowInstance && preservedSelectionRef.current.nodes.length > 0) {
+            const nodeIds = preservedSelectionRef.current.nodes.map(n => n.id);
+            const currentNodes = isControlled ? controlledNodes : internalNodes;
+            const updatedNodes = currentNodes.map((n) => ({
+                ...n,
+                selected: nodeIds.includes(n.id),
+            }));
+            setNodes(updatedNodes);
+        }
+        if (reactFlowInstance && preservedSelectionRef.current.edges.length > 0) {
+            const edgeIds = preservedSelectionRef.current.edges.map(e => e.id);
+            const currentEdges = isControlled ? controlledEdges : internalEdges;
+            const updatedEdges = currentEdges.map((e) => ({
+                ...e,
+                selected: edgeIds.includes(e.id),
+            }));
+            setEdges(updatedEdges);
+        }
+    }, [reactFlowInstance, isControlled, controlledNodes, internalNodes, controlledEdges, internalEdges, setNodes, setEdges]);
+
+    // Expose restore function to parent
+    useEffect(() => {
+        if (onRestoreSelection) {
+            onRestoreSelection(restoreSelection);
+        }
+    }, [onRestoreSelection, restoreSelection]);
 
     const [connectionMenu, setConnectionMenu] = useState<{
         isOpen: boolean;
@@ -176,18 +214,18 @@ export default function ModelingCanvas({
     const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
         if (onNodeClick) {
             const elementId = node.data?.elementId;
-            const elementName = node.data?.label || node.id;
-            const elementType = node.data?.type || 'Unknown';
-            onNodeClick(node.id, elementId, elementName, elementType);
+            const elementName = (node.data?.label as string) || node.id;
+            const elementType = (node.data?.type as string) || 'Unknown';
+            onNodeClick(node.id, elementId as string | undefined, elementName, elementType);
         }
     }, [onNodeClick]);
 
     const handleEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
         if (onEdgeClick) {
             const relationshipId = edge.data?.relationshipId;
-            const relationshipName = edge.label || edge.data?.name || edge.id;
-            const relationshipType = edge.data?.type || edge.label || 'Unknown';
-            onEdgeClick(edge.id, relationshipId, relationshipName, relationshipType);
+            const relationshipName = (edge.label as string) || (edge.data?.name as string) || edge.id;
+            const relationshipType = (edge.data?.type as string) || (edge.label as string) || 'Unknown';
+            onEdgeClick(edge.id, relationshipId as string | undefined, relationshipName, relationshipType);
         }
     }, [onEdgeClick]);
 
@@ -219,7 +257,11 @@ export default function ModelingCanvas({
             );
         } catch (err) {
             console.error(err);
-            alert('Failed to rename element');
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToRenameElement'),
+                type: 'error',
+            });
         } finally {
             setRenameDialog({ isOpen: false, nodeId: null, currentName: '', elementId: null });
         }
@@ -237,7 +279,12 @@ export default function ModelingCanvas({
         // TODO: Fetch views using this element
         const confirmMsg = `Delete "${nodeContextMenu.nodeData?.label || 'element'}" from repository?\n\nThis will remove it from all views. This action cannot be undone.`;
 
-        if (!confirm(confirmMsg)) return;
+        const confirmed = await confirm({
+            title: t('delete') || 'Delete',
+            description: confirmMsg,
+            variant: 'destructive',
+        });
+        if (!confirmed) return;
 
         try {
             await api.delete(`/model/elements/${elementId}`);
@@ -246,13 +293,28 @@ export default function ModelingCanvas({
             setNodes((nds) => nds.filter((n) => n.id !== nodeContextMenu.nodeId));
         } catch (err) {
             console.error(err);
-            alert('Failed to delete element');
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToDeleteElement'),
+                type: 'error',
+            });
         }
     };
 
-    const isValidConnection = useCallback((connection: Connection) => {
-        const sourceNode = nodes.find((n) => n.id === connection.source);
-        const targetNode = nodes.find((n) => n.id === connection.target);
+    const isValidConnection = useCallback((connection: Connection | Edge) => {
+        let sourceId: string;
+        let targetId: string;
+        
+        if ('source' in connection && 'target' in connection) {
+            // It's a Connection or Edge - both have source and target
+            sourceId = connection.source;
+            targetId = connection.target;
+        } else {
+            return false;
+        }
+        
+        const sourceNode = nodes.find((n) => n.id === sourceId);
+        const targetNode = nodes.find((n) => n.id === targetId);
         if (!sourceNode || !targetNode) return false;
 
         const sourceType = sourceNode.data.type as string;
@@ -263,7 +325,7 @@ export default function ModelingCanvas({
     }, [nodes]);
 
     const onConnect = useCallback(
-        (params: Connection) => {
+        async (params: Connection) => {
             const sourceNode = nodes.find((n) => n.id === params.source);
             const targetNode = nodes.find((n) => n.id === params.target);
 
@@ -274,7 +336,11 @@ export default function ModelingCanvas({
                 const validRelations = getValidRelations(sourceType, targetType);
 
                 if (validRelations.length === 0) {
-                    alert('No valid relationship allowed between these elements.');
+                    await alert({
+                        title: t('error') || 'Error',
+                        message: t('noValidRelationship'),
+                        type: 'warning',
+                    });
                     return;
                 }
 
@@ -287,7 +353,11 @@ export default function ModelingCanvas({
                     );
                     
                     if (duplicate) {
-                        alert('This relationship already exists.');
+                        await alert({
+                            title: t('warning') || 'Warning',
+                            message: t('relationshipExists'),
+                            type: 'warning',
+                        });
                         return;
                     }
 
@@ -308,10 +378,10 @@ export default function ModelingCanvas({
                 }
             }
         },
-        [nodes, edges, setEdges, reactFlowInstance],
+        [nodes, edges, setEdges, reactFlowInstance, alert, t],
     );
 
-    const onRelationSelect = (relation: string) => {
+    const onRelationSelect = async (relation: string) => {
         if (connectionMenu.params) {
             // Check for duplicates in menu selection
             const duplicate = edges.find(
@@ -321,7 +391,11 @@ export default function ModelingCanvas({
             );
             
             if (duplicate) {
-                alert('This relationship already exists.');
+                await alert({
+                    title: t('warning') || 'Warning',
+                    message: t('relationshipExists'),
+                    type: 'warning',
+                });
             } else {
                 setEdges((eds) => addEdge({ ...connectionMenu.params!, label: relation, type: 'default' } as Edge, eds));
             }
@@ -363,7 +437,11 @@ export default function ModelingCanvas({
 
                     // Ensure we have a valid package ID
                     if (!packageId) {
-                        alert('No package selected. Please select a package first.');
+                        await alert({
+                            title: t('error') || 'Error',
+                            message: t('noPackageSelected'),
+                            type: 'error',
+                        });
                         return;
                     }
 
@@ -373,10 +451,14 @@ export default function ModelingCanvas({
                         layer: layer,
                         packageId: packageId
                     });
-                    elementId = newElement.id;
+                    elementId = (newElement as { id: string }).id;
                 } catch (err) {
                     console.error('Error creating element:', err);
-                    alert('Error creating element: ' + (err as Error).message);
+                    await alert({
+                        title: t('error') || 'Error',
+                        message: t('errorCreatingElement', { error: (err as Error).message }),
+                        type: 'error',
+                    });
                 }
             }
 
@@ -398,7 +480,12 @@ export default function ModelingCanvas({
     );
 
     const onSave = async () => {
-        const name = prompt('View Name:');
+        const name = await promptDialog({
+            title: t('newView') || 'New View',
+            label: 'View Name',
+            placeholder: 'View Name',
+            required: true,
+        });
         if (!name) return;
 
         const content = {
@@ -412,14 +499,25 @@ export default function ModelingCanvas({
                 content,
                 modelPackage: { connect: { id: packageId } }
             });
-            alert('View saved!');
+            await alert({
+                title: t('success') || 'Success',
+                message: t('viewSaved'),
+                type: 'success',
+            });
         } catch (err) {
             console.error(err);
-            alert('Failed to save view');
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToSaveView'),
+                type: 'error',
+            });
         }
     };
 
     const handleSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
+        // Preserve selection for restoration
+        preservedSelectionRef.current = { nodes: selectedNodes, edges: selectedEdges };
+        
         // Only update state if selection actually changed
         setSelectedNodes((prev) => {
             if (prev.length === selectedNodes.length && 
@@ -437,27 +535,27 @@ export default function ModelingCanvas({
         });
         
         // If an edge is selected, trigger onEdgeClick (only if different from last selection)
-        if (selectedEdges.length > 0 && selectedNodes.length === 0) {
+        if (selectedEdges.length > 0 && selectedNodes.length === 0) { 
             const edge = selectedEdges[0];
-            if (lastSelectedEdgeRef.current !== edge.id && onEdgeClickRef.current) {
+            if (edge && lastSelectedEdgeRef.current !== edge.id && onEdgeClickRef.current) {
                 lastSelectedEdgeRef.current = edge.id;
                 lastSelectedNodeRef.current = null;
                 const relationshipId = edge.data?.relationshipId;
-                const relationshipName = edge.label || edge.data?.name || edge.id;
-                const relationshipType = edge.data?.type || edge.label || 'Unknown';
-                onEdgeClickRef.current(edge.id, relationshipId, relationshipName, relationshipType);
+                const relationshipName = (edge.label as string) || (edge.data?.name as string) || edge.id;
+                const relationshipType = (edge.data?.type as string) || (edge.label as string) || 'Unknown';
+                onEdgeClickRef.current(edge.id, relationshipId as string | undefined, relationshipName, relationshipType);
             }
         }
         // If a node is selected, trigger onNodeClick (only if different from last selection)
         else if (selectedNodes.length > 0 && selectedEdges.length === 0) {
             const node = selectedNodes[0];
-            if (lastSelectedNodeRef.current !== node.id && onNodeClickRef.current) {
+            if (node && lastSelectedNodeRef.current !== node.id && onNodeClickRef.current) {
                 lastSelectedNodeRef.current = node.id;
                 lastSelectedEdgeRef.current = null;
                 const elementId = node.data?.elementId;
-                const elementName = node.data?.label || node.id;
-                const elementType = node.data?.type || 'Unknown';
-                onNodeClickRef.current(node.id, elementId, elementName, elementType);
+                const elementName = (node.data?.label as string) || node.id;
+                const elementType = (node.data?.type as string) || 'Unknown';
+                onNodeClickRef.current(node.id, elementId as string | undefined, elementName, elementType);
             }
         }
         // If nothing is selected, reset refs
@@ -465,7 +563,12 @@ export default function ModelingCanvas({
             lastSelectedNodeRef.current = null;
             lastSelectedEdgeRef.current = null;
         }
-    }, []); // No dependencies - we use refs for callbacks
+        
+        // Notify parent of selection change
+        if (onSelectionChange) {
+            onSelectionChange(selectedNodes, selectedEdges);
+        }
+    }, [onSelectionChange]); // Include onSelectionChange in dependencies
 
     return (
         <div className="w-full h-full" ref={reactFlowWrapper}>
@@ -549,14 +652,6 @@ export default function ModelingCanvas({
                     onCancel={() => setRenameDialog({ isOpen: false, nodeId: null, currentName: '', elementId: null })}
                 />
             )}
-            <FormattingPanel
-                selectedNodes={selectedNodes}
-                selectedEdges={selectedEdges}
-                onUpdateNodes={setNodes}
-                onUpdateEdges={setEdges}
-                allNodes={nodes}
-                allEdges={edges}
-            />
             <StereotypePanel
                 selectedNodes={selectedNodes}
                 selectedEdges={selectedEdges}

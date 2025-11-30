@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Pencil, Trash2, Home } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useDialog } from '@/contexts/DialogContext';
 
 interface User {
     id: string;
@@ -44,6 +45,7 @@ interface Role {
 }
 
 export default function UsersPage() {
+    const { alert, confirm } = useDialog();
     const router = useRouter();
     const [users, setUsers] = useState<User[]>([]);
     const [roles, setRoles] = useState<Role[]>([]);
@@ -82,7 +84,11 @@ export default function UsersPage() {
             if (error.status === 401) {
                 console.error("Unauthorized. Redirecting to login.");
                 localStorage.removeItem('accessToken');
-                alert("You need to login to access this page. Use admin@archimodeler.com / admin123");
+                await alert({
+                    title: "Authentication Required",
+                    message: "You need to login to access this page. Use admin@archimodeler.com / admin123",
+                    type: 'warning',
+                });
                 router.push('/');
             } else {
                 console.error("Failed to fetch users:", error);
@@ -94,13 +100,22 @@ export default function UsersPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this user?")) return;
+        const confirmed = await confirm({
+            title: "Delete User",
+            description: "Are you sure you want to delete this user?",
+            variant: 'destructive',
+        });
+        if (!confirmed) return;
         try {
             await api.delete(`/users/${id}`);
             fetchUsers();
         } catch (error) {
             console.error("Failed to delete user:", error);
-            alert("Failed to delete user");
+            await alert({
+                title: "Error",
+                message: "Failed to delete user",
+                type: 'error',
+            });
         }
     };
 
@@ -167,7 +182,11 @@ export default function UsersPage() {
             fetchUsers();
         } catch (error: any) {
             console.error(`Failed to ${editingUser ? 'update' : 'create'} user:`, error);
-            alert(`Failed to ${editingUser ? 'update' : 'create'} user: ${error.message || 'Unknown error'}`);
+            await alert({
+                title: "Error",
+                message: `Failed to ${editingUser ? 'update' : 'create'} user: ${error.message || 'Unknown error'}`,
+                type: 'error',
+            });
         }
     };
 
@@ -189,7 +208,7 @@ export default function UsersPage() {
                             {t('backToHome')}
                         </Button>
                     </Link>
-                    <Button onClick={handleOpenDialog}>
+                    <Button onClick={() => handleOpenDialog()}>
                         <Plus className="mr-2 h-4 w-4" /> Add User
                     </Button>
                 </div>
@@ -318,8 +337,7 @@ export default function UsersPage() {
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     required={!editingUser}
-                                    placeholder={editingUser ? "Leave empty to keep current password" : ""}
-                                    placeholder="Enter password"
+                                    placeholder={editingUser ? "Leave empty to keep current password" : "Enter password"}
                                     minLength={6}
                                 />
                             </div>

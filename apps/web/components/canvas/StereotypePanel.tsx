@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tag, X } from 'lucide-react';
 import { api } from '@/lib/api/client';
+import { useDialog } from '@/contexts/DialogContext';
+import { useTranslations } from 'next-intl';
 
 interface Stereotype {
     id: string;
@@ -28,6 +30,7 @@ interface StereotypePanelProps {
 }
 
 export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate }: StereotypePanelProps) {
+    const { alert } = useDialog();
     const [stereotypes, setStereotypes] = useState<Stereotype[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -47,7 +50,7 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
 
     const fetchStereotypes = async () => {
         try {
-            const data = await api.get('/stereotypes');
+            const data = await api.get<Stereotype[]>('/stereotypes');
             setStereotypes(data);
         } catch (error) {
             console.error('Failed to fetch stereotypes:', error);
@@ -59,10 +62,10 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
     const fetchElementStereotypes = async () => {
         const stereotypesMap: Record<string, Stereotype[]> = {};
         for (const node of selectedNodes) {
-            const elementId = node.data?.elementId || node.id;
+            const elementId = (node.data?.elementId as string) || node.id;
             try {
-                const data = await api.get(`/stereotypes/elements/${elementId}`);
-                stereotypesMap[elementId] = data.map((es: any) => es.stereotype);
+                const data = await api.get<Array<{ stereotype: Stereotype }>>(`/stereotypes/elements/${elementId}`);
+                stereotypesMap[elementId] = data.map((es) => es.stereotype);
             } catch (error) {
                 console.error(`Failed to fetch stereotypes for element ${elementId}:`, error);
             }
@@ -109,7 +112,11 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
             onUpdate?.();
         } catch (error) {
             console.error('Failed to apply stereotype:', error);
-            alert('Failed to apply stereotype');
+            await alert({
+                title: 'Error',
+                message: 'Failed to apply stereotype',
+                type: 'error',
+            });
         }
     };
 
@@ -120,7 +127,11 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
             onUpdate?.();
         } catch (error) {
             console.error('Failed to remove stereotype:', error);
-            alert('Failed to remove stereotype');
+            await alert({
+                title: 'Error',
+                message: 'Failed to remove stereotype',
+                type: 'error',
+            });
         }
     };
 
@@ -171,11 +182,11 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
                                 <div className="space-y-2">
                                     <Label className="text-xs font-semibold">Applied Stereotypes</Label>
                                     {selectedNodes.map((node) => {
-                                        const elementId = node.data?.elementId || node.id;
+                                        const elementId = (node.data?.elementId as string) || node.id;
                                         const nodeStereotypes = elementStereotypes[elementId] || [];
                                         return (
                                             <div key={elementId} className="space-y-1">
-                                                <p className="text-xs text-muted-foreground">{node.data?.label || node.id}</p>
+                                                <p className="text-xs text-muted-foreground">{(node.data?.label as string) || node.id}</p>
                                                 <div className="flex flex-wrap gap-1">
                                                     {nodeStereotypes.length === 0 ? (
                                                         <span className="text-xs text-muted-foreground">No stereotypes</span>

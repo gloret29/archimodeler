@@ -17,7 +17,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/navigation";
-import { useTransition } from "react";
+import { useTransition, useEffect, useState } from "react";
+import { api } from '@/lib/api/client';
 
 const languageFormSchema = z.object({
     language: z.enum(["en", "fr"]),
@@ -31,6 +32,8 @@ export default function LanguageSettingsPage() {
     const router = useRouter();
     const pathname = usePathname();
     const [isPending, startTransition] = useTransition();
+    const [saving, setSaving] = useState(false);
+    const [userLocale, setUserLocale] = useState<string | null>(null);
 
     const form = useForm<LanguageFormValues>({
         resolver: zodResolver(languageFormSchema),
@@ -38,6 +41,34 @@ export default function LanguageSettingsPage() {
             language: locale as "en" | "fr",
         },
     });
+
+    useEffect(() => {
+        // Fetch user's locale preference from backend
+        const fetchUserLocale = async () => {
+            try {
+                const user = await api.get<{ locale?: string }>('/users/me');
+                if (user.locale && ['en', 'fr'].includes(user.locale)) {
+                    setUserLocale(user.locale);
+                    form.setValue('language', user.locale as "en" | "fr");
+                }
+            } catch (error) {
+                console.error('Failed to fetch user locale:', error);
+            }
+        };
+        fetchUserLocale();
+    }, [form]);
+
+    const saveLocale = async (newLocale: string): Promise<void> => {
+        try {
+            setSaving(true);
+            await api.put('/users/me/locale', { locale: newLocale });
+        } catch (error) {
+            console.error('Failed to save locale preference:', error);
+            throw error; // Re-throw to allow caller to handle
+        } finally {
+            setSaving(false);
+        }
+    };
 
     function onSubmit(data: LanguageFormValues) {
         startTransition(() => {
@@ -69,9 +100,12 @@ export default function LanguageSettingsPage() {
                                 <RadioGroup
                                     onValueChange={(val) => {
                                         field.onChange(val);
-                                        // Apply immediately for better UX
-                                        startTransition(() => {
-                                            router.replace(pathname, { locale: val });
+                                        // Save locale preference to backend first
+                                        saveLocale(val).then(() => {
+                                            // Then redirect to the new locale
+                                            startTransition(() => {
+                                                router.replace(pathname, { locale: val });
+                                            });
                                         });
                                     }}
                                     defaultValue={field.value}

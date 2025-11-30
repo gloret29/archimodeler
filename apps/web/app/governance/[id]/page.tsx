@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Home } from 'lucide-react';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
+import { useDialog } from '@/contexts/DialogContext';
 import { api } from '@/lib/api/client';
 
 export default function ChangeRequestDetailPage() {

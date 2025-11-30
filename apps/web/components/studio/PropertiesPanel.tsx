@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { X, Tag, ChevronDown, ChevronRight, Save } from 'lucide-react';
+import { X, Tag, ChevronDown, ChevronRight, Save, ChevronUp } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { api } from '@/lib/api/client';
+import { useTranslations } from 'next-intl';
+import { useDialog } from '@/contexts/DialogContext';
 
 interface Stereotype {
     id: string;
@@ -59,6 +61,9 @@ export default function PropertiesPanel({
     selectedRelationshipName,
     selectedRelationshipType
 }: PropertiesPanelProps) {
+    const t = useTranslations('Properties');
+    const { alert, confirm } = useDialog();
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [stereotypes, setStereotypes] = useState<Stereotype[]>([]);
     const [appliedStereotypes, setAppliedStereotypes] = useState<ElementStereotype[] | RelationshipStereotype[]>([]);
     const [loading, setLoading] = useState(false);
@@ -96,7 +101,7 @@ export default function PropertiesPanel({
         
         try {
             // Fetch only stereotypes applicable to this element's type
-            const data = await api.get(`/stereotypes/elements/${selectedElementId}/applicable`);
+            const data = await api.get<Stereotype[]>(`/stereotypes/elements/${selectedElementId}/applicable`);
             setStereotypes(data);
         } catch (error) {
             console.error('Failed to fetch stereotypes:', error);
@@ -108,7 +113,7 @@ export default function PropertiesPanel({
         
         try {
             // Fetch only stereotypes applicable to this relationship's type
-            const data = await api.get(`/stereotypes/relationships/${selectedRelationshipId}/applicable`);
+            const data = await api.get<Stereotype[]>(`/stereotypes/relationships/${selectedRelationshipId}/applicable`);
             setStereotypes(data);
         } catch (error: any) {
             if (error.status === 404) {
@@ -126,7 +131,7 @@ export default function PropertiesPanel({
         
         setLoading(true);
         try {
-            const data = await api.get(`/stereotypes/elements/${selectedElementId}`);
+            const data = await api.get<ElementStereotype[]>(`/stereotypes/elements/${selectedElementId}`);
             console.log('Fetched element stereotypes:', data);
             setAppliedStereotypes(data);
             // Initialize properties state from extendedProperties
@@ -148,7 +153,7 @@ export default function PropertiesPanel({
         
         setLoading(true);
         try {
-            const data = await api.get(`/stereotypes/relationships/${selectedRelationshipId}`);
+            const data = await api.get<RelationshipStereotype[]>(`/stereotypes/relationships/${selectedRelationshipId}`);
             console.log('Fetched relationship stereotypes:', data);
             setAppliedStereotypes(data);
             // Initialize properties state from extendedProperties
@@ -170,7 +175,11 @@ export default function PropertiesPanel({
 
         // Check if stereotype is already applied
         if (appliedStereotypes.some(s => s.stereotype.id === selectedStereotypeId)) {
-            alert(`This stereotype is already applied to this ${isRelationship ? 'relationship' : 'element'}`);
+            await alert({
+                title: t('error') || 'Error',
+                message: t('stereotypeAlreadyApplied', { type: isRelationship ? t('relationship') : t('element') }),
+                type: 'warning',
+            });
             return;
         }
 
@@ -191,14 +200,23 @@ export default function PropertiesPanel({
             }
         } catch (error) {
             console.error('Failed to apply stereotype:', error);
-            alert('Failed to apply stereotype');
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToApplyStereotype'),
+                type: 'error',
+            });
         }
     };
 
     const handleRemoveStereotype = async (stereotypeId: string) => {
         if (!selectedElementId && !selectedRelationshipId) return;
 
-        if (!confirm(`Remove this stereotype from this ${isRelationship ? 'relationship' : 'element'}?`)) {
+        const confirmed = await confirm({
+            title: t('remove') || 'Remove',
+            description: t('confirmRemoveStereotype', { type: isRelationship ? t('relationship') : t('element') }),
+            variant: 'destructive',
+        });
+        if (!confirmed) {
             return;
         }
 
@@ -234,11 +252,19 @@ export default function PropertiesPanel({
                     window.dispatchEvent(new CustomEvent('element-stereotype-updated', { detail: { elementId: selectedElementId } }));
                 }
             } else {
-                alert('Failed to remove stereotype');
+                await alert({
+                    title: t('error') || 'Error',
+                    message: t('failedToRemoveStereotype'),
+                    type: 'error',
+                });
             }
         } catch (error) {
             console.error('Failed to remove stereotype:', error);
-            alert('Failed to remove stereotype');
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToRemoveStereotype'),
+                type: 'error',
+            });
         }
     };
 
@@ -278,7 +304,11 @@ export default function PropertiesPanel({
             console.log('Properties saved successfully');
         } catch (error) {
             console.error('Failed to save properties:', error);
-            alert('Failed to save properties');
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToSaveProperties'),
+                type: 'error',
+            });
         }
     };
 
@@ -332,7 +362,7 @@ export default function PropertiesPanel({
                         onValueChange={(val) => updateStereotypeProperty(stereotypeId, schema.key, val)}
                     >
                         <SelectTrigger className="text-sm">
-                            <SelectValue placeholder={schema.placeholder || 'Select...'} />
+                            <SelectValue placeholder={schema.placeholder || t('selectPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                             {schema.options?.map((option) => (
@@ -351,12 +381,27 @@ export default function PropertiesPanel({
     if (!selectedElementId && !selectedRelationshipId) {
         return (
             <Card className="m-4">
-                <CardHeader>
-                    <CardTitle className="text-sm">Properties</CardTitle>
+                <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                            <Tag className="h-4 w-4" />
+                            {t('title')}
+                        </CardTitle>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                        >
+                            {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                        </Button>
+                    </div>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">Select an element or relationship to view its properties</p>
-                </CardContent>
+                {!isCollapsed && (
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">{t('selectElementOrRelationship')}</p>
+                    </CardContent>
+                )}
             </Card>
         );
     }
@@ -368,19 +413,32 @@ export default function PropertiesPanel({
 
     return (
         <Card className="m-4">
-            <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Properties
-                </CardTitle>
-                <CardDescription className="text-xs">
-                    {isRelationship ? 'Relationship' : 'Element'} properties and stereotypes
-                </CardDescription>
+            <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="text-sm flex items-center gap-2">
+                            <Tag className="h-4 w-4" />
+                            {t('title')}
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                            {isRelationship ? t('relationship') : t('element')} {t('propertiesAndStereotypes')}
+                        </CardDescription>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                    >
+                        {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                    </Button>
+                </div>
             </CardHeader>
+            {!isCollapsed && (
             <CardContent className="space-y-4">
                 {/* Name */}
                 <div className="space-y-2">
-                    <Label className="text-xs">{isRelationship ? 'Relationship' : 'Element'} Name</Label>
+                    <Label className="text-xs">{isRelationship ? t('relationship') : t('element')} {t('name')}</Label>
                     <Input
                         value={isRelationship ? (selectedRelationshipName || '') : (selectedElementName || '')}
                         readOnly
@@ -391,7 +449,7 @@ export default function PropertiesPanel({
                 {/* Type */}
                 {(isRelationship ? selectedRelationshipType : selectedElementType) && (
                     <div className="space-y-2">
-                        <Label className="text-xs">Type</Label>
+                        <Label className="text-xs">{t('type')}</Label>
                         <Input
                             value={isRelationship ? (selectedRelationshipType || '') : (selectedElementType || '')}
                             readOnly
@@ -402,11 +460,11 @@ export default function PropertiesPanel({
 
                 {/* Applied Stereotypes */}
                 <div className="space-y-2">
-                    <Label className="text-xs">Applied Stereotypes ({isRelationship ? 'Relationship' : 'Element'})</Label>
+                    <Label className="text-xs">{t('appliedStereotypes')} ({isRelationship ? t('relationship') : t('element')})</Label>
                     {loading ? (
-                        <p className="text-xs text-muted-foreground">Loading...</p>
+                        <p className="text-xs text-muted-foreground">{t('loading')}</p>
                     ) : appliedStereotypes.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No stereotypes applied</p>
+                        <p className="text-xs text-muted-foreground">{t('noStereotypesApplied')}</p>
                     ) : (
                         <div className="space-y-2">
                             {appliedStereotypes.map((es) => {
@@ -507,13 +565,13 @@ export default function PropertiesPanel({
                                                     onClick={() => handleSaveStereotypeProperties(es.stereotype.id)}
                                                 >
                                                     <Save className="h-3 w-3 mr-1" />
-                                                    Save Properties
+                                                    {t('saveProperties')}
                                                 </Button>
                                             </div>
                                         )}
                                         {isExpanded && propertiesArray.length === 0 && (
                                             <div className="p-3 border-t bg-muted/30">
-                                                <p className="text-xs text-muted-foreground">No properties defined for this stereotype</p>
+                                                <p className="text-xs text-muted-foreground">{t('noPropertiesDefined')}</p>
                                                 {properties && (
                                                     <details className="mt-2">
                                                         <summary className="text-[10px] text-muted-foreground cursor-pointer">Debug: propertiesSchema</summary>
@@ -533,16 +591,16 @@ export default function PropertiesPanel({
 
                 {/* Apply New Stereotype */}
                 <div className="space-y-2">
-                    <Label className="text-xs">Apply Stereotype</Label>
+                    <Label className="text-xs">{t('applyStereotype')}</Label>
                     <div className="flex gap-2">
                         <Select value={selectedStereotypeId} onValueChange={setSelectedStereotypeId}>
                             <SelectTrigger className="flex-1 text-sm">
-                                <SelectValue placeholder="Select a stereotype" />
+                                <SelectValue placeholder={t('selectStereotype')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {availableStereotypes.length === 0 ? (
                                     <div className="p-2 text-xs text-muted-foreground">
-                                        No available stereotypes
+                                        {t('noAvailableStereotypes')}
                                     </div>
                                 ) : (
                                     availableStereotypes.map((stereotype) => (
@@ -564,11 +622,12 @@ export default function PropertiesPanel({
                             onClick={handleApplyStereotype}
                             disabled={!selectedStereotypeId}
                         >
-                            Apply
+                            {t('apply')}
                         </Button>
                     </div>
                 </div>
             </CardContent>
+            )}
         </Card>
     );
 }

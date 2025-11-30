@@ -26,7 +26,7 @@ export default function BroadcastPage() {
         setLoading(true);
 
         try {
-            const result = await api.post('/notifications/broadcast', {
+            const result = await api.post<{ count: number }>('/notifications/broadcast', {
                 title: title.trim(),
                 message: message.trim(),
                 severity,

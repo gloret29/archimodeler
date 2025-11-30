@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from '@/navigation';
+import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const currentLocale = useLocale();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +38,27 @@ export default function LoginPage() {
 
       const data = await res.json();
       localStorage.setItem('accessToken', data.access_token);
-      router.push('/home');
+      
+      // Fetch user to get their locale preference
+      try {
+        const userRes = await API_CONFIG.fetch('/users/me', {
+          headers: {
+            'Authorization': `Bearer ${data.access_token}`
+          }
+        });
+        if (userRes.ok) {
+          const user = await userRes.json();
+          const userLocale = user.locale || currentLocale || 'en';
+          // Redirect to user's preferred locale using next-intl router
+          router.push('/home', { locale: userLocale });
+        } else {
+          // Fallback to current locale
+          router.push('/home', { locale: currentLocale });
+        }
+      } catch (err) {
+        // Fallback to current locale if user fetch fails
+        router.push('/home', { locale: currentLocale });
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

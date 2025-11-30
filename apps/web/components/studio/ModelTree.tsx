@@ -31,6 +31,8 @@ import { useSearchParams } from 'next/navigation';
 import { useTabsStore } from '@/store/useTabsStore';
 import { useRepositoryStore } from '@/store/useRepositoryStore';
 import { ARCHIMATE_CONCEPTS, ConceptDefinition } from '@/lib/metamodel';
+import { useTranslations } from 'next-intl';
+import { useDialog } from '@/contexts/DialogContext';
 import {
   Dialog,
   DialogContent,
@@ -181,9 +183,11 @@ const svgMapping: Record<string, string> = {
 };
 
 function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTreeProps) {
+const t = useTranslations('ModelTree');
     const router = useRouter();
     const searchParams = useSearchParams();
     const { refreshTrigger } = useRepositoryStore();
+    const { alert, confirm, prompt: promptDialog } = useDialog();
 
     const [folders, setFolders] = useState<FolderType[]>([]);
     const [elements, setElements] = useState<Element[]>([]);
@@ -286,7 +290,12 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
     };
 
     const handleCreateFolder = async (parentId?: string) => {
-        const name = prompt('Folder Name:');
+        const name = await promptDialog({
+            title: t('newFolder'),
+            label: t('newFolder'),
+            placeholder: t('newFolder'),
+            required: true,
+        });
         if (!name) return;
 
         try {
@@ -302,27 +311,45 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
     };
 
     const handleRenameFolder = async (folderId: string, currentName: string) => {
-        const newName = prompt('New Folder Name:', currentName);
+        const newName = await promptDialog({
+            title: t('rename'),
+            label: t('newFolder'),
+            defaultValue: currentName,
+            required: true,
+        });
         if (!newName || newName === currentName) return;
 
         try {
             await api.put(`/model/folders/${folderId}`, { name: newName });
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert('Failed to rename folder');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'Failed to rename folder',
+                type: 'error',
+            });
         }
     };
 
     const handleDeleteFolder = async (folderId: string, folderName: string) => {
-        if (!confirm(`Delete folder "${folderName}"?`)) return;
+        const confirmed = await confirm({
+            title: t('deleteFolder'),
+            description: t('confirmDelete', { name: folderName }) + ' ' + t('thisActionCannotBeUndone'),
+            variant: 'destructive',
+        });
+        if (!confirmed) return;
 
         try {
             await api.delete(`/model/folders/${folderId}`);
             fetchData();
         } catch (err: any) {
             console.error(err);
-            alert(`Failed to delete folder: ${err.message || 'Unknown error'}`);
+            await alert({
+                title: t('error') || 'Error',
+                message: `Failed to delete folder: ${err.message || 'Unknown error'}`,
+                type: 'error',
+            });
         }
     };
 
@@ -374,7 +401,12 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
     };
 
     const handleRenameView = async (viewId: string, currentName: string) => {
-        const newName = prompt('New view name:', currentName);
+        const newName = await promptDialog({
+            title: t('rename'),
+            label: t('newView'),
+            defaultValue: currentName,
+            required: true,
+        });
         if (!newName || newName === currentName) return;
 
         try {
@@ -382,7 +414,11 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             fetchData();
         } catch (err) {
             console.error(err);
-            alert('Failed to rename view');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'Failed to rename view',
+                type: 'error',
+            });
         }
     };
 
@@ -408,7 +444,11 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             
         } catch (err) {
             console.error(err);
-            alert('Failed to delete view');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'Failed to delete view',
+                type: 'error',
+            });
         } finally {
             setDeleteConfirmation({ isOpen: false, viewId: null, viewName: null, position: null });
         }
@@ -419,7 +459,12 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
     };
 
     const handleRenameElement = async (elementId: string, currentName: string) => {
-        const newName = prompt('New name:', currentName);
+        const newName = await promptDialog({
+            title: t('rename'),
+            label: t('rename'),
+            defaultValue: currentName,
+            required: true,
+        });
         if (!newName || newName === currentName) return;
 
         try {
@@ -429,41 +474,72 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             fetchData();
         } catch (err) {
             console.error(err);
-            alert('Failed to rename element');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'Failed to rename element',
+                type: 'error',
+            });
         }
     };
 
     const handleDeleteElement = async (elementId: string, elementName: string) => {
-        if (!confirm(`Delete "${elementName}"? This action cannot be undone.`)) return;
+        const confirmed = await confirm({
+            title: t('deleteElement'),
+            description: t('confirmDelete', { name: elementName }) + ' ' + t('thisActionCannotBeUndone'),
+            variant: 'destructive',
+        });
+        if (!confirmed) return;
 
         try {
             await api.delete(`/model/elements/${elementId}`);
             fetchData();
         } catch (err) {
             console.error(err);
-            alert('Failed to delete element');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'Failed to delete element',
+                type: 'error',
+            });
         }
     };
 
     const handleDeleteRelationship = async (relationshipId: string, relationshipName: string) => {
-        if (!confirm(`Delete the relationship "${relationshipName}"? This action cannot be undone.`)) return;
+        const confirmed = await confirm({
+            title: t('delete') || 'Delete',
+            description: t('confirmDelete', { name: relationshipName }) + ' ' + t('thisActionCannotBeUndone'),
+            variant: 'destructive',
+        });
+        if (!confirmed) return;
 
         try {
             await api.delete(`/model/relationships/${relationshipId}`);
             fetchData();
         } catch (err) {
             console.error(err);
-            alert('Failed to delete relationship');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'Failed to delete relationship',
+                type: 'error',
+            });
         }
     };
 
     const handleCreateElementInFolder = async (folderId: string, conceptType: string, layer: string) => {
         if (!packageId) {
-            alert('No package selected');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'No package selected',
+                type: 'error',
+            });
             return;
         }
 
-        const name = prompt(`Enter name for ${formatConceptTypeName(conceptType)}:`);
+        const name = await promptDialog({
+            title: t('newElement'),
+            label: `Enter name for ${formatConceptTypeName(conceptType)}`,
+            placeholder: formatConceptTypeName(conceptType),
+            required: true,
+        });
         if (!name) return;
 
         try {
@@ -481,7 +557,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                 packageId: pkgId,
                 folderId: folderId
             });
-            console.log('Element created:', createdElement, 'folderId:', createdElement.folderId);
+            console.log('Element created:', createdElement, 'folderId:', (createdElement as { folderId?: string }).folderId);
 
             // Small delay to ensure backend has updated
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -490,7 +566,11 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             fetchData();
         } catch (err) {
             console.error(err);
-            alert('Failed to create element');
+            await alert({
+                title: t('error') || 'Error',
+                message: 'Failed to create element',
+                type: 'error',
+            });
         }
     };
 
@@ -499,13 +579,23 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         .filter(c => enabledConcepts.includes(c.name))
         .reduce((acc, concept) => {
             if (!acc[concept.layer]) acc[concept.layer] = [];
-            acc[concept.layer].push(concept);
+            const layerArray = acc[concept.layer];
+            if (layerArray) {
+                layerArray.push(concept);
+            }
             return acc;
         }, {} as Record<string, ConceptDefinition[]>);
 
+    // Layer order with translations
     const layerOrder = [
-        'Strategy', 'Business', 'Application', 'Technology',
-        'Physical', 'Motivation', 'Implementation & Migration', 'Composite'
+        { key: 'Strategy', label: t('layerStrategy') },
+        { key: 'Business', label: t('layerBusiness') },
+        { key: 'Application', label: t('layerApplication') },
+        { key: 'Technology', label: t('layerTechnology') },
+        { key: 'Physical', label: t('layerPhysical') },
+        { key: 'Motivation', label: t('layerMotivation') },
+        { key: 'Implementation & Migration', label: t('layerImplementationMigration') },
+        { key: 'Composite', label: t('layerComposite') }
     ];
 
     const renderFolder = (folder: FolderType): React.ReactElement => {
@@ -542,7 +632,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                 e.stopPropagation();
                                 handleCreateFolder(folder.id);
                             }}
-                            title="New Subfolder"
+                            title={t('newFolder')}
                         >
                             <FolderPlus className="h-3.5 w-3.5 text-primary" />
                         </Button>
@@ -554,7 +644,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                 e.stopPropagation();
                                 handleRenameFolder(folder.id, folder.name);
                             }}
-                            title="Rename Folder"
+                            title={t('rename')}
                         >
                             <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
@@ -566,7 +656,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                 e.stopPropagation();
                                 handleDeleteFolder(folder.id, folder.name);
                             }}
-                            title="Delete Folder"
+                            title={t('delete')}
                         >
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
@@ -605,14 +695,14 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                             e.stopPropagation();
                                             handleRenameView(view.id, view.name);
                                         }}
-                                        title="Rename"
+                                        title={t('rename')}
                                     >
                                         <Edit2 className="h-3 w-3 text-muted-foreground" />
                                     </button>
                                     <button
                                         className="p-0.5 hover:bg-destructive/10 rounded"
                                         onClick={(e) => initiateDeleteView(e, view.id, view.name)}
-                                        title="Delete"
+                                        title={t('delete')}
                                     >
                                         <Trash2 className="h-3 w-3 text-destructive" />
                                     </button>
@@ -660,7 +750,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                             e.stopPropagation();
                                             handleRenameElement(el.id, el.name);
                                         }}
-                                        title="Rename"
+                                        title={t('rename')}
                                     >
                                         <Edit2 className="h-3 w-3 text-muted-foreground" />
                                     </button>
@@ -670,7 +760,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                             e.stopPropagation();
                                             handleDeleteElement(el.id, el.name);
                                         }}
-                                        title="Delete"
+                                        title={t('delete')}
                                     >
                                         <Trash2 className="h-3 w-3 text-destructive" />
                                     </button>
@@ -699,17 +789,17 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                         handleCreateFolder(folder.id);
                     }}>
                         <FolderPlus className="mr-2 h-4 w-4" />
-                        New Folder
+                        {t('newFolder')}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuLabel>Create ArchiMate Element</ContextMenuLabel>
-                    {layerOrder.map(layer => {
-                        const concepts = groupedConcepts[layer];
+                    <ContextMenuLabel>{t('newElement')}</ContextMenuLabel>
+                    {layerOrder.map(({ key, label }) => {
+                        const concepts = groupedConcepts[key];
                         if (!concepts || concepts.length === 0) return null;
                         
                         return (
-                            <ContextMenuSub key={layer}>
-                                <ContextMenuSubTrigger>{layer}</ContextMenuSubTrigger>
+                            <ContextMenuSub key={key}>
+                                <ContextMenuSubTrigger>{label}</ContextMenuSubTrigger>
                                 <ContextMenuSubContent className="w-64">
                                     {concepts.map(concept => {
                                         const svgFile = svgMapping[concept.name];
@@ -761,9 +851,9 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         <TooltipProvider>
             <aside className="w-full bg-background h-full flex flex-col relative">
                 <div className="p-4 border-b border-border flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">Repository</h2>
+                    <h2 className="text-lg font-semibold">{t('repository')}</h2>
                     <Button variant="outline" size="sm" onClick={() => handleCreateFolder()}>
-                        <Folder className="h-4 w-4 mr-1" /> New Folder
+                        <Folder className="h-4 w-4 mr-1" /> {t('newFolder')}
                     </Button>
                 </div>
 
@@ -771,7 +861,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                     <div className="relative mb-2">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search..."
+                            placeholder={t('search')}
                             className="pl-8 h-8"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -812,14 +902,14 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                             e.stopPropagation();
                                             handleRenameView(view.id, view.name);
                                         }}
-                                        title="Rename"
+                                        title={t('rename')}
                                     >
                                         <Edit2 className="h-3 w-3 text-muted-foreground" />
                                     </button>
                                     <button
                                         className="p-0.5 hover:bg-destructive/10 rounded"
                                         onClick={(e) => initiateDeleteView(e, view.id, view.name)}
-                                        title="Delete"
+                                        title={t('delete')}
                                     >
                                         <Trash2 className="h-3 w-3 text-destructive" />
                                     </button>
@@ -870,7 +960,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                             e.stopPropagation();
                                             handleRenameElement(el.id, el.name);
                                         }}
-                                        title="Rename"
+                                        title={t('rename')}
                                     >
                                         <Edit2 className="h-3 w-3 text-muted-foreground" />
                                     </button>
@@ -880,7 +970,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                             e.stopPropagation();
                                             handleDeleteElement(el.id, el.name);
                                         }}
-                                        title="Delete"
+                                        title={t('delete')}
                                     >
                                         <Trash2 className="h-3 w-3 text-destructive" />
                                     </button>
@@ -926,7 +1016,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                                                             e.stopPropagation();
                                                             handleDeleteRelationship(rel.id, relationshipName);
                                                         }}
-                                                        title="Delete"
+                                                        title={t('delete')}
                                                     >
                                                         <Trash2 className="h-3 w-3 text-destructive" />
                                                     </button>
@@ -974,19 +1064,19 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-2 text-destructive font-semibold">
                                     <AlertTriangle className="h-4 w-4" />
-                                    <span>Delete View?</span>
+                                    <span>{t('deleteView')}</span>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
-                                    Are you sure you want to delete <strong>{deleteConfirmation.viewName}</strong>? 
+                                    {t('confirmDelete', { name: deleteConfirmation.viewName || '' })} 
                                     <br/>
-                                    This will NOT remove the elements from the repository.
+                                    {t('thisActionCannotBeUndone')}
                                 </p>
                                 <div className="flex justify-end gap-2 mt-2">
                                     <Button variant="outline" size="sm" onClick={cancelDeleteView}>
-                                        Cancel
+                                        {t('cancel')}
                                     </Button>
                                     <Button variant="destructive" size="sm" onClick={confirmDeleteView}>
-                                        Delete
+                                        {t('deleteConfirm')}
                                     </Button>
                                 </div>
                             </div>

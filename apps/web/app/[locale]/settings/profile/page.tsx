@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { useTranslations } from "next-intl";
+import { useDialog } from '@/contexts/DialogContext';
 
 const profileFormSchema = z.object({
     username: z
@@ -42,6 +43,7 @@ export default function ProfileSettingsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const t = useTranslations('Settings');
     const tCommon = useTranslations('Common');
+    const { alert } = useDialog();
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -57,7 +59,7 @@ export default function ProfileSettingsPage() {
         // Here we fetch all users and take the first one for demonstration.
         const fetchUser = async () => {
             try {
-                const user = await api.get('/users/me');
+                const user = await api.get<{ id: string; name: string; email: string }>('/users/me');
                 setUserId(user.id);
                 form.reset({
                     username: user.name || "",
@@ -82,10 +84,18 @@ export default function ProfileSettingsPage() {
                 email: data.email,
             });
 
-            alert("Profile updated successfully!");
+            await alert({
+                title: t('success'),
+                message: t('profileUpdatedSuccessfully'),
+                type: 'success',
+            });
         } catch (error) {
             console.error(error);
-            alert("Failed to update profile.");
+            await alert({
+                title: "Error",
+                message: "Failed to update profile.",
+                type: 'error',
+            });
         }
     }
 

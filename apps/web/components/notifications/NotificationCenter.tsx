@@ -63,7 +63,7 @@ export function NotificationCenter() {
                 return;
             }
 
-            const data = await api.get('/notifications');
+            const data = await api.get<Notification[]>('/notifications');
             // Update notifications, preserving any real-time notifications that might not be in the API response yet
             setNotifications(prev => {
                 const newNotifications = data || [];
@@ -92,7 +92,7 @@ export function NotificationCenter() {
                 return;
             }
 
-            const data = await api.get('/notifications/unread-count');
+            const data = await api.get<{ count: number }>('/notifications/unread-count');
             setUnreadCount(data.count || 0);
         } catch (error: any) {
             // Ne logger que si ce n'est pas une erreur d'authentification attendue (401 ou 500 si userId manquant)
@@ -111,7 +111,7 @@ export function NotificationCenter() {
                 if (!token) {
                     return null;
                 }
-                const userData = await api.get('/users/me');
+                const userData = await api.get<{ id: string }>('/users/me');
                 return userData?.id || null;
             } catch (error) {
                 console.error('Failed to get current user ID:', error);

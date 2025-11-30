@@ -45,6 +45,7 @@ export default function PackageSelector() {
     const [packages, setPackages] = useState<ModelPackage[]>([]);
     const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
     useEffect(() => {
         // Check authentication first

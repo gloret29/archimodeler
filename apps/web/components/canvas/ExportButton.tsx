@@ -10,14 +10,17 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import html2canvas from 'html2canvas';
+import { useDialog } from '@/contexts/DialogContext';
+import { useTranslations } from 'next-intl';
 
 interface ExportButtonProps {
     reactFlowInstance: ReactFlowInstance | null;
     viewName?: string;
-    reactFlowWrapper?: React.RefObject<HTMLDivElement>;
+    reactFlowWrapper?: React.RefObject<HTMLDivElement | null>;
 }
 
 export default function ExportButton({ reactFlowInstance, viewName = 'view', reactFlowWrapper }: ExportButtonProps) {
+    const { alert } = useDialog();
     const [isOpen, setIsOpen] = React.useState(false);
 
     // Helper function to capture canvas with CSS color fixes
@@ -104,7 +107,11 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
                 const clonedChildren = Array.from(cloned.children);
                 
                 for (let i = 0; i < originalChildren.length && i < clonedChildren.length; i++) {
-                    walkOriginal(originalChildren[i], clonedChildren[i]);
+                    const originalChild = originalChildren[i];
+                    const clonedChild = clonedChildren[i];
+                    if (originalChild && clonedChild) {
+                        walkOriginal(originalChild, clonedChild);
+                    }
                 }
             };
 
@@ -141,9 +148,13 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
         }
     };
 
-    const exportToSVG = () => {
+    const exportToSVG = async () => {
         if (!reactFlowInstance) {
-            alert('Canvas not ready');
+            await alert({
+                title: 'Warning',
+                message: 'Canvas not ready',
+                type: 'warning',
+            });
             return;
         }
 
@@ -152,7 +163,11 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
             const edges = reactFlowInstance.getEdges();
 
             if (nodes.length === 0) {
-                alert('No elements to export');
+                await alert({
+                    title: 'Warning',
+                    message: 'No elements to export',
+                    type: 'warning',
+                });
                 return;
             }
 
@@ -251,13 +266,21 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
             setIsOpen(false);
         } catch (error) {
             console.error('Failed to export SVG:', error);
-            alert('Failed to export SVG');
+            await alert({
+                title: 'Error',
+                message: 'Failed to export SVG',
+                type: 'error',
+            });
         }
     };
 
     const exportToPNG = async () => {
         if (!reactFlowInstance || !reactFlowWrapper?.current) {
-            alert('Canvas not ready');
+            await alert({
+                title: 'Warning',
+                message: 'Canvas not ready',
+                type: 'warning',
+            });
             return;
         }
 
@@ -265,7 +288,11 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
             const nodes = reactFlowInstance.getNodes();
             
             if (nodes.length === 0) {
-                alert('No elements to export');
+                await alert({
+                    title: 'Warning',
+                    message: 'No elements to export',
+                    type: 'warning',
+                });
                 return;
             }
 
@@ -329,13 +356,21 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
             setIsOpen(false);
         } catch (error) {
             console.error('Failed to export PNG:', error);
-            alert('Failed to export PNG: ' + (error as Error).message);
+            await alert({
+                title: 'Error',
+                message: 'Failed to export PNG: ' + (error as Error).message,
+                type: 'error',
+            });
         }
     };
 
     const copyToClipboard = async () => {
         if (!reactFlowInstance || !reactFlowWrapper?.current) {
-            alert('Canvas not ready');
+            await alert({
+                title: 'Warning',
+                message: 'Canvas not ready',
+                type: 'warning',
+            });
             return;
         }
 
@@ -343,7 +378,11 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
             const nodes = reactFlowInstance.getNodes();
             
             if (nodes.length === 0) {
-                alert('No elements to copy');
+                await alert({
+                    title: 'Warning',
+                    message: 'No elements to copy',
+                    type: 'warning',
+                });
                 return;
             }
 
@@ -370,7 +409,11 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
                     // Show success feedback
                     setIsOpen(false);
                     // You could add a toast notification here
-                    alert('Image copied to clipboard!');
+                    await alert({
+                        title: 'Success',
+                        message: 'Image copied to clipboard!',
+                        type: 'success',
+                    });
                 } catch (clipboardError) {
                     // Fallback: try to copy as data URL
                     console.warn('ClipboardItem not supported, trying fallback:', clipboardError);
@@ -380,10 +423,18 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
                         reader.onloadend = async () => {
                             try {
                                 await navigator.clipboard.writeText(reader.result as string);
-                                alert('Image data copied to clipboard!');
+                                await alert({
+                                    title: 'Success',
+                                    message: 'Image data copied to clipboard!',
+                                    type: 'success',
+                                });
                             } catch (err) {
                                 console.error('Failed to copy to clipboard:', err);
-                                alert('Failed to copy to clipboard. Please use Export instead.');
+                                await alert({
+                                    title: 'Error',
+                                    message: 'Failed to copy to clipboard. Please use Export instead.',
+                                    type: 'error',
+                                });
                             }
                         };
                         reader.readAsDataURL(fallbackBlob);
@@ -392,7 +443,11 @@ export default function ExportButton({ reactFlowInstance, viewName = 'view', rea
             }, 'image/png');
         } catch (error) {
             console.error('Failed to copy to clipboard:', error);
-            alert('Failed to copy to clipboard: ' + (error as Error).message);
+            await alert({
+                title: 'Error',
+                message: 'Failed to copy to clipboard: ' + (error as Error).message,
+                type: 'error',
+            });
         }
     };
 

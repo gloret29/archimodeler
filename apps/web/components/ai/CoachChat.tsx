@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, Send, Sparkles } from 'lucide-react';
 import { API_CONFIG } from '@/lib/api/config';
+import { useTranslations } from 'next-intl';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -14,6 +15,7 @@ interface Message {
 }
 
 export default function CoachChat() {
+    const t = useTranslations('Coach');
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -36,17 +38,23 @@ export default function CoachChat() {
             setMessages(prev => [...prev, { role: 'assistant', content: data }]);
         } catch (err) {
             console.error(err);
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error.' }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: t('error') }]);
         } finally {
             setLoading(false);
         }
     };
 
+    // Calculate position to be left of the Repository sidebar (which is ~320px wide)
+    const sidebarWidth = 320; // Repository sidebar width
+    const margin = 16; // 1rem = 16px
+    const rightPosition = sidebarWidth + margin;
+
     if (!isOpen) {
         return (
             <Button
-                className="fixed bottom-4 right-4 rounded-full w-12 h-12 shadow-lg"
+                className="fixed bottom-4 rounded-full w-12 h-12 shadow-lg z-40"
                 onClick={() => setIsOpen(true)}
+                style={{ right: `${rightPosition}px` }}
             >
                 <MessageCircle />
             </Button>
@@ -54,11 +62,11 @@ export default function CoachChat() {
     }
 
     return (
-        <Card className="fixed bottom-4 right-4 w-96 h-[500px] shadow-xl flex flex-col z-50">
+        <Card className="fixed bottom-4 w-96 h-[500px] shadow-xl flex flex-col z-30" style={{ right: `${rightPosition}px` }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
                 <CardTitle className="text-lg flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-yellow-500" />
-                    ArchiCoach
+                    {t('title')}
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>X</Button>
             </CardHeader>
@@ -67,7 +75,7 @@ export default function CoachChat() {
                     <div className="space-y-4">
                         {messages.length === 0 && (
                             <p className="text-sm text-muted-foreground text-center mt-8">
-                                Hello! I'm your ArchiMate Coach. Ask me anything about modeling or best practices.
+                                {t('welcomeMessage')}
                             </p>
                         )}
                         {messages.map((msg, i) => (
@@ -87,7 +95,7 @@ export default function CoachChat() {
                         ))}
                         {loading && (
                             <div className="flex justify-start">
-                                <div className="bg-muted rounded-lg p-3 text-sm animate-pulse">Thinking...</div>
+                                <div className="bg-muted rounded-lg p-3 text-sm animate-pulse">{t('thinking')}</div>
                             </div>
                         )}
                     </div>
@@ -96,7 +104,7 @@ export default function CoachChat() {
                     <Textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask a question..."
+                        placeholder={t('askQuestion')}
                         className="min-h-[40px] max-h-[100px]"
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {

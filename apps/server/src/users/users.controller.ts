@@ -126,4 +126,19 @@ export class UsersController {
         }
         return this.usersService.getChatHistory(userId, targetUserId);
     }
+
+    @Put('me/locale')
+    @ApiOperation({ summary: 'Update user locale', description: 'Update the preferred language/locale for the current user' })
+    @ApiResponse({ status: 200, description: 'Locale updated successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async updateLocale(@Request() req: any, @Body() body: { locale: string }) {
+        const userId = req.user?.userId;
+        if (!userId) {
+            throw new HttpException('User not found in token', HttpStatus.UNAUTHORIZED);
+        }
+        if (!body.locale || !['en', 'fr'].includes(body.locale)) {
+            throw new HttpException('Invalid locale. Must be "en" or "fr"', HttpStatus.BAD_REQUEST);
+        }
+        return this.usersService.update(userId, { locale: body.locale });
+    }
 }

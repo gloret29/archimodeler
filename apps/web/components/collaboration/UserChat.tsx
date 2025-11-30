@@ -66,9 +66,9 @@ export function UserChat({ currentUser, targetUser, isOpen, onClose }: UserChatP
 
         const loadChatHistory = async () => {
             try {
-                const history = await api.get(`/users/me/chat/${targetUser.id}`);
+                const history = await api.get<Array<{ id: string; from: string; to: string; message: string; timestamp: string | Date }>>(`/users/me/chat/${targetUser.id}`);
                 // Convert history to Message format
-                const formattedMessages: Message[] = history.map((msg: any) => ({
+                const formattedMessages: Message[] = history.map((msg) => ({
                     id: msg.id,
                     from: msg.from,
                     to: msg.to,

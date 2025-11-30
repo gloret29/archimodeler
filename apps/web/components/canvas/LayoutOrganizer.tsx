@@ -140,7 +140,10 @@ function applyHierarchicalLayout(nodes: Node[], edges: Edge[]): Node[] {
 
     // If no roots, use first node as root
     if (roots.length === 0 && nodes.length > 0) {
-        roots.push(nodes[0]);
+        const firstNode = nodes[0];
+        if (firstNode) {
+            roots.push(firstNode);
+        }
     }
 
     // Assign levels using BFS
@@ -269,6 +272,7 @@ function applyForceDirectedLayout(nodes: Node[], edges: Edge[]): Node[] {
             for (let j = i + 1; j < nodes.length; j++) {
                 const node1 = nodes[i];
                 const node2 = nodes[j];
+                if (!node1 || !node2) continue;
                 const pos1 = positions.get(node1.id)!;
                 const pos2 = positions.get(node2.id)!;
 
