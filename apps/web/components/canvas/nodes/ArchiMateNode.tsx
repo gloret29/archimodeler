@@ -1,6 +1,7 @@
 import React, { memo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import Image from 'next/image';
+import { api } from '@/lib/api/client';
 
 // Map ArchiMate types to their SVG filenames
 const svgMapping: Record<string, string> = {
@@ -111,14 +112,8 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
 
         const fetchStereotypes = async () => {
             try {
-                const headers: HeadersInit = {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                };
-                const response = await fetch(`http://localhost:3002/stereotypes/elements/${elementId}`, { headers });
-                if (response.ok) {
-                    const data = await response.json();
-                    setStereotypes(data.map((es: any) => ({ name: es.stereotype.name })));
-                }
+                const data = await api.get(`/stereotypes/elements/${elementId}`);
+                setStereotypes(data.map((es: any) => ({ name: es.stereotype.name })));
             } catch (error) {
                 console.error('Failed to fetch stereotypes:', error);
             }

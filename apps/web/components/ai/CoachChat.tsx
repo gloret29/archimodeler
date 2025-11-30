@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, Send, Sparkles } from 'lucide-react';
+import { API_CONFIG } from '@/lib/api/config';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -27,12 +28,8 @@ export default function CoachChat() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:3002/ai/coach', {
+            const res = await API_CONFIG.fetch('/ai/coach', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                },
                 body: JSON.stringify({ question: userMsg.content })
             });
             const data = await res.text();

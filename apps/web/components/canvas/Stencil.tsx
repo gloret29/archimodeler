@@ -6,6 +6,7 @@ import {
     Box
 } from 'lucide-react';
 import { ARCHIMATE_CONCEPTS, ConceptDefinition } from '@/lib/metamodel';
+import { api } from '@/lib/api/client';
 
 // Map ArchiMate types to their SVG filenames (same as ArchiMateNode)
 const svgMapping: Record<string, string> = {
@@ -104,9 +105,8 @@ export default function Stencil() {
 
     useEffect(() => {
         // Fetch enabled concepts configuration
-        fetch('http://localhost:3002/settings')
-            .then(res => res.json())
-            .then(data => {
+        api.get('/settings')
+            .then((data: any) => {
                 if (Array.isArray(data)) {
                     const palette = data.find((s: any) => s.key === 'palette');
                     if (palette && palette.value) {

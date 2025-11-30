@@ -7,6 +7,7 @@ import { User } from './useCollaboration';
 import { useOpenChats } from './useOpenChats';
 import { useUnreadMessages } from './useUnreadMessages';
 import { useChatSenders } from './useChatSenders';
+import { API_CONFIG } from '@/lib/api/config';
 
 interface UseChatNotificationsOptions {
     currentUser: User | null;
@@ -25,7 +26,7 @@ export function useChatNotifications({ currentUser, enabled, activeUsers = [] }:
         if (!enabled || !currentUser) return;
 
         // Connect to WebSocket for chat notifications
-        const socket = io('http://localhost:3002/collaboration', {
+        const socket = io(API_CONFIG.wsUrl, {
             transports: ['websocket'],
         });
 

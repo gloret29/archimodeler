@@ -8,6 +8,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { api } from '@/lib/api/client';
 import {
     Tooltip,
     TooltipContent,
@@ -210,13 +211,9 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             return;
         }
 
-        const token = localStorage.getItem('accessToken');
-        const headers = { 'Authorization': `Bearer ${token}` };
-
         // Fetch folders filtered by packageId
-        fetch(`http://localhost:3002/model/packages/${packageId}/folders`, { headers })
-            .then(res => res.json())
-            .then(data => {
+        api.get(`/model/packages/${packageId}/folders`)
+            .then((data: any) => {
                 if (Array.isArray(data)) {
                     setFolders(data);
                 }
@@ -224,9 +221,8 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             .catch(console.error);
 
         // Fetch elements filtered by packageId
-        fetch(`http://localhost:3002/model/packages/${packageId}/elements`, { headers })
-            .then(res => res.json())
-            .then(data => {
+        api.get(`/model/packages/${packageId}/elements`)
+            .then((data: any) => {
                 if (Array.isArray(data)) {
                     setElements(data);
                 }
@@ -234,9 +230,8 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             .catch(console.error);
 
         // Fetch views filtered by packageId
-        fetch(`http://localhost:3002/model/packages/${packageId}/views`, { headers })
-            .then(res => res.json())
-            .then(data => {
+        api.get(`/model/packages/${packageId}/views`)
+            .then((data: any) => {
                 if (Array.isArray(data)) {
                     setViews(data);
                 }
@@ -244,9 +239,8 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             .catch(console.error);
 
         // Fetch relationships filtered by packageId
-        fetch(`http://localhost:3002/model/relationships?packageId=${packageId}`, { headers })
-            .then(res => res.json())
-            .then(data => {
+        api.get(`/model/relationships?packageId=${packageId}`)
+            .then((data: any) => {
                 if (Array.isArray(data)) {
                     setRelationships(data);
                 }
@@ -269,9 +263,8 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
 
     // Fetch palette configuration
     useEffect(() => {
-        fetch('http://localhost:3002/settings')
-            .then(res => res.json())
-            .then(data => {
+        api.get('/settings')
+            .then((data: any) => {
                 if (Array.isArray(data)) {
                     const palette = data.find((s: any) => s.key === 'palette');
                     if (palette && palette.value && Array.isArray(palette.value)) {
@@ -297,17 +290,10 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!name) return;
 
         try {
-            await fetch('http://localhost:3002/model/folders', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                },
-                body: JSON.stringify({
-                    name,
-                    parentId,
-                    modelPackage: { connect: { id: packageId || 'default-package-id' } }
-                })
+            await api.post('/model/folders', {
+                name,
+                parentId,
+                modelPackage: { connect: { id: packageId || 'default-package-id' } }
             });
             fetchData();
         } catch (err) {
@@ -320,14 +306,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!newName || newName === currentName) return;
 
         try {
-            await fetch(`http://localhost:3002/model/folders/${folderId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                },
-                body: JSON.stringify({ name: newName })
-            });
+            await api.put(`/model/folders/${folderId}`, { name: newName });
             fetchData();
         } catch (err) {
             console.error(err);
@@ -339,23 +318,11 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!confirm(`Delete folder "${folderName}"?`)) return;
 
         try {
-            const res = await fetch(`http://localhost:3002/model/folders/${folderId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-            });
-
-            if (!res.ok) {
-                const errorData = await res.json();
-                alert(`Failed to delete folder: ${errorData.message || 'Unknown error'}`);
-                return;
-            }
-
+            await api.delete(`/model/folders/${folderId}`);
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert('Failed to delete folder');
+            alert(`Failed to delete folder: ${err.message || 'Unknown error'}`);
         }
     };
 
@@ -372,13 +339,8 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             if (!existingId) return;
 
             try {
-                await fetch(`http://localhost:3002/model/elements/${existingId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                    },
-                    body: JSON.stringify({ folder: { connect: { id: targetFolderId } } })
+                await api.put(`/model/elements/${existingId}`, {
+                    folder: { connect: { id: targetFolderId } }
                 });
                 fetchData();
             } catch (err) {
@@ -389,13 +351,8 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             if (!folderId || folderId === targetFolderId) return; // Can't drop into self
 
             try {
-                await fetch(`http://localhost:3002/model/folders/${folderId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                    },
-                    body: JSON.stringify({ parent: { connect: { id: targetFolderId } } })
+                await api.put(`/model/folders/${folderId}`, {
+                    parent: { connect: { id: targetFolderId } }
                 });
                 fetchData();
             } catch (err) {
@@ -406,13 +363,8 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             if (!viewId) return;
 
             try {
-                await fetch(`http://localhost:3002/model/views/${viewId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                    },
-                    body: JSON.stringify({ folder: { connect: { id: targetFolderId } } })
+                await api.put(`/model/views/${viewId}`, {
+                    folder: { connect: { id: targetFolderId } }
                 });
                 fetchData();
             } catch (err) {
@@ -426,15 +378,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!newName || newName === currentName) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/views/${viewId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name: newName })
-            });
+            await api.put(`/model/views/${viewId}`, { name: newName });
             fetchData();
         } catch (err) {
             console.error(err);
@@ -457,13 +401,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!deleteConfirmation.viewId) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/views/${deleteConfirmation.viewId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            await api.delete(`/model/views/${deleteConfirmation.viewId}`);
             fetchData();
             
             useTabsStore.getState().removeTab(`tab-${deleteConfirmation.viewId}`);
@@ -485,11 +423,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!newName || newName === currentName) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/elements/${elementId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
+            await api.put(`/model/elements/${elementId}`, {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ name: newName })
@@ -505,13 +439,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!confirm(`Delete "${elementName}"? This action cannot be undone.`)) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/elements/${elementId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            await api.delete(`/model/elements/${elementId}`);
             fetchData();
         } catch (err) {
             console.error(err);
@@ -523,13 +451,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
         if (!confirm(`Delete the relationship "${relationshipName}"? This action cannot be undone.`)) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/relationships/${relationshipId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            await api.delete(`/model/relationships/${relationshipId}`);
             fetchData();
         } catch (err) {
             console.error(err);
@@ -554,28 +476,13 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
             setExpanded(prev => ({ ...prev, [folderId]: true }));
             
             // Use the simplified endpoint that handles concept type creation
-            const response = await fetch('http://localhost:3002/model/elements', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name,
-                    type: conceptType,
-                    layer: layer,
-                    packageId: pkgId,
-                    folderId: folderId
-                })
+            const createdElement = await api.post('/model/elements', {
+                name,
+                type: conceptType,
+                layer: layer,
+                packageId: pkgId,
+                folderId: folderId
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Failed to create element:', errorText);
-                throw new Error('Failed to create element');
-            }
-
-            const createdElement = await response.json();
             console.log('Element created:', createdElement, 'folderId:', createdElement.folderId);
 
             // Small delay to ensure backend has updated

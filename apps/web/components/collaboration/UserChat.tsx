@@ -15,6 +15,7 @@ import { User } from '@/hooks/useCollaboration';
 import { io, Socket } from 'socket.io-client';
 import { useOpenChats } from '@/hooks/useOpenChats';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
+import { API_CONFIG } from '@/lib/api/config';
 
 interface Message {
     id: string;
@@ -59,7 +60,7 @@ export function UserChat({ currentUser, targetUser, isOpen, onClose }: UserChatP
         if (!isOpen) return;
 
         // Connect to WebSocket for chat
-        const newSocket = io('http://localhost:3002/collaboration', {
+        const newSocket = io(API_CONFIG.wsUrl, {
             transports: ['websocket'],
         });
 

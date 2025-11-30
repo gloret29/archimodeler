@@ -7,6 +7,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag, Package, Home } from "lucide-react";
 import { useTranslations } from 'next-intl';
+import { API_CONFIG } from '@/lib/api/config';
+
+interface User {
+    id: string;
+    email: string;
+    name?: string;
+    roles?: Array<{ name: string }>;
+}
 
 export default function AdminLayout({
     children,
@@ -16,21 +24,62 @@ export default function AdminLayout({
     const router = useRouter();
     const t = useTranslations('Home');
     const [authorized, setAuthorized] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // TODO: Real auth check with JWT/API
-        const token = localStorage.getItem("accessToken");
-        // Mock check for now - in real app, verify token and role
-        if (!token) {
-            // router.push("/login"); // Uncomment when login exists
-            // For dev, we allow access but log it
-            console.warn("No token found, assuming dev mode or redirecting");
-        }
-        setAuthorized(true);
+        const checkAuth = async () => {
+            try {
+                const token = API_CONFIG.getAuthToken();
+                if (!token) {
+                    console.warn("No token found, redirecting to home");
+                    router.push("/home");
+                    return;
+                }
+
+                // Verify token and check for Admin role
+                const response = await API_CONFIG.fetch('/users/me');
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Token invalid or expired
+                        localStorage.removeItem('accessToken');
+                        router.push("/");
+                        return;
+                    }
+                    throw new Error(`Failed to verify authentication: ${response.status}`);
+                }
+
+                const user: User = await response.json();
+                
+                // Check if user has Admin role
+                const hasAdminRole = user.roles?.some(role => role.name === 'Admin') || false;
+                
+                if (!hasAdminRole) {
+                    console.warn("User does not have Admin role, redirecting to home");
+                    router.push("/home");
+                    return;
+                }
+
+                setAuthorized(true);
+            } catch (error) {
+                console.error("Authentication check failed:", error);
+                router.push("/home");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkAuth();
     }, [router]);
 
-    if (!authorized) {
-        return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    if (loading || !authorized) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-center">
+                    <p className="text-muted-foreground">Checking authorization...</p>
+                </div>
+            </div>
+        );
     }
 
     return (

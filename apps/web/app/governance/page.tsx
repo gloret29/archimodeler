@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { api } from '@/lib/api/client';
 
 interface ChangeRequest {
     id: string;
@@ -21,13 +22,8 @@ export default function GovernancePage() {
 
     useEffect(() => {
         // Fetch change requests
-        fetch('http://localhost:3002/workflow/change-requests', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            }
-        })
-            .then(res => res.json())
-            .then(data => setRequests(data))
+        api.get('/workflow/change-requests')
+            .then((data: any) => setRequests(data))
             .catch(err => console.error(err));
     }, []);
 

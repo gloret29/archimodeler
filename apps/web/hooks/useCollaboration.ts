@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { API_CONFIG } from '@/lib/api/config';
 
 export interface User {
     id: string;
@@ -73,7 +74,7 @@ export function useCollaboration({
             return;
         }
 
-        const socket = io('http://localhost:3002/collaboration', {
+        const socket = io(API_CONFIG.wsUrl, {
             transports: ['websocket'],
             reconnection: true,
             reconnectionDelay: 1000,

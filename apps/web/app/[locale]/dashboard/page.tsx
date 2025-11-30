@@ -6,15 +6,15 @@ import { Link } from '@/navigation';
 import { Button } from '@/components/ui/button';
 import { Home } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { api } from '@/lib/api/client';
 
 export default function DashboardPage() {
     const t = useTranslations('Home');
     const [metrics, setMetrics] = useState<any>(null);
 
     useEffect(() => {
-        fetch('http://localhost:3002/search/dashboard')
-            .then(res => res.json())
-            .then(data => setMetrics(data))
+        api.get('/search/dashboard')
+            .then((data: any) => setMetrics(data))
             .catch(err => console.error('Failed to fetch metrics', err));
     }, []);
 

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from '@/navigation';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api/client';
+import { API_CONFIG } from '@/lib/api/config';
 import {
     Select,
     SelectContent,
@@ -80,27 +82,13 @@ export default function PackageSelector() {
 
     const fetchPackages = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = API_CONFIG.getAuthToken();
             if (!token) {
                 window.location.href = '/';
                 return;
             }
 
-            const res = await fetch('http://localhost:3002/model/packages', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (res.status === 401) {
-                localStorage.removeItem('accessToken');
-                window.location.href = '/';
-                return;
-            }
-
-            if (!res.ok) {
-                throw new Error(`Failed to fetch packages: ${res.status} ${res.statusText}`);
-            }
-
-            const data = await res.json();
+            const data = await api.get('/model/packages');
             
             if (Array.isArray(data)) {
                 setPackages(data);
@@ -121,11 +109,16 @@ export default function PackageSelector() {
                     setSelectedPackageId(currentPackageId);
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to fetch packages:', error);
             // Don't redirect on network errors, just show empty state
-            // Only redirect if token is missing
-            const token = localStorage.getItem('accessToken');
+            // Only redirect if token is missing or unauthorized
+            if (error.status === 401) {
+                localStorage.removeItem('accessToken');
+                window.location.href = '/';
+                return;
+            }
+            const token = API_CONFIG.getAuthToken();
             if (!token) {
                 window.location.href = '/';
             }

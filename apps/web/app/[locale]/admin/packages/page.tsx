@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '@/navigation';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api/client';
+import { API_CONFIG } from '@/lib/api/config';
 import {
     Table,
     TableBody,
@@ -73,27 +75,14 @@ export default function PackagesPage() {
 
     const fetchPackages = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                router.push('/');
-                return;
-            }
-
-            const res = await fetch('http://localhost:3002/model/packages', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (res.status === 401) {
+            const data = await api.get('/model/packages');
+            setPackages(Array.isArray(data) ? data : []);
+        } catch (error: any) {
+            if (error.status === 401) {
                 localStorage.removeItem('accessToken');
                 router.push('/');
                 return;
             }
-
-            if (res.ok) {
-                const data = await res.json();
-                setPackages(Array.isArray(data) ? data : []);
-            }
-        } catch (error) {
             console.error('Failed to fetch packages:', error);
         } finally {
             setLoading(false);
@@ -104,28 +93,15 @@ export default function PackagesPage() {
         if (!newPackageName.trim()) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch('http://localhost:3002/model/packages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name: newPackageName,
-                    description: newPackageDescription || undefined,
-                    status: 'DRAFT'
-                })
+            await api.post('/model/packages', {
+                name: newPackageName,
+                description: newPackageDescription || undefined,
+                status: 'DRAFT'
             });
-
-            if (res.ok) {
-                await fetchPackages();
-                setCreateDialogOpen(false);
-                setNewPackageName('');
-                setNewPackageDescription('');
-            } else {
-                alert('Failed to create package');
-            }
+            await fetchPackages();
+            setCreateDialogOpen(false);
+            setNewPackageName('');
+            setNewPackageDescription('');
         } catch (error) {
             console.error('Failed to create package:', error);
             alert('Failed to create package');
@@ -143,32 +119,18 @@ export default function PackagesPage() {
         if (!packageToEdit || !editPackageName.trim()) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:3002/model/packages/${packageToEdit.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name: editPackageName,
-                    description: editPackageDescription || undefined,
-                })
+            await api.put(`/model/packages/${packageToEdit.id}`, {
+                name: editPackageName,
+                description: editPackageDescription || undefined,
             });
-
-            if (res.ok) {
-                await fetchPackages();
-                setEditDialogOpen(false);
-                setPackageToEdit(null);
-                setEditPackageName('');
-                setEditPackageDescription('');
-            } else {
-                const errorText = await res.text();
-                alert(`Failed to update package: ${errorText}`);
-            }
-        } catch (error) {
+            await fetchPackages();
+            setEditDialogOpen(false);
+            setPackageToEdit(null);
+            setEditPackageName('');
+            setEditPackageDescription('');
+        } catch (error: any) {
             console.error('Failed to update package:', error);
-            alert('Failed to update package');
+            alert(`Failed to update package: ${error.message || 'Unknown error'}`);
         }
     };
 
@@ -181,37 +143,20 @@ export default function PackagesPage() {
         if (!packageToDelete) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:3002/model/packages/${packageToDelete.id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (res.ok) {
-                await fetchPackages();
-                setDeleteDialogOpen(false);
-                setPackageToDelete(null);
-            } else {
-                const errorText = await res.text();
-                alert(`Failed to delete package: ${errorText}`);
-            }
-        } catch (error) {
+            await api.delete(`/model/packages/${packageToDelete.id}`);
+            await fetchPackages();
+            setDeleteDialogOpen(false);
+            setPackageToDelete(null);
+        } catch (error: any) {
             console.error('Failed to delete package:', error);
-            alert('Failed to delete package');
+            alert(`Failed to delete package: ${error.message || 'Unknown error'}`);
         }
     };
 
     const handleExportSingle = async (packageId: string) => {
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch('http://localhost:3002/model/packages/export', {
+            const res = await API_CONFIG.fetch('/model/packages/export', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({ packageIds: [packageId] })
             });
 
@@ -245,13 +190,8 @@ export default function PackagesPage() {
         }
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch('http://localhost:3002/model/packages/export', {
+            const res = await API_CONFIG.fetch('/model/packages/export', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({ packageIds: Array.from(selectedPackagesForExport) })
             });
 
@@ -288,7 +228,6 @@ export default function PackagesPage() {
 
         setImporting(true);
         try {
-            const token = localStorage.getItem('accessToken');
             const formData = new FormData();
             formData.append('file', importFile);
             if (importOverwrite) {
@@ -298,11 +237,9 @@ export default function PackagesPage() {
                 formData.append('newPackageName', importNewName);
             }
 
-            const res = await fetch('http://localhost:3002/model/packages/import', {
+            const res = await API_CONFIG.fetch('/model/packages/import', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: {}, // Don't set Content-Type for FormData, browser will set it with boundary
                 body: formData
             });
 
@@ -337,30 +274,17 @@ export default function PackagesPage() {
 
         setDuplicating(true);
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:3002/model/packages/${packageToDuplicate.id}/duplicate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name: duplicatePackageName.trim() })
+            const result = await api.post(`/model/packages/${packageToDuplicate.id}/duplicate`, {
+                name: duplicatePackageName.trim()
             });
-
-            if (res.ok) {
-                const result = await res.json();
-                alert(`Package duplicated successfully!\n\nDuplicated:\n- ${result.imported.elements} elements\n- ${result.imported.relationships} relationships\n- ${result.imported.folders} folders\n- ${result.imported.views} views`);
-                await fetchPackages();
-                setDuplicateDialogOpen(false);
-                setPackageToDuplicate(null);
-                setDuplicatePackageName('');
-            } else {
-                const error = await res.json();
-                alert(`Failed to duplicate package: ${error.error || error.message || 'Unknown error'}`);
-            }
-        } catch (error) {
+            alert(`Package duplicated successfully!\n\nDuplicated:\n- ${result.imported.elements} elements\n- ${result.imported.relationships} relationships\n- ${result.imported.folders} folders\n- ${result.imported.views} views`);
+            await fetchPackages();
+            setDuplicateDialogOpen(false);
+            setPackageToDuplicate(null);
+            setDuplicatePackageName('');
+        } catch (error: any) {
             console.error('Failed to duplicate package:', error);
-            alert('Failed to duplicate package');
+            alert(`Failed to duplicate package: ${error.error || error.message || 'Unknown error'}`);
         } finally {
             setDuplicating(false);
         }

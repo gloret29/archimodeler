@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Home } from 'lucide-react';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
+import { api } from '@/lib/api/client';
 
 export default function ChangeRequestDetailPage() {
     const params = useParams();
@@ -18,25 +19,15 @@ export default function ChangeRequestDetailPage() {
 
     useEffect(() => {
         if (params.id) {
-            fetch(`http://localhost:3002/workflow/change-requests/${params.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-            })
-                .then(res => res.json())
-                .then(data => setRequest(data))
+            api.get(`/workflow/change-requests/${params.id}`)
+                .then((data: any) => setRequest(data))
                 .catch(err => console.error(err));
         }
     }, [params.id]);
 
     const handleAction = async (action: 'approve' | 'reject' | 'publish' | 'submit') => {
         try {
-            await fetch(`http://localhost:3002/workflow/change-requests/${params.id}/${action}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-            });
+            await api.put(`/workflow/change-requests/${params.id}/${action}`, {});
             // Refresh
             window.location.reload();
         } catch (err) {

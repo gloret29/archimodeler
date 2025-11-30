@@ -5,6 +5,7 @@ import { ReactFlowProvider, useNodesState, useEdgesState, Node, Edge, NodeChange
 import ModelingCanvas from '@/components/canvas/ModelingCanvas';
 import { useCollaboration, User } from '@/hooks/useCollaboration';
 import CollaborativeCursors from '@/components/collaboration/CollaborativeCursors';
+import { api } from '@/lib/api/client';
 
 interface CollaborativeCanvasProps {
     viewId: string;
@@ -53,37 +54,24 @@ export default function CollaborativeCanvas({
 
         const fetchView = async () => {
             try {
-                const token = localStorage.getItem('accessToken');
-                const res = await fetch(`http://localhost:3002/model/views/${viewId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (res.ok) {
-                    const text = await res.text();
-                    if (!text) {
-                        setIsLoaded(true);
-                        return; 
+                const viewData = await api.get(`/model/views/${viewId}`);
+                if (viewData && viewData.content) {
+                    console.log('Loading view content:', viewData.content);
+                    // Restore nodes and edges
+                    const content = typeof viewData.content === 'string' 
+                        ? JSON.parse(viewData.content) 
+                        : viewData.content;
+                        
+                    if (content.nodes) {
+                        console.log('Restoring nodes:', content.nodes.length);
+                        setNodes(content.nodes);
                     }
-                    
-                    const viewData = JSON.parse(text);
-                    if (viewData && viewData.content) {
-                        console.log('Loading view content:', viewData.content);
-                        // Restore nodes and edges
-                        const content = typeof viewData.content === 'string' 
-                            ? JSON.parse(viewData.content) 
-                            : viewData.content;
-                            
-                        if (content.nodes) {
-                            console.log('Restoring nodes:', content.nodes.length);
-                            setNodes(content.nodes);
-                        }
-                        if (content.edges) {
-                            console.log('Restoring edges:', content.edges.length);
-                            setEdges(content.edges);
-                        }
-                    } else {
-                        console.log('View has no content');
+                    if (content.edges) {
+                        console.log('Restoring edges:', content.edges.length);
+                        setEdges(content.edges);
                     }
+                } else {
+                    console.log('View has no content');
                 }
             } catch (error) {
                 console.error('Failed to fetch view:', error);

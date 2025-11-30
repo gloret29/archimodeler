@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { api } from '@/lib/api/client';
 import {
     Form,
     FormControl,
@@ -56,19 +57,12 @@ export default function ProfileSettingsPage() {
         // Here we fetch all users and take the first one for demonstration.
         const fetchUser = async () => {
             try {
-                const token = localStorage.getItem('accessToken');
-                const res = await fetch('http://localhost:3002/users', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const user = await api.get('/users/me');
+                setUserId(user.id);
+                form.reset({
+                    username: user.name || "",
+                    email: user.email || "",
                 });
-                const users = await res.json();
-                if (users && users.length > 0) {
-                    const user = users[0]; // Pick the first user
-                    setUserId(user.id);
-                    form.reset({
-                        username: user.name || "",
-                        email: user.email || "",
-                    });
-                }
             } catch (error) {
                 console.error("Failed to fetch user", error);
             } finally {
@@ -83,22 +77,10 @@ export default function ProfileSettingsPage() {
         if (!userId) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:3002/users/${userId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name: data.username,
-                    email: data.email,
-                })
+            await api.put(`/users/${userId}`, {
+                name: data.username,
+                email: data.email,
             });
-
-            if (!res.ok) {
-                throw new Error('Failed to update profile');
-            }
 
             alert("Profile updated successfully!");
         } catch (error) {

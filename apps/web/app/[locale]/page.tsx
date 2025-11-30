@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock } from 'lucide-react';
+import { API_CONFIG } from '@/lib/api/config';
 
 import { useTranslations } from 'next-intl';
 
@@ -24,9 +25,8 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:3002/auth/login', {
+      const res = await API_CONFIG.fetch('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password }),
       });
 

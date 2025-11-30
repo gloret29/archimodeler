@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { api } from '@/lib/api/client';
 
 interface DataSource {
     id: string;
@@ -18,13 +19,8 @@ export default function ConnectorsPage() {
     const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
     useEffect(() => {
-        fetch('http://localhost:3002/connectors', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            }
-        })
-            .then(res => res.json())
-            .then(data => setDataSources(data))
+        api.get('/connectors')
+            .then((data: any) => setDataSources(data))
             .catch(err => console.error(err));
     }, []);
 

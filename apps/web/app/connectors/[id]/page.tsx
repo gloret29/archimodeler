@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Home } from 'lucide-react';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
+import { api } from '@/lib/api/client';
 
 export default function ConnectorDetailPage() {
     const params = useParams();
@@ -25,13 +26,7 @@ export default function ConnectorDetailPage() {
     const handleSync = async () => {
         setSyncing(true);
         try {
-            const res = await fetch(`http://localhost:3002/connectors/${params.id}/sync`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-            });
-            const result = await res.json();
+            const result = await api.post(`/connectors/${params.id}/sync`, {});
             alert(`Sync complete! Synced ${result.synced} elements.`);
         } catch (err) {
             console.error(err);

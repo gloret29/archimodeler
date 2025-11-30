@@ -12,6 +12,7 @@ import { ARCHIMATE_CONCEPTS } from "@/lib/metamodel";
 import { Link } from "@/navigation";
 import { Home } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { api } from '@/lib/api/client';
 
 export default function AdminSettings() {
     const [githubConfig, setGithubConfig] = useState({
@@ -30,14 +31,8 @@ export default function AdminSettings() {
     const [paletteConfig, setPaletteConfig] = useState<string[]>([]);
 
     useEffect(() => {
-        fetch('http://localhost:3002/settings')
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error(`HTTP error! status: ${res.status}`);
-                }
-                return res.json();
-            })
-            .then(data => {
+        api.get('/settings')
+            .then((data: any) => {
                 if (Array.isArray(data)) {
                     const github = data.find((s: any) => s.key === 'github');
                     if (github && github.value) setGithubConfig(github.value);
@@ -73,21 +68,12 @@ export default function AdminSettings() {
         else if (section === 'Palette') value = paletteConfig;
 
         try {
-            const res = await fetch(`http://localhost:3002/settings/${key}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ value, description: `${section} Configuration` })
+            const result = await api.post(`/settings/${key}`, {
+                value,
+                description: `${section} Configuration`
             });
-
-            if (res.ok) {
-                const result = await res.json();
-                console.log(`${section} settings saved:`, result);
-                alert(`${section} settings saved successfully!`);
-            } else {
-                const errorText = await res.text();
-                console.error(`Failed to save ${section} settings:`, errorText);
-                throw new Error(`Failed to save: ${res.status} ${errorText}`);
-            }
+            console.log(`${section} settings saved:`, result);
+            alert(`${section} settings saved successfully!`);
         } catch (err: any) {
             console.error(`Error saving ${section} settings:`, err);
             alert(`Failed to save ${section} settings: ${err.message || 'Unknown error'}`);

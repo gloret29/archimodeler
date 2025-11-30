@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Plus, Layout, BarChart3, ArrowRight, Box, Settings, LogOut, Shield, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { api } from '@/lib/api/client';
 
 interface ModelPackage {
     id: string;
@@ -27,13 +28,8 @@ export default function HomePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('http://localhost:3002/model/packages', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            }
-        })
-            .then(res => res.json())
-            .then(data => {
+        api.get('/model/packages')
+            .then((data: any) => {
                 setPackages(data);
                 setLoading(false);
             })

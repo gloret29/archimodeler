@@ -16,6 +16,7 @@ import { useCollaboration } from '@/hooks/useCollaboration';
 import { useChatNotifications } from '@/hooks/useChatNotifications';
 import { useChatContext } from '@/contexts/ChatContext';
 import { UserChat } from '@/components/collaboration/UserChat';
+import { API_CONFIG } from '@/lib/api/config';
 
 import { Home, Save, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -152,15 +153,13 @@ function StudioContent() {
     React.useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const token = localStorage.getItem('accessToken');
+                const token = API_CONFIG.getAuthToken();
                 if (!token) {
                     console.warn('No access token found');
                     return;
                 }
 
-                const res = await fetch('http://localhost:3002/users/me', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await API_CONFIG.fetch('/users/me');
                 if (res.ok) {
                     const user = await res.json();
                     // Generate a color based on user ID for consistency

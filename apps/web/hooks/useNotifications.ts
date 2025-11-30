@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { API_CONFIG } from '@/lib/api/config';
 
 interface Notification {
     id: string;
@@ -23,7 +24,7 @@ export function useNotifications(userId?: string) {
         if (!userId) return;
 
         // Connect to WebSocket
-        const newSocket = io('http://localhost:3002/collaboration', {
+        const newSocket = io(API_CONFIG.wsUrl, {
             transports: ['websocket'],
         });
 

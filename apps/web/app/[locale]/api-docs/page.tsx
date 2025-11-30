@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Home } from 'lucide-react';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
+import { API_CONFIG } from '@/lib/api/config';
 
 export default function ApiDocsPage() {
     const t = useTranslations('Home');
@@ -20,7 +21,7 @@ export default function ApiDocsPage() {
                 </Link>
             </div>
             <iframe
-                src="http://localhost:3002/api-docs"
+                src={`${API_CONFIG.baseUrl}/api-docs`}
                 className="flex-1 w-full border-0"
                 title="API Documentation"
             />

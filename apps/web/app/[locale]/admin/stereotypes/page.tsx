@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Edit, Trash2, Home, Settings2 } from "lucide-react";
 import { Link } from "@/navigation";
 import { useTranslations } from "next-intl";
+import { api } from '@/lib/api/client';
 
 interface ConceptType {
     id: string;
@@ -81,14 +82,8 @@ export default function StereotypesAdminPage() {
 
     const fetchConceptTypes = async () => {
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch('http://localhost:3002/stereotypes/types/concept-types', { headers });
-            if (response.ok) {
-                const data = await response.json();
-                setConceptTypes(data);
-            }
+            const data = await api.get('/stereotypes/types/concept-types');
+            setConceptTypes(data);
         } catch (error) {
             console.error('Failed to fetch concept types:', error);
         }
@@ -96,14 +91,8 @@ export default function StereotypesAdminPage() {
 
     const fetchRelationTypes = async () => {
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch('http://localhost:3002/stereotypes/types/relation-types', { headers });
-            if (response.ok) {
-                const data = await response.json();
-                setRelationTypes(data);
-            }
+            const data = await api.get('/stereotypes/types/relation-types');
+            setRelationTypes(data);
         } catch (error) {
             console.error('Failed to fetch relation types:', error);
         }
@@ -111,14 +100,8 @@ export default function StereotypesAdminPage() {
 
     const fetchStereotypes = async () => {
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch('http://localhost:3002/stereotypes', { headers });
-            if (response.ok) {
-                const data = await response.json();
-                setStereotypes(data);
-            }
+            const data = await api.get('/stereotypes');
+            setStereotypes(data);
         } catch (error) {
             console.error('Failed to fetch stereotypes:', error);
         } finally {
@@ -224,66 +207,39 @@ export default function StereotypesAdminPage() {
                 propertiesSchema: convertAttributesToPropertiesSchema(formData.attributes),
             };
 
-            let response;
             if (editingStereotype) {
                 // Update stereotype
-                response = await fetch(`http://localhost:3002/stereotypes/${editingStereotype.id}`, {
-                    method: 'PUT',
-                    headers,
-                    body: JSON.stringify(payload),
+                await api.put(`/stereotypes/${editingStereotype.id}`, payload);
+                
+                // Update applicable concept types
+                await api.put(`/stereotypes/${editingStereotype.id}/applicable-concept-types`, {
+                    conceptTypeIds: formData.selectedConceptTypeIds
                 });
 
-                if (response.ok) {
-                    // Update applicable concept types
-                    await fetch(`http://localhost:3002/stereotypes/${editingStereotype.id}/applicable-concept-types`, {
-                        method: 'PUT',
-                        headers,
-                        body: JSON.stringify({ conceptTypeIds: formData.selectedConceptTypeIds }),
-                    });
-
-                    // Update applicable relation types
-                    await fetch(`http://localhost:3002/stereotypes/${editingStereotype.id}/applicable-relation-types`, {
-                        method: 'PUT',
-                        headers,
-                        body: JSON.stringify({ relationTypeIds: formData.selectedRelationTypeIds }),
-                    });
-                }
+                // Update applicable relation types
+                await api.put(`/stereotypes/${editingStereotype.id}/applicable-relation-types`, {
+                    relationTypeIds: formData.selectedRelationTypeIds
+                });
             } else {
                 // Create stereotype
-                response = await fetch('http://localhost:3002/stereotypes', {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(payload),
+                const newStereotype = await api.post('/stereotypes', payload);
+                
+                // Update applicable concept types
+                await api.put(`/stereotypes/${newStereotype.id}/applicable-concept-types`, {
+                    conceptTypeIds: formData.selectedConceptTypeIds
                 });
 
-                if (response.ok) {
-                    const newStereotype = await response.json();
-                    // Update applicable concept types
-                    await fetch(`http://localhost:3002/stereotypes/${newStereotype.id}/applicable-concept-types`, {
-                        method: 'PUT',
-                        headers,
-                        body: JSON.stringify({ conceptTypeIds: formData.selectedConceptTypeIds }),
-                    });
-
-                    // Update applicable relation types
-                    await fetch(`http://localhost:3002/stereotypes/${newStereotype.id}/applicable-relation-types`, {
-                        method: 'PUT',
-                        headers,
-                        body: JSON.stringify({ relationTypeIds: formData.selectedRelationTypeIds }),
-                    });
-                }
+                // Update applicable relation types
+                await api.put(`/stereotypes/${newStereotype.id}/applicable-relation-types`, {
+                    relationTypeIds: formData.selectedRelationTypeIds
+                });
             }
 
-            if (response.ok) {
-                handleCloseDialog();
-                fetchStereotypes();
-            } else {
-                const error = await response.json();
-                alert(`Failed to ${editingStereotype ? 'update' : 'create'} stereotype: ${error.message || 'Unknown error'}`);
-            }
+            handleCloseDialog();
+            fetchStereotypes();
         } catch (error: any) {
             console.error('Failed to save stereotype:', error);
-            alert(`Failed to save stereotype: ${error.message}`);
+            alert(`Failed to ${editingStereotype ? 'update' : 'create'} stereotype: ${error.message || 'Unknown error'}`);
         }
     };
 
@@ -293,19 +249,8 @@ export default function StereotypesAdminPage() {
         }
 
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch(`http://localhost:3002/stereotypes/${id}`, {
-                method: 'DELETE',
-                headers,
-            });
-
-            if (response.ok) {
-                fetchStereotypes();
-            } else {
-                alert('Failed to delete stereotype');
-            }
+            await api.delete(`/stereotypes/${id}`);
+            fetchStereotypes();
         } catch (error) {
             console.error('Failed to delete stereotype:', error);
             alert('Failed to delete stereotype');

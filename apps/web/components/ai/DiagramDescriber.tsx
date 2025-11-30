@@ -10,6 +10,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { API_CONFIG } from '@/lib/api/config';
 
 export default function DiagramDescriber({ nodes, edges }: { nodes: any[], edges: any[] }) {
     const [description, setDescription] = useState("");
@@ -18,12 +19,8 @@ export default function DiagramDescriber({ nodes, edges }: { nodes: any[], edges
     const handleGenerate = async () => {
         setLoading(true);
         try {
-            const res = await fetch("http://localhost:3002/ai/describe", {
+            const res = await API_CONFIG.fetch("/ai/describe", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                },
                 body: JSON.stringify({ nodes, edges }),
             });
             const data = await res.text();

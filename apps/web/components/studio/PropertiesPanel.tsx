@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { X, Tag, ChevronDown, ChevronRight, Save } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { api } from '@/lib/api/client';
 
 interface Stereotype {
     id: string;
@@ -94,15 +95,9 @@ export default function PropertiesPanel({
         if (!selectedElementId) return;
         
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
             // Fetch only stereotypes applicable to this element's type
-            const response = await fetch(`http://localhost:3002/stereotypes/elements/${selectedElementId}/applicable`, { headers });
-            if (response.ok) {
-                const data = await response.json();
-                setStereotypes(data);
-            }
+            const data = await api.get(`/stereotypes/elements/${selectedElementId}/applicable`);
+            setStereotypes(data);
         } catch (error) {
             console.error('Failed to fetch stereotypes:', error);
         }
@@ -112,21 +107,16 @@ export default function PropertiesPanel({
         if (!selectedRelationshipId) return;
         
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
             // Fetch only stereotypes applicable to this relationship's type
-            const response = await fetch(`http://localhost:3002/stereotypes/relationships/${selectedRelationshipId}/applicable`, { headers });
-            if (response.ok) {
-                const data = await response.json();
-                setStereotypes(data);
-            } else if (response.status === 404) {
+            const data = await api.get(`/stereotypes/relationships/${selectedRelationshipId}/applicable`);
+            setStereotypes(data);
+        } catch (error: any) {
+            if (error.status === 404) {
                 // Relationship not found in database
                 console.log('Relationship not found, cannot fetch applicable stereotypes');
-                setStereotypes([]);
+            } else {
+                console.error('Failed to fetch relationship stereotypes:', error);
             }
-        } catch (error) {
-            console.error('Failed to fetch relationship stereotypes:', error);
             setStereotypes([]);
         }
     };
@@ -136,22 +126,16 @@ export default function PropertiesPanel({
         
         setLoading(true);
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch(`http://localhost:3002/stereotypes/elements/${selectedElementId}`, { headers });
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Fetched element stereotypes:', data);
-                setAppliedStereotypes(data);
-                // Initialize properties state from extendedProperties
-                const props: Record<string, any> = {};
-                data.forEach((es: ElementStereotype) => {
-                    props[es.stereotype.id] = es.extendedProperties || {};
-                    console.log(`Stereotype ${es.stereotype.name} propertiesSchema:`, es.stereotype.propertiesSchema);
-                });
-                setStereotypeProperties(props);
-            }
+            const data = await api.get(`/stereotypes/elements/${selectedElementId}`);
+            console.log('Fetched element stereotypes:', data);
+            setAppliedStereotypes(data);
+            // Initialize properties state from extendedProperties
+            const props: Record<string, any> = {};
+            data.forEach((es: ElementStereotype) => {
+                props[es.stereotype.id] = es.extendedProperties || {};
+                console.log(`Stereotype ${es.stereotype.name} propertiesSchema:`, es.stereotype.propertiesSchema);
+            });
+            setStereotypeProperties(props);
         } catch (error) {
             console.error('Failed to fetch element stereotypes:', error);
         } finally {
@@ -164,22 +148,16 @@ export default function PropertiesPanel({
         
         setLoading(true);
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch(`http://localhost:3002/stereotypes/relationships/${selectedRelationshipId}`, { headers });
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Fetched relationship stereotypes:', data);
-                setAppliedStereotypes(data);
-                // Initialize properties state from extendedProperties
-                const props: Record<string, any> = {};
-                data.forEach((rs: RelationshipStereotype) => {
-                    props[rs.stereotype.id] = rs.extendedProperties || {};
-                    console.log(`Stereotype ${rs.stereotype.name} propertiesSchema:`, rs.stereotype.propertiesSchema);
-                });
-                setStereotypeProperties(props);
-            }
+            const data = await api.get(`/stereotypes/relationships/${selectedRelationshipId}`);
+            console.log('Fetched relationship stereotypes:', data);
+            setAppliedStereotypes(data);
+            // Initialize properties state from extendedProperties
+            const props: Record<string, any> = {};
+            data.forEach((rs: RelationshipStereotype) => {
+                props[rs.stereotype.id] = rs.extendedProperties || {};
+                console.log(`Stereotype ${rs.stereotype.name} propertiesSchema:`, rs.stereotype.propertiesSchema);
+            });
+            setStereotypeProperties(props);
         } catch (error) {
             console.error('Failed to fetch relationship stereotypes:', error);
         } finally {
@@ -197,32 +175,19 @@ export default function PropertiesPanel({
         }
 
         try {
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            
             const url = isRelationship
-                ? `http://localhost:3002/stereotypes/relationships/${selectedRelationshipId}/apply/${selectedStereotypeId}`
-                : `http://localhost:3002/stereotypes/elements/${selectedElementId}/apply/${selectedStereotypeId}`;
+                ? `/stereotypes/relationships/${selectedRelationshipId}/apply/${selectedStereotypeId}`
+                : `/stereotypes/elements/${selectedElementId}/apply/${selectedStereotypeId}`;
             
-            const response = await fetch(url, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ extendedProperties: {} }),
-            });
+            await api.post(url, { extendedProperties: {} });
 
-            if (response.ok) {
-                setSelectedStereotypeId("");
-                if (isRelationship) {
-                    fetchRelationshipStereotypes();
-                } else {
-                    fetchElementStereotypes();
-                    // Trigger a refresh of the canvas to update the display
-                    window.dispatchEvent(new CustomEvent('element-stereotype-updated', { detail: { elementId: selectedElementId } }));
-                }
+            setSelectedStereotypeId("");
+            if (isRelationship) {
+                fetchRelationshipStereotypes();
             } else {
-                alert('Failed to apply stereotype');
+                fetchElementStereotypes();
+                // Trigger a refresh of the canvas to update the display
+                window.dispatchEvent(new CustomEvent('element-stereotype-updated', { detail: { elementId: selectedElementId } }));
             }
         } catch (error) {
             console.error('Failed to apply stereotype:', error);
@@ -243,8 +208,8 @@ export default function PropertiesPanel({
             };
             
             const url = isRelationship
-                ? `http://localhost:3002/stereotypes/relationships/${selectedRelationshipId}/remove/${stereotypeId}`
-                : `http://localhost:3002/stereotypes/elements/${selectedElementId}/remove/${stereotypeId}`;
+                ? `/stereotypes/relationships/${selectedRelationshipId}/remove/${stereotypeId}`
+                : `/stereotypes/elements/${selectedElementId}/remove/${stereotypeId}`;
             
             const response = await fetch(url, {
                 method: 'DELETE',
@@ -303,27 +268,14 @@ export default function PropertiesPanel({
         if (!selectedElementId) return;
 
         try {
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch(
-                `http://localhost:3002/stereotypes/elements/${selectedElementId}/properties/${stereotypeId}`,
+            await api.put(
+                `/stereotypes/elements/${selectedElementId}/properties/${stereotypeId}`,
                 {
-                    method: 'PUT',
-                    headers,
-                    body: JSON.stringify({
-                        extendedProperties: stereotypeProperties[stereotypeId] || {},
-                    }),
+                    extendedProperties: stereotypeProperties[stereotypeId] || {},
                 }
             );
-
-            if (response.ok) {
-                // Show success feedback (could use toast)
-                console.log('Properties saved successfully');
-            } else {
-                alert('Failed to save properties');
-            }
+            // Show success feedback (could use toast)
+            console.log('Properties saved successfully');
         } catch (error) {
             console.error('Failed to save properties:', error);
             alert('Failed to save properties');

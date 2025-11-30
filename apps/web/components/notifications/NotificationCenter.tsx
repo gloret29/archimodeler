@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api/client';
 import {
     Popover,
     PopoverContent,
@@ -48,14 +49,8 @@ export function NotificationCenter() {
 
     const fetchNotifications = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch('http://localhost:3002/notifications', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setNotifications(data);
-            }
+            const data = await api.get('/notifications');
+            setNotifications(data);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         }
@@ -63,14 +58,8 @@ export function NotificationCenter() {
 
     const fetchUnreadCount = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch('http://localhost:3002/notifications/unread-count', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setUnreadCount(data.count);
-            }
+            const data = await api.get('/notifications/unread-count');
+            setUnreadCount(data.count);
         } catch (error) {
             console.error('Failed to fetch unread count:', error);
         }
@@ -91,11 +80,7 @@ export function NotificationCenter() {
 
     const markAsRead = async (id: string) => {
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/notifications/${id}/read`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await api.put(`/notifications/${id}/read`, {});
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (error) {
@@ -105,11 +90,7 @@ export function NotificationCenter() {
 
     const markAllAsRead = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch('http://localhost:3002/notifications/read-all', {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await api.put('/notifications/read-all', {});
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
         } catch (error) {
@@ -119,11 +100,7 @@ export function NotificationCenter() {
 
     const deleteNotification = async (id: string) => {
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/notifications/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await api.delete(`/notifications/${id}`);
             setNotifications(prev => prev.filter(n => n.id !== id));
             // Update unread count if it was unread
             const notification = notifications.find(n => n.id === id);
@@ -137,11 +114,7 @@ export function NotificationCenter() {
 
     const deleteAllRead = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch('http://localhost:3002/notifications/read/all', {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await api.delete('/notifications/read/all');
             setNotifications(prev => prev.filter(n => !n.read));
         } catch (error) {
             console.error('Failed to delete all read:', error);

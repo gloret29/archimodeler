@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { User, LogOut, Settings, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api/client';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,20 +46,15 @@ export function UserInfo() {
                     return;
                 }
 
-                const res = await fetch('http://localhost:3002/users/me', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    const userData = await res.json();
-                    setUser(userData);
-                } else if (res.status === 401) {
+                const userData = await api.get('/users/me');
+                setUser(userData);
+            } catch (error: any) {
+                console.error('Failed to fetch user:', error);
+                if (error.status === 401) {
                     // Token expired or invalid
                     localStorage.removeItem('accessToken');
                     router.push('/');
                 }
-            } catch (error) {
-                console.error('Failed to fetch user:', error);
             } finally {
                 setLoading(false);
             }

@@ -1,5 +1,5 @@
 // API service for managing views
-const API_URL = 'http://localhost:3002';
+import { API_CONFIG } from './config';
 
 export interface View {
     id: string;
@@ -29,13 +29,8 @@ export interface UpdateViewDto {
 
 export const viewsApi = {
     async create(data: CreateViewDto): Promise<View> {
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_URL}/model/views`, {
+        const response = await API_CONFIG.fetch('/model/views', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
             body: JSON.stringify(data),
         });
 
@@ -50,12 +45,7 @@ export const viewsApi = {
     },
 
     async get(id: string): Promise<View> {
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_URL}/model/views/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
+        const response = await API_CONFIG.fetch(`/model/views/${id}`);
 
         if (!response.ok) {
             throw new Error('Failed to get view');
@@ -65,13 +55,8 @@ export const viewsApi = {
     },
 
     async update(id: string, data: UpdateViewDto): Promise<View> {
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_URL}/model/views/${id}`, {
+        const response = await API_CONFIG.fetch(`/model/views/${id}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
             body: JSON.stringify(data),
         });
 

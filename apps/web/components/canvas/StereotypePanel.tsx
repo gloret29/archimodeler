@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tag, X } from 'lucide-react';
+import { api } from '@/lib/api/client';
 
 interface Stereotype {
     id: string;
@@ -46,14 +47,8 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
 
     const fetchStereotypes = async () => {
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            const response = await fetch('http://localhost:3002/stereotypes', { headers });
-            if (response.ok) {
-                const data = await response.json();
-                setStereotypes(data);
-            }
+            const data = await api.get('/stereotypes');
+            setStereotypes(data);
         } catch (error) {
             console.error('Failed to fetch stereotypes:', error);
         } finally {
@@ -66,14 +61,8 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
         for (const node of selectedNodes) {
             const elementId = node.data?.elementId || node.id;
             try {
-                const headers: HeadersInit = {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                };
-                const response = await fetch(`http://localhost:3002/stereotypes/elements/${elementId}`, { headers });
-                if (response.ok) {
-                    const data = await response.json();
-                    stereotypesMap[elementId] = data.map((es: any) => es.stereotype);
-                }
+                const data = await api.get(`/stereotypes/elements/${elementId}`);
+                stereotypesMap[elementId] = data.map((es: any) => es.stereotype);
             } catch (error) {
                 console.error(`Failed to fetch stereotypes for element ${elementId}:`, error);
             }
@@ -97,28 +86,19 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
         );
 
         try {
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-
             // Apply to selected nodes
             for (const node of selectedNodes) {
                 const elementId = node.data?.elementId || node.id;
-                await fetch(`http://localhost:3002/stereotypes/elements/${elementId}/apply/${selectedStereotype.id}`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ extendedProperties }),
+                await api.post(`/stereotypes/elements/${elementId}/apply/${selectedStereotype.id}`, {
+                    extendedProperties
                 });
             }
 
             // Apply to selected edges
             for (const edge of selectedEdges) {
                 const relationshipId = edge.data?.relationshipId || edge.id;
-                await fetch(`http://localhost:3002/stereotypes/relationships/${relationshipId}/apply/${selectedStereotype.id}`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ extendedProperties }),
+                await api.post(`/stereotypes/relationships/${relationshipId}/apply/${selectedStereotype.id}`, {
+                    extendedProperties
                 });
             }
 
@@ -135,13 +115,7 @@ export default function StereotypePanel({ selectedNodes, selectedEdges, onUpdate
 
     const handleRemoveStereotype = async (elementId: string, stereotypeId: string) => {
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            await fetch(`http://localhost:3002/stereotypes/elements/${elementId}/remove/${stereotypeId}`, {
-                method: 'DELETE',
-                headers,
-            });
+            await api.delete(`/stereotypes/elements/${elementId}/remove/${stereotypeId}`);
             fetchElementStereotypes();
             onUpdate?.();
         } catch (error) {

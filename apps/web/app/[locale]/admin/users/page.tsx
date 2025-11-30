@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@/navigation";
 import { Button } from "@/components/ui/button";
+import { api } from '@/lib/api/client';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -64,27 +65,9 @@ export default function UsersPage() {
 
     const fetchRoles = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                console.warn("No access token found for fetching roles.");
-                setRoles([]);
-                return;
-            }
-
-            const res = await fetch("http://localhost:3002/roles", {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-            
-            if (res.ok) {
-                const data = await res.json();
-                // Ensure data is an array
-                setRoles(Array.isArray(data) ? data : []);
-            } else {
-                console.error("Failed to fetch roles:", res.status, res.statusText);
-                setRoles([]);
-            }
+            const data = await api.get('/roles');
+            // Ensure data is an array
+            setRoles(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Failed to fetch roles:", error);
             setRoles([]);
@@ -93,33 +76,19 @@ export default function UsersPage() {
 
     const fetchUsers = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                console.warn("No access token found. Redirecting to login.");
-                router.push('/');
-                return;
-            }
-
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${token}`,
-            };
-            const res = await fetch("http://localhost:3002/users", { headers });
-            if (res.ok) {
-                const data = await res.json();
-                // Ensure data is an array
-                setUsers(Array.isArray(data) ? data : []);
-            } else if (res.status === 401) {
+            const data = await api.get('/users');
+            // Ensure data is an array
+            setUsers(Array.isArray(data) ? data : []);
+        } catch (error: any) {
+            if (error.status === 401) {
                 console.error("Unauthorized. Redirecting to login.");
                 localStorage.removeItem('accessToken');
                 alert("You need to login to access this page. Use admin@archimodeler.com / admin123");
                 router.push('/');
             } else {
-                console.error("Failed to fetch users:", res.status, res.statusText);
+                console.error("Failed to fetch users:", error);
                 setUsers([]);
             }
-        } catch (error) {
-            console.error("Failed to fetch users:", error);
-            setUsers([]);
         } finally {
             setLoading(false);
         }
@@ -128,13 +97,7 @@ export default function UsersPage() {
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this user?")) return;
         try {
-            const headers: HeadersInit = {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            };
-            await fetch(`http://localhost:3002/users/${id}`, { 
-                method: "DELETE",
-                headers,
-            });
+            await api.delete(`/users/${id}`);
             fetchUsers();
         } catch (error) {
             console.error("Failed to delete user:", error);
@@ -196,27 +159,16 @@ export default function UsersPage() {
                 payload.password = formData.password;
             }
 
-            const url = editingUser 
-                ? `http://localhost:3002/users/${editingUser.id}`
-                : "http://localhost:3002/users";
-            const method = editingUser ? "PUT" : "POST";
-
-            const response = await fetch(url, {
-                method,
-                headers,
-                body: JSON.stringify(payload),
-            });
-
-            if (response.ok) {
-                handleCloseDialog();
-                fetchUsers();
+            if (editingUser) {
+                await api.put(`/users/${editingUser.id}`, payload);
             } else {
-                const error = await response.json();
-                alert(`Failed to ${editingUser ? 'update' : 'create'} user: ${error.message || 'Unknown error'}`);
+                await api.post('/users', payload);
             }
+            handleCloseDialog();
+            fetchUsers();
         } catch (error: any) {
             console.error(`Failed to ${editingUser ? 'update' : 'create'} user:`, error);
-            alert(`Failed to ${editingUser ? 'update' : 'create'} user: ${error.message}`);
+            alert(`Failed to ${editingUser ? 'update' : 'create'} user: ${error.message || 'Unknown error'}`);
         }
     };
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { api } from '@/lib/api/client';
 import {
     Table,
     TableBody,
@@ -33,8 +34,7 @@ export default function RolesPage() {
 
     const fetchRoles = async () => {
         try {
-            const res = await fetch("http://localhost:3002/roles");
-            const data = await res.json();
+            const data = await api.get('/roles');
             setRoles(data);
         } catch (error) {
             console.error("Failed to fetch roles:", error);
@@ -46,7 +46,7 @@ export default function RolesPage() {
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this role?")) return;
         try {
-            await fetch(`http://localhost:3002/roles/${id}`, { method: "DELETE" });
+            await api.delete(`/roles/${id}`);
             fetchRoles();
         } catch (error) {
             console.error("Failed to delete role:", error);

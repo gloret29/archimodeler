@@ -28,6 +28,7 @@ import LayoutOrganizer from './LayoutOrganizer';
 import ExportButton from './ExportButton';
 import { getValidRelations } from '@/lib/metamodel';
 import DiagramDescriber from '../ai/DiagramDescriber';
+import { api } from '@/lib/api/client';
 
 const nodeTypes = {
     archimate: ArchiMateNode,
@@ -204,15 +205,7 @@ export default function ModelingCanvas({
         if (!renameDialog.elementId || !renameDialog.nodeId) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/elements/${renameDialog.elementId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name: newName })
-            });
+            await api.put(`/model/elements/${renameDialog.elementId}`, { name: newName });
 
             // Update node label locally
             setNodes((nds) =>
@@ -245,13 +238,7 @@ export default function ModelingCanvas({
         if (!confirm(confirmMsg)) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch(`http://localhost:3002/model/elements/${elementId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            await api.delete(`/model/elements/${elementId}`);
 
             // Remove from current view
             setNodes((nds) => nds.filter((n) => n.id !== nodeContextMenu.nodeId));
@@ -378,28 +365,13 @@ export default function ModelingCanvas({
                         return;
                     }
 
-                    const res = await fetch('http://localhost:3002/model/elements', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            name: label || type,
-                            type: type,
-                            layer: layer,
-                            packageId: packageId
-                        })
+                    const newElement = await api.post('/model/elements', {
+                        name: label || type,
+                        type: type,
+                        layer: layer,
+                        packageId: packageId
                     });
-
-                    if (res.ok) {
-                        const newElement = await res.json();
-                        elementId = newElement.id;
-                    } else {
-                        const errorText = await res.text();
-                        console.error('Failed to create element. Status:', res.status, 'Response:', errorText);
-                        alert(`Failed to create element: ${res.status} - ${errorText.substring(0, 200)}`);
-                    }
+                    elementId = newElement.id;
                 } catch (err) {
                     console.error('Error creating element:', err);
                     alert('Error creating element: ' + (err as Error).message);
@@ -433,18 +405,10 @@ export default function ModelingCanvas({
         };
 
         try {
-            const token = localStorage.getItem('accessToken');
-            await fetch('http://localhost:3002/model/views', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name,
-                    content,
-                    modelPackage: { connect: { id: packageId } }
-                })
+            await api.post('/model/views', {
+                name,
+                content,
+                modelPackage: { connect: { id: packageId } }
             });
             alert('View saved!');
         } catch (err) {
