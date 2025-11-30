@@ -178,3 +178,105 @@ Enfin, nous utilisons les capacités natives d'Antigravity pour intégrer des fo
     *   **Prompt Système pour l'IA** : "Tu es un architecte expert. Analyse ce graphe et décris les flux de données et les dépendances critiques. Identifie les risques potentiels."
     *   Cette fonctionnalité doit être accessible via un bouton "Générer Description" dans le portail Horizzon.
 *   **How-to Coach** : Indexe la documentation technique générée (et potentiellement des guides ArchiMate) dans une base vectorielle (pgvector sur PostgreSQL). Crée un chatbot dans l'interface ("Coach") qui répond aux questions de modélisation (ex: "Comment modéliser un microservice en ArchiMate?") en utilisant un pipeline RAG (Retrieval-Augmented Generation).
+
+# Chapitre 8 : Internationalisation (i18n) et Système de Dialogues
+
+## 8.1 Internationalisation avec next-intl
+
+### Architecture i18n
+
+L'internationalisation a été implémentée en utilisant **next-intl**, une bibliothèque moderne pour Next.js qui offre un support complet de l'internationalisation avec routing basé sur les locales.
+
+**Structure des fichiers :**
+- `apps/web/messages/en.json` - Traductions anglaises
+- `apps/web/messages/fr.json` - Traductions françaises
+- `apps/web/i18n/request.ts` - Configuration next-intl
+- `apps/web/middleware.ts` - Middleware de routage i18n
+- `apps/web/navigation.ts` - Utilitaires de navigation i18n
+
+**Fonctionnalités implémentées :**
+- Support de 2 langues (EN/FR) avec possibilité d'extension
+- Routes avec locale (`/en/studio`, `/fr/studio`)
+- Traduction de toutes les pages principales (Studio, Admin, Settings, etc.)
+- Page de sélection de langue dans les paramètres
+- Changement de langue en temps réel sans rechargement
+- Persistance de la langue dans le profil utilisateur (base de données)
+- Composant LocaleSwitcher pour changement rapide
+- Composant LocaleSync pour synchronisation avec le backend
+
+**Utilisation dans les composants :**
+
+```tsx
+import { useTranslations } from 'next-intl';
+
+export default function MyComponent() {
+    const t = useTranslations('Studio');
+    
+    return <h1>{t('title')}</h1>;
+}
+```
+
+**Navigation i18n-aware :**
+
+```tsx
+import { Link } from '@/navigation';
+
+<Link href="/studio">Studio</Link> // Préserve automatiquement la locale
+```
+
+### Migration de base de données
+
+Une migration Prisma a été créée pour ajouter le champ `locale` au modèle `User` :
+- Migration : `packages/database/prisma/migrations/20251130154241_add_user_locale/`
+- Le champ `locale` stocke la préférence de langue de l'utilisateur
+- Synchronisation automatique lors du changement de langue
+
+## 8.2 Système de Dialogues Centralisé
+
+### Architecture
+
+Un système de dialogues centralisé a été implémenté pour standardiser l'affichage des dialogues dans toute l'application.
+
+**Composants :**
+- `DialogContext.tsx` - Context React pour gestion centralisée
+- `useDialog.tsx` - Hook personnalisé pour API unifiée
+- `AlertDialog.tsx` - Dialogues d'alerte/confirmation
+- `MessageDialog.tsx` - Dialogues d'information
+- `PromptDialog.tsx` - Dialogues de saisie
+
+**Utilisation :**
+
+```tsx
+import { useDialog } from '@/hooks/useDialog';
+
+function MyComponent() {
+    const dialog = useDialog();
+    
+    // Afficher une alerte
+    dialog.alert({
+        title: 'Confirmation',
+        message: 'Êtes-vous sûr ?',
+        onConfirm: () => console.log('Confirmé')
+    });
+    
+    // Afficher un message
+    dialog.message({
+        title: 'Information',
+        message: 'Opération réussie'
+    });
+    
+    // Afficher un prompt
+    dialog.prompt({
+        title: 'Saisie',
+        message: 'Entrez votre nom',
+        onConfirm: (value) => console.log(value)
+    });
+}
+```
+
+**Avantages :**
+- API unifiée et cohérente
+- Réduction de la duplication de code
+- Gestion centralisée de l'état des dialogues
+- Support de l'internationalisation intégré
+- Accessibilité améliorée (ARIA, focus management)

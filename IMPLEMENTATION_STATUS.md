@@ -108,9 +108,21 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [x] Internationalisation (i18n)
   - [x] Configuration next-intl
   - [x] Fichiers de traduction (EN/FR)
-  - [x] Mise à jour des pages (Studio, Settings, Profile, Appearance)
+  - [x] Mise à jour des pages (Studio, Settings, Profile, Appearance, Admin, Dashboard, Home)
   - [x] Page de sélection de langue
   - [x] Changement de langue en temps réel
+  - [x] Composant LocaleSwitcher
+  - [x] Composant LocaleSync pour synchronisation avec le backend
+  - [x] Migration de base de données pour stocker la locale utilisateur
+  - [x] Persistance de la langue dans le profil utilisateur
+  - [x] Routes avec locale (`/en/*`, `/fr/*`)
+  - [x] Navigation i18n-aware
+- [x] Système de Dialogues
+  - [x] DialogContext pour gestion centralisée
+  - [x] Hook useDialog pour API unifiée
+  - [x] Composants AlertDialog, MessageDialog, PromptDialog
+  - [x] Intégration dans tous les composants nécessaires
+  - [x] Support i18n dans les dialogues
 
 ### 10.2 Accessibilité
 **Statut**: 🔴 **À faire**

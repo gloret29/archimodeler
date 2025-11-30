@@ -30,6 +30,7 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 - 🔒 **Sécurisé** - Authentification JWT et RBAC
 - 📱 **Responsive** - Fonctionne sur tous les appareils
 - 🌐 **Collaboratif** - Édition multi-utilisateurs en temps réel avec chat intégré
+- 🌍 **Multilingue** - Support complet de l'internationalisation (i18n) avec français et anglais
 
 ## ✨ Fonctionnalités
 
@@ -84,6 +85,23 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 - **Notifications en Temps Réel** - Réception instantanée via WebSocket
 - **Gestion des Notifications** - Marquer comme lues, supprimer, tout marquer comme lu
 
+### Internationalisation (i18n)
+
+- **Multilingue** - Support complet de l'internationalisation avec next-intl
+- **Langues Disponibles** - Français et Anglais (extensible)
+- **Changement de Langue** - Sélection de langue dans les paramètres avec application immédiate
+- **Persistance** - La langue est sauvegardée dans le profil utilisateur
+- **Interface Traduite** - Toutes les pages principales sont traduites (Studio, Admin, Settings, etc.)
+- **Synchronisation** - Synchronisation automatique de la langue entre les sessions
+
+### Système de Dialogues
+
+- **Dialog Context** - Système centralisé de gestion des dialogues
+- **AlertDialog** - Dialogues d'alerte pour les confirmations importantes
+- **MessageDialog** - Dialogues d'information avec messages personnalisés
+- **PromptDialog** - Dialogues de saisie pour les entrées utilisateur
+- **API Unifiée** - Hook `useDialog` pour un accès simple et cohérent
+
 ## 🏗️ Architecture
 
 ### Stack Technologique
@@ -96,6 +114,7 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 │  - Tailwind CSS + shadcn/ui             │
 │  - Zustand (state management)           │
 │  - Socket.io Client (collaboration)     │
+│  - next-intl (internationalisation)     │
 └─────────────────────────────────────────┘
                     ↕ HTTP/REST + WebSocket
 ┌─────────────────────────────────────────┐
@@ -131,9 +150,19 @@ archimodeler/
 │   │   │   ├── collaboration/ # Chat et collaboration
 │   │   │   ├── notifications/ # Centre de notifications
 │   │   │   ├── common/   # Composants communs
+│   │   │   │   ├── LocaleSwitcher.tsx
+│   │   │   │   ├── LocaleSync.tsx
+│   │   │   │   ├── AlertDialog.tsx
+│   │   │   │   ├── MessageDialog.tsx
+│   │   │   │   └── PromptDialog.tsx
 │   │   │   └── ui/       # Composants UI réutilisables
 │   │   ├── hooks/        # Hooks React personnalisés
+│   │   │   └── useDialog.tsx
 │   │   ├── contexts/     # Contextes React
+│   │   │   └── DialogContext.tsx
+│   │   ├── messages/     # Fichiers de traduction i18n
+│   │   │   ├── en.json
+│   │   │   └── fr.json
 │   │   └── lib/          # Utilitaires et helpers
 │   ├── server/           # Backend NestJS
 │   │   └── src/
@@ -252,6 +281,9 @@ L'application sera accessible à :
 - [Spécifications Techniques](./SPECIFICATIONS.md) - Architecture et implémentation détaillée
 - [Guide de Développement](./DEV_GUIDE.md) - Guide pour les développeurs
 - [Status d'Implémentation](./IMPLEMENTATION_STATUS.md) - Fonctionnalités implémentées
+- [Internationalisation (i18n)](./docs/I18N.md) - Guide complet de l'internationalisation
+- [Guide de Test i18n](./docs/I18N_TEST_GUIDE.md) - Guide de test de l'internationalisation
+- [Déploiement Proxmox](./DEPLOY_PROXMOX.md) - Guide de déploiement sur Proxmox
 
 ## 🛠️ Développement
 

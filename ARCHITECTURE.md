@@ -36,7 +36,8 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
 - **UI Components** : shadcn/ui + Lucide React
 - **State Management** : Zustand
 - **Collaboration** : Socket.io Client (WebSocket)
-- **Internationalisation** : next-intl
+- **Internationalisation** : next-intl (support EN/FR avec extension possible)
+- **Dialogues** : Système centralisé avec DialogContext et hooks personnalisés
 
 ### Backend
 - **Framework** : NestJS
@@ -75,6 +76,22 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
 - **Chat Direct** : Communication en temps réel entre utilisateurs actifs
 - **Notifications** : Système de notifications en temps réel via WebSocket
 - **Présence** : Suivi des utilisateurs actifs par vue
+
+## 🌍 Internationalisation (i18n)
+
+- **Bibliothèque** : next-intl
+- **Langues Supportées** : Français (fr), Anglais (en)
+- **Routing** : Routes avec locale (`/en/studio`, `/fr/studio`)
+- **Persistance** : Préférence de langue stockée dans le profil utilisateur
+- **Composants** : LocaleSwitcher, LocaleSync
+- **Traductions** : Toutes les pages principales traduites
+
+## 💬 Système de Dialogues
+
+- **Architecture** : Context centralisé (DialogContext)
+- **API** : Hook `useDialog` pour accès unifié
+- **Types** : AlertDialog, MessageDialog, PromptDialog
+- **Intégration** : Support i18n intégré dans tous les dialogues
 
 ## 🛠️ Démarrage
 Utiliser `npm run dev` à la racine pour lancer tous les services (Web + Server).
