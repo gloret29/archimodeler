@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * @fileoverview Composant de panneau de commentaires.
+ * 
+ * Affiche les commentaires associés à un élément ou une relation,
+ * permet d'ajouter de nouveaux commentaires et de répondre aux existants.
+ * Supporte les mentions d'utilisateurs avec autocomplétion.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,13 +61,40 @@ interface Comment {
     updatedAt: Date;
 }
 
+/**
+ * Propriétés du composant CommentPanel.
+ * 
+ * @interface CommentPanelProps
+ */
 interface CommentPanelProps {
+    /** Type de cible du commentaire (ELEMENT, RELATIONSHIP, VIEW) */
     targetType: CommentTargetType;
+    /** ID de la cible (null si aucune cible sélectionnée) */
     targetId: string | null;
+    /** Nom de la cible (optionnel, pour affichage) */
     targetName?: string;
+    /** ID de l'utilisateur actuel (pour les permissions) */
     currentUserId?: string;
 }
 
+/**
+ * Composant de panneau de commentaires.
+ * 
+ * Affiche les commentaires associés à un élément ou une relation,
+ * permet d'ajouter de nouveaux commentaires et de répondre aux existants.
+ * Supporte les mentions d'utilisateurs avec autocomplétion et peut être replié.
+ * 
+ * @component CommentPanel
+ * @param {CommentPanelProps} props - Propriétés du composant
+ * 
+ * @example
+ * <CommentPanel
+ *   targetType="ELEMENT"
+ *   targetId="elem-123"
+ *   targetName="Business Actor"
+ *   currentUserId="user-1"
+ * />
+ */
 export default function CommentPanel({ targetType, targetId, targetName, currentUserId }: CommentPanelProps) {
     const t = useTranslations('Comments');
     const { alert, prompt } = useDialog();

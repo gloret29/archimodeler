@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @fileoverview Hook pour gérer l'autocomplétion des mentions d'utilisateurs.
+ * 
+ * Détecte les mentions @username dans un texte, charge la liste des utilisateurs,
+ * filtre selon la saisie et permet la sélection avec le clavier.
+ */
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '@/lib/api/client';
 
@@ -17,10 +24,30 @@ interface MentionState {
     selectedIndex: number;
 }
 
+/**
+ * Hook pour gérer l'autocomplétion des mentions d'utilisateurs dans un textarea.
+ * 
+ * Détecte les mentions @username, charge la liste des utilisateurs disponibles,
+ * filtre selon la saisie et permet la navigation et sélection au clavier.
+ * 
+ * @param {string} value - Valeur actuelle du textarea
+ * @param {(value: string) => void} onChange - Fonction de callback pour mettre à jour la valeur
+ * @param {React.RefObject<HTMLTextAreaElement>} textareaRef - Référence au textarea
+ * @returns {Object} État et fonctions pour gérer les mentions
+ * @returns {MentionState | null} returns.mentionState - État actuel de la mention (null si aucune)
+ * @returns {User[]} returns.filteredUsers - Liste des utilisateurs filtrés selon la saisie
+ * @returns {(e: React.ChangeEvent<HTMLTextAreaElement>) => void} returns.handleTextChange - Handler pour les changements de texte
+ * @returns {(e: React.KeyboardEvent<HTMLTextAreaElement>) => boolean} returns.handleKeyDown - Handler pour les touches du clavier
+ * @returns {(user: User) => void} returns.insertMention - Fonction pour insérer une mention
+ * 
+ * @example
+ * const { mentionState, filteredUsers, handleTextChange, handleKeyDown, insertMention } = 
+ *   useMentionAutocomplete(comment, setComment, textareaRef);
+ */
 export function useMentionAutocomplete(
     value: string,
     onChange: (value: string) => void,
-    textareaRef: React.RefObject<HTMLTextAreaElement>
+    textareaRef: React.RefObject<HTMLTextAreaElement | null>
 ) {
     const [users, setUsers] = useState<User[]>([]);
     const [mentionState, setMentionState] = useState<MentionState | null>(null);
@@ -158,8 +185,9 @@ export function useMentionAutocomplete(
 
         if (e.key === 'Enter' || e.key === 'Tab') {
             e.preventDefault();
-            if (filteredUsers[mentionState.selectedIndex]) {
-                insertMention(filteredUsers[mentionState.selectedIndex]);
+            const selectedUser = filteredUsers[mentionState.selectedIndex];
+            if (selectedUser) {
+                insertMention(selectedUser);
             }
             return true;
         }

@@ -2,6 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+/**
+ * Point d'entrée de l'application NestJS.
+ * 
+ * Initialise l'application, configure CORS, Swagger et démarre le serveur.
+ * 
+ * @function bootstrap
+ * @returns {Promise<void>}
+ */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
@@ -31,6 +39,9 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(process.env.PORT ?? 3002);
+  const port = process.env.PORT ?? 3002;
+  await app.listen(port);
+  console.log(`🚀 Server is running on: http://localhost:${port}`);
+  console.log(`📚 API Documentation: http://localhost:${port}/api-docs`);
 }
 bootstrap();

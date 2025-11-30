@@ -22,6 +22,17 @@ export interface ResolveThreadDto {
     resolved: boolean;
 }
 
+/**
+ * Service de gestion des commentaires et annotations.
+ * 
+ * Fournit les opérations CRUD pour les commentaires, la gestion des mentions
+ * d'utilisateurs et l'envoi de notifications automatiques.
+ * 
+ * @class CommentsService
+ * @example
+ * // Dans un controller
+ * constructor(private commentsService: CommentsService) {}
+ */
 @Injectable()
 export class CommentsService {
     private readonly logger = new Logger(CommentsService.name);
@@ -34,7 +45,24 @@ export class CommentsService {
     ) {}
 
     /**
-     * Create a new comment thread with an initial comment
+     * Crée un nouveau thread de commentaires avec un commentaire initial.
+     * 
+     * Extrait automatiquement les mentions d'utilisateurs (@username) du commentaire
+     * et envoie des notifications aux utilisateurs mentionnés.
+     * 
+     * @param {string} userId - ID de l'utilisateur créateur du thread
+     * @param {CreateCommentThreadDto} dto - Données du thread à créer
+     * @returns {Promise<CommentThread>} Le thread créé avec ses commentaires et relations
+     * @throws {Error} Si la création échoue
+     * 
+     * @example
+     * const thread = await commentsService.createThread(userId, {
+     *   targetType: 'ELEMENT',
+     *   targetId: 'elem-123',
+     *   initialComment: 'Ceci est un commentaire avec @username mentionné',
+     *   positionX: 100,
+     *   positionY: 200
+     * });
      */
     async createThread(userId: string, dto: CreateCommentThreadDto) {
         // Extract mentions from the initial comment
@@ -662,6 +690,45 @@ export class CommentsService {
         }
 
         return [...new Set(mentions)]; // Remove duplicates
+    }
+
+    /**
+     * Récupère le nom d'une cible de commentaire.
+     * 
+     * @private
+     * @param {CommentTargetType} type - Type de la cible
+     * @param {string} id - ID de la cible
+     * @returns {Promise<string>} Nom de la cible
+     */
+    private async getTargetName(type: CommentTargetType, id: string): Promise<string> {
+        switch (type) {
+            case CommentTargetType.ELEMENT:
+                const element = await this.prisma.element.findUnique({ where: { id } });
+                return element?.name || 'Element';
+            case CommentTargetType.RELATIONSHIP:
+                const relationship = await this.prisma.relationship.findUnique({ where: { id } });
+                return relationship?.name || 'Relationship';
+            case CommentTargetType.VIEW:
+                const view = await this.prisma.view.findUnique({ where: { id } });
+                return view?.name || 'View';
+            default:
+                return 'Unknown Target';
+        }
+    }
+
+    /**
+     * Récupère le nom d'un utilisateur.
+     * 
+     * @private
+     * @param {string} userId - ID de l'utilisateur
+     * @returns {Promise<string>} Nom de l'utilisateur
+     */
+    private async getAuthorName(userId: string): Promise<string> {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true },
+        });
+        return user?.name || 'Unknown User';
     }
 }
 

@@ -28,6 +28,19 @@ import FormattingPanel from '@/components/canvas/FormattingPanel';
 import { Node, Edge } from '@xyflow/react';
 import { useToast } from '@/components/ui/use-toast-simple';
 
+/**
+ * Composant principal de la page Studio.
+ * 
+ * Gère l'interface complète du studio de modélisation incluant :
+ * - Gestion des onglets de vues
+ * - Canvas collaboratif
+ * - Repository et palette
+ * - Panneaux de propriétés et commentaires
+ * - Sauvegarde avec raccourci CTRL+S
+ * 
+ * @component StudioContent
+ * @returns {JSX.Element} Le composant Studio complet
+ */
 function StudioContent() {
     const searchParams = useSearchParams();
     const packageId = searchParams.get('packageId');

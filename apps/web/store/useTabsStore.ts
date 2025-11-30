@@ -1,6 +1,18 @@
+/**
+ * @fileoverview Store Zustand pour gérer les onglets de vues.
+ * 
+ * Gère l'état des onglets ouverts, l'onglet actif, et les opérations
+ * de création, sauvegarde et fermeture d'onglets.
+ */
+
 import { create } from 'zustand';
 import { viewsApi, CreateViewDto } from '@/lib/api/views';
 
+/**
+ * Interface représentant un onglet de vue.
+ * 
+ * @interface ViewTab
+ */
 export interface ViewTab {
     id: string;
     viewId: string;
@@ -11,24 +23,48 @@ export interface ViewTab {
     isModified: boolean; // Whether the view has been modified since last save
 }
 
+/**
+ * Interface du store Zustand pour les onglets.
+ * 
+ * @interface TabsStore
+ */
 interface TabsStore {
+    /** Liste des onglets ouverts */
     tabs: ViewTab[];
+    /** ID de l'onglet actif (null si aucun) */
     activeTabId: string | null;
 
     // Actions
+    /** Ajoute un nouvel onglet à la liste */
     addTab: (tab: ViewTab) => void;
+    /** Crée un nouvel onglet avec persistance en base de données */
     addTabWithPersistence: (name: string, packageId: string, folderId?: string) => Promise<ViewTab>;
+    /** Supprime un onglet de la liste */
     removeTab: (tabId: string) => void;
+    /** Définit l'onglet actif */
     setActiveTab: (tabId: string) => void;
+    /** Met à jour le nom d'un onglet */
     updateTabName: (tabId: string, newName: string) => Promise<void>;
+    /** Met à jour le dossier d'un onglet */
     updateTabFolder: (tabId: string, folderId: string | null) => Promise<void>;
+    /** Sauvegarde le contenu de l'onglet actif */
     saveActiveTab: (content: any) => Promise<void>;
+    /** Marque un onglet comme modifié */
     markTabAsModified: (tabId: string) => void;
+    /** Marque un onglet comme sauvegardé */
     markTabAsSaved: (tabId: string) => void;
+    /** Ferme tous les onglets */
     closeAllTabs: () => void;
+    /** Ouvre une vue depuis le repository */
     openViewFromRepository: (viewId: string, viewName: string, packageId: string, folderId?: string) => void;
 }
 
+/**
+ * Store Zustand pour gérer les onglets de vues.
+ * 
+ * @example
+ * const { tabs, activeTabId, addTab, saveActiveTab } = useTabsStore();
+ */
 export const useTabsStore = create<TabsStore>((set, get) => ({
     tabs: [],
     activeTabId: null,

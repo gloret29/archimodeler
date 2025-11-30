@@ -5,6 +5,18 @@ import type { CreateCommentThreadDto, CreateCommentDto, ResolveThreadDto } from 
 import { AuthGuard } from '@nestjs/passport';
 import { CommentTargetType } from '@prisma/client';
 
+/**
+ * Controller pour la gestion des commentaires et annotations.
+ * 
+ * Expose les endpoints REST pour créer, lire, modifier et supprimer des commentaires.
+ * Tous les endpoints nécessitent une authentification JWT.
+ * 
+ * @class CommentsController
+ * @example
+ * // Créer un thread
+ * POST /comments/threads
+ * Body: { targetType: 'ELEMENT', targetId: 'elem-123', initialComment: '...' }
+ */
 @ApiTags('Comments')
 @Controller('comments')
 @UseGuards(AuthGuard('jwt'))

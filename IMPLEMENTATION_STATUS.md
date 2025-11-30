@@ -16,6 +16,17 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
   - [x] Modèles Prisma (User, Role, Permission, Group)
   - [x] Seeding des Rôles (RBAC)
   - [x] Guards NestJS
+  - [x] Authentification locale (email/password)
+  - [ ] Authentification SAML 2.0
+    - [x] Stratégie SAML (SamlStrategy) - Structure de base
+    - [ ] Configuration dynamique SAML (variables d'environnement)
+    - [ ] Endpoints SAML dans AuthController (`/auth/saml`, `/auth/saml/callback`)
+    - [ ] Intégration de la stratégie SAML dans AuthModule
+    - [ ] Gestion de la création automatique d'utilisateurs depuis SAML
+    - [ ] Mapping des attributs SAML vers les rôles utilisateur
+    - [ ] Interface frontend pour le bouton de connexion SAML
+    - [ ] Support de multiples IdP (Identity Providers)
+    - [ ] Documentation de configuration SAML
 
 ## ✅ Phase 2 : Moteur de Métamodèle (Terminé)
 
@@ -392,3 +403,29 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 ### 16.2 Backup et Maintenance
 - [ ] Backup automatisé PostgreSQL
 - [ ] Suppression non-destructive (Soft Delete)
+
+### 16.3 Authentification SAML 2.0 Complète
+**Statut**: 🟡 **Partiellement implémenté**
+- [x] Stratégie SAML de base (SamlStrategy)
+- [ ] Configuration complète SAML
+  - [ ] Variables d'environnement pour la configuration SAML (entryPoint, issuer, cert, etc.)
+  - [ ] Support de la configuration via l'interface d'administration
+  - [ ] Validation de la configuration SAML
+- [ ] Endpoints backend
+  - [ ] `GET /auth/saml` - Initie l'authentification SAML
+  - [ ] `POST /auth/saml/callback` - Gère le callback après authentification
+  - [ ] Gestion des erreurs d'authentification SAML
+- [ ] Intégration utilisateur
+  - [ ] Création automatique d'utilisateurs depuis le profil SAML
+  - [ ] Synchronisation des attributs utilisateur (email, nom, etc.)
+  - [ ] Mapping des groupes/rôles SAML vers les rôles ArchiModeler
+  - [ ] Mise à jour des utilisateurs existants lors de la connexion SAML
+- [ ] Interface frontend
+  - [ ] Bouton "Se connecter avec SAML" sur la page de connexion
+  - [ ] Gestion du retour après authentification SAML
+  - [ ] Messages d'erreur pour les échecs d'authentification SAML
+  - [ ] Support de multiples IdP (sélection du fournisseur d'identité)
+- [ ] Documentation
+  - [ ] Guide de configuration SAML pour les administrateurs
+  - [ ] Documentation des attributs SAML requis
+  - [ ] Exemples de configuration pour différents IdP (Azure AD, Okta, etc.)

@@ -189,13 +189,9 @@ archimodeler/
 
 ## 🚀 Installation
 
-### Prérequis
+Pour un guide d'installation complet et détaillé, consultez le [Guide d'Installation](./INSTALLATION_GUIDE.md).
 
-- Node.js 22.17.0 ou supérieur
-- PostgreSQL 14 ou supérieur
-- npm ou pnpm
-
-### Étapes
+### Installation Rapide (Développement)
 
 1. **Cloner le repository**
 ```bash
@@ -208,23 +204,27 @@ cd archimodeler
 npm install
 ```
 
-3. **Configurer la base de données**
-
-Créez un fichier `.env` dans `packages/database/` :
-```env
-DATABASE_URL="postgresql://user:password@localhost:5432/archimodeler"
+3. **Démarrer les services Docker**
+```bash
+docker-compose up -d
 ```
 
-4. **Initialiser la base de données**
+4. **Configurer et initialiser la base de données**
 ```bash
+# Créer le fichier .env
 cd packages/database
+echo 'DATABASE_URL="postgresql://user:password@localhost:5432/archimodeler?schema=public"' > .env
 npx prisma generate
 npx prisma migrate dev
 npx ts-node prisma/seed.ts
 cd ../..
 ```
 
-5. **Lancer l'application**
+5. **Configurer les variables d'environnement**
+
+Créez `apps/server/.env` et `apps/web/.env` (voir [Guide d'Installation](./INSTALLATION_GUIDE.md) pour les détails)
+
+6. **Lancer l'application**
 ```bash
 npm run dev
 ```
@@ -233,6 +233,10 @@ L'application sera accessible à :
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:3001
 - Documentation Swagger: http://localhost:3001/api
+
+**Première connexion** : Email `admin@archimodeler.com` / Mot de passe `admin` (⚠️ changez-le immédiatement !)
+
+Pour plus de détails, consultez le [Guide d'Installation complet](./INSTALLATION_GUIDE.md).
 
 ## 📖 Utilisation
 
@@ -299,6 +303,14 @@ L'application sera accessible à :
 ### Pour les Utilisateurs
 - [Manuel Utilisateur](./USER_MANUAL.md) - Guide complet pour utiliser ArchiModeler
 
+### Installation et Déploiement
+- [Guide d'Installation](./INSTALLATION_GUIDE.md) - Guide complet d'installation (développement et production)
+- [Déploiement Proxmox](./DEPLOY_PROXMOX.md) - Guide de déploiement sur Proxmox
+
+### Documentation du Code
+- [Documentation du Code](./CODE_DOCUMENTATION.md) - Guide pour comprendre et documenter le code source
+- [Recommandations de Refactoring](./REFACTORING_RECOMMENDATIONS.md) - Analyse et propositions d'amélioration du code
+
 ### Pour les Développeurs
 - [Spécifications Techniques](./SPECIFICATIONS.md) - Architecture et implémentation détaillée
 - [Guide de Développement](./DEV_GUIDE.md) - Guide pour les développeurs
@@ -306,7 +318,6 @@ L'application sera accessible à :
 - [Status d'Implémentation](./IMPLEMENTATION_STATUS.md) - Fonctionnalités implémentées
 - [Internationalisation (i18n)](./docs/I18N.md) - Guide complet de l'internationalisation
 - [Guide de Test i18n](./docs/I18N_TEST_GUIDE.md) - Guide de test de l'internationalisation
-- [Déploiement Proxmox](./DEPLOY_PROXMOX.md) - Guide de déploiement sur Proxmox
 - [Base de Données](./README_DATABASE.md) - Documentation de la base de données
 - [Modèle de Données](./DATABASE_MODEL.md) - Documentation détaillée du modèle de données
 

@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @fileoverview Hook pour gérer la collaboration en temps réel.
+ * 
+ * Gère la connexion WebSocket, la synchronisation des curseurs,
+ * la sélection d'éléments et la communication entre utilisateurs.
+ */
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { API_CONFIG } from '@/lib/api/config';
@@ -34,6 +41,30 @@ interface UseCollaborationOptions {
     onViewSaved?: (data: { viewId: string; savedBy: { id: string; name: string } }) => void;
 }
 
+/**
+ * Hook pour gérer la collaboration en temps réel sur une vue.
+ * 
+ * Établit une connexion WebSocket pour synchroniser les actions des utilisateurs
+ * en temps réel : curseurs, sélections, modifications de nœuds/arêtes.
+ * 
+ * @param {UseCollaborationOptions} options - Options de configuration
+ * @param {string} options.viewId - ID de la vue pour la session de collaboration
+ * @param {User} options.user - Informations de l'utilisateur actuel
+ * @param {(data: {userId: string, node: any}) => void} [options.onNodeChanged] - Callback appelé quand un nœud est modifié
+ * @param {(data: {userId: string, edge: any}) => void} [options.onEdgeChanged] - Callback appelé quand une arête est modifiée
+ * @param {(data: {userId: string, nodeId: string}) => void} [options.onNodeDeleted] - Callback appelé quand un nœud est supprimé
+ * @param {(data: {userId: string, edgeId: string}) => void} [options.onEdgeDeleted] - Callback appelé quand une arête est supprimée
+ * @param {(data: {userId: string, selectedNodes: string[]}) => void} [options.onSelectionChanged] - Callback appelé quand la sélection change
+ * @param {(data: {viewId: string, savedBy: {id: string, name: string}}) => void} [options.onViewSaved] - Callback appelé quand une vue est sauvegardée
+ * @returns {CollaborationState} État de la collaboration (utilisateurs, curseurs, sélections, connexion)
+ * 
+ * @example
+ * const { users, cursors, isConnected, sendCursorUpdate } = useCollaboration({
+ *   viewId: 'view-123',
+ *   user: { id: 'user-1', name: 'John', color: '#FF0000' },
+ *   onNodeChanged: (data) => console.log('Node changed by', data.userId),
+ * });
+ */
 export function useCollaboration({
     viewId,
     user,

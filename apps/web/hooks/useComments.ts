@@ -20,7 +20,24 @@ interface CommentsMap {
 }
 
 /**
- * Hook to fetch and manage comment counts for multiple targets
+ * Hook pour récupérer et gérer les compteurs de commentaires pour plusieurs cibles.
+ * 
+ * Ce hook est utilisé pour afficher les badges de commentaires sur les éléments
+ * et relations du canvas. Il récupère les threads de commentaires en parallèle
+ * pour toutes les cibles fournies.
+ * 
+ * @param {Array<{type: CommentTargetType, id: string}>} targets - Liste des cibles pour lesquelles récupérer les commentaires
+ * @returns {Object} Objet contenant la map des commentaires et l'état de chargement
+ * @returns {CommentsMap} returns.commentsMap - Map des compteurs de commentaires par targetId
+ * @returns {boolean} returns.loading - Indique si les commentaires sont en cours de chargement
+ * 
+ * @example
+ * const { commentsMap, loading } = useComments([
+ *   { type: 'ELEMENT', id: 'elem-1' },
+ *   { type: 'ELEMENT', id: 'elem-2' }
+ * ]);
+ * 
+ * const commentCount = commentsMap['elem-1']?.count || 0;
  */
 export function useComments(targets: Array<{ type: CommentTargetType; id: string }>) {
     const [commentsMap, setCommentsMap] = useState<CommentsMap>({});
