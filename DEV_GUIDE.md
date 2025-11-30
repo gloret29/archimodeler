@@ -280,3 +280,66 @@ function MyComponent() {
 - Gestion centralisée de l'état des dialogues
 - Support de l'internationalisation intégré
 - Accessibilité améliorée (ARIA, focus management)
+
+## 8.3 Système de Commentaires et Annotations
+
+### Architecture
+
+Un système complet de commentaires et annotations a été implémenté pour permettre la collaboration sur les éléments et relations du modèle.
+
+**Modèles de données (Prisma) :**
+- `CommentThread` - Thread de discussion lié à un élément, relation, vue ou package
+- `Comment` - Commentaire individuel dans un thread (avec support des réponses)
+- `CommentMention` - Mentions d'utilisateurs dans les commentaires
+
+**Backend (NestJS) :**
+- Module `CommentsModule` avec service et controller
+- Endpoints REST pour CRUD des commentaires
+- Extraction automatique des mentions (@username)
+- Notifications automatiques pour les mentions et réponses
+- Intégration WebSocket pour mises à jour en temps réel
+
+**Frontend (React) :**
+- `CommentPanel` - Panneau principal de commentaires (repliable)
+- `CommentThread` - Affichage d'un thread avec réponses
+- `CommentItem` - Affichage d'un commentaire individuel
+- `MentionSuggestions` - Autocomplétion pour les mentions
+- `useComments` - Hook pour gérer les commentaires
+- `useMentionAutocomplete` - Hook pour l'autocomplétion des mentions
+- Badges visuels sur le canvas pour les éléments avec commentaires
+
+**Fonctionnalités :**
+- Création de threads de discussion sur les éléments et relations
+- Réponses aux commentaires (threads imbriqués)
+- Mentions d'utilisateurs avec autocomplétion (@username)
+- Notifications en temps réel pour les mentions et réponses
+- Résolution/marquage des threads comme résolus
+- Annotations visuelles sur le canvas (badges avec compteur)
+- Panneau repliable dans le PropertiesPanel
+- Mises à jour en temps réel via WebSocket
+
+**Utilisation :**
+
+```tsx
+// Dans un composant
+import { useComments } from '@/hooks/useComments';
+
+function MyComponent() {
+    const { threads, createThread, addComment } = useComments('ELEMENT', elementId);
+    
+    // Créer un thread
+    await createThread({
+        targetType: 'ELEMENT',
+        targetId: elementId,
+        initialComment: 'Ceci est un commentaire avec @username mentionné'
+    });
+}
+```
+
+**Notifications :**
+Les notifications sont automatiquement créées lorsque :
+- Un utilisateur est mentionné dans un commentaire
+- Une réponse est ajoutée à un commentaire
+- Un thread est résolu
+
+Les notifications incluent le contexte complet (auteur, élément cible, aperçu du commentaire).

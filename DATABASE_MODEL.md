@@ -10,6 +10,8 @@ ArchiModeler utilise PostgreSQL comme base de données principale pour stocker t
 - **Système de stéréotypes** extensible
 - **Workflow de validation** pour les packages de modèles
 - **Système de notifications** pour les utilisateurs
+- **Système de chat** en temps réel entre utilisateurs
+- **Système de commentaires et annotations** sur les éléments, relations et vues
 - **Intégration de sources de données externes**
 - **Organisation hiérarchique** via dossiers
 
@@ -24,6 +26,8 @@ Le modèle de données est organisé en plusieurs domaines fonctionnels :
 5. **Workflow** : ChangeRequest, WorkflowStatus
 6. **Intégration** : DataSource
 7. **Configuration** : SystemSetting
+8. **Collaboration** : ChatMessage
+9. **Commentaires et Annotations** : CommentThread, Comment, CommentMention
 
 ---
 
@@ -40,6 +44,7 @@ Représente un utilisateur de l'application.
 | `email` | TEXT | UNIQUE, NOT NULL | Adresse email (identifiant de connexion) |
 | `password` | TEXT | NOT NULL | Mot de passe hashé (bcrypt) |
 | `name` | TEXT | NULLABLE | Nom complet de l'utilisateur |
+| `locale` | TEXT | NULLABLE, DEFAULT 'en' | Langue préférée de l'utilisateur (en, fr) |
 | `createdAt` | TIMESTAMP | DEFAULT now() | Date de création |
 | `updatedAt` | TIMESTAMP | DEFAULT now(), AUTO UPDATE | Date de dernière modification |
 
@@ -49,6 +54,11 @@ Représente un utilisateur de l'application.
 - `requestedChanges` : One-to-Many avec `ChangeRequest` (requester)
 - `reviewedChanges` : One-to-Many avec `ChangeRequest` (reviewer)
 - `notifications` : One-to-Many avec `Notification`
+- `sentMessages` : One-to-Many avec `ChatMessage` (expéditeur)
+- `receivedMessages` : One-to-Many avec `ChatMessage` (destinataire)
+- `comments` : One-to-Many avec `Comment` (auteur)
+- `mentionedIn` : One-to-Many avec `CommentMention` (mentions dans les commentaires)
+- `resolvedThreads` : One-to-Many avec `CommentThread` (threads résolus)
 
 **Index :**
 - UNIQUE sur `email`
@@ -76,12 +86,21 @@ Représente une notification pour un utilisateur.
 
 **Enum `NotificationType` :**
 - `CHANGE_REQUEST_CREATED` : Demande de changement créée
-- `CHANGE_REQUEST_SUBMITTED` : Demande de changement soumise
 - `CHANGE_REQUEST_APPROVED` : Demande de changement approuvée
 - `CHANGE_REQUEST_REJECTED` : Demande de changement rejetée
 - `CHANGE_REQUEST_PUBLISHED` : Demande de changement publiée
+- `ELEMENT_CREATED` : Élément créé
+- `ELEMENT_UPDATED` : Élément modifié
+- `RELATIONSHIP_CREATED` : Relation créée
+- `VIEW_CREATED` : Vue créée
+- `VIEW_UPDATED` : Vue modifiée
+- `SYSTEM_ALERT` : Alerte système
+- `COLLABORATION_INVITE` : Invitation à collaborer
 - `CHAT_MESSAGE` : Message de chat reçu
-- `SYSTEM` : Notification système
+- `COMMENT_CREATED` : Commentaire créé
+- `COMMENT_REPLY` : Réponse à un commentaire
+- `COMMENT_MENTION` : Mention dans un commentaire
+- `COMMENT_RESOLVED` : Commentaire résolu
 
 **Enum `NotificationSeverity` :**
 - `INFO` : Information
@@ -555,7 +574,119 @@ Définit une source de données externe pour synchronisation.
 
 ---
 
-### 7. Configuration
+### 8. Collaboration
+
+#### `ChatMessage`
+Représente un message de chat entre deux utilisateurs.
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY, DEFAULT uuid() | Identifiant unique |
+| `fromId` | UUID | FOREIGN KEY → User.id, CASCADE DELETE | Utilisateur expéditeur |
+| `toId` | UUID | FOREIGN KEY → User.id, CASCADE DELETE | Utilisateur destinataire |
+| `message` | TEXT | NOT NULL | Contenu du message |
+| `createdAt` | TIMESTAMP | DEFAULT now() | Date d'envoi |
+
+**Relations :**
+- `from` : Many-to-One avec `User` (expéditeur)
+- `to` : Many-to-One avec `User` (destinataire)
+
+**Index :**
+- Index sur `(fromId, toId, createdAt)` pour les requêtes de conversation
+- Index sur `(toId, fromId, createdAt)` pour les requêtes inversées
+
+---
+
+### 9. Commentaires et Annotations
+
+#### `CommentThread`
+Représente un thread de discussion lié à un élément, une relation ou une vue.
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY, DEFAULT uuid() | Identifiant unique |
+| `targetType` | CommentTargetType | NOT NULL | Type de cible (ELEMENT, RELATIONSHIP, VIEW) |
+| `targetId` | TEXT | NOT NULL | ID de l'élément, relation ou vue |
+| `positionX` | FLOAT | NULLABLE | Position X sur le canvas (pour annotations) |
+| `positionY` | FLOAT | NULLABLE | Position Y sur le canvas (pour annotations) |
+| `resolved` | BOOLEAN | DEFAULT false | Indique si le thread est résolu |
+| `resolvedAt` | TIMESTAMP | NULLABLE | Date de résolution |
+| `resolvedById` | UUID | FOREIGN KEY → User.id, NULLABLE | Utilisateur qui a résolu le thread |
+| `createdAt` | TIMESTAMP | DEFAULT now() | Date de création |
+| `updatedAt` | TIMESTAMP | DEFAULT now(), AUTO UPDATE | Date de modification |
+
+**Relations :**
+- `comments` : One-to-Many avec `Comment`
+- `resolvedBy` : Many-to-One avec `User` (optionnel)
+
+**Enum `CommentTargetType` :**
+- `ELEMENT` : Commentaire sur un élément
+- `RELATIONSHIP` : Commentaire sur une relation
+- `VIEW` : Commentaire sur une vue
+
+**Index :**
+- Index sur `(targetType, targetId)` pour rechercher les threads d'une cible
+- Index sur `resolved` pour filtrer les threads résolus/non résolus
+
+---
+
+#### `Comment`
+Représente un commentaire individuel dans un thread.
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY, DEFAULT uuid() | Identifiant unique |
+| `content` | TEXT | NOT NULL | Contenu du commentaire |
+| `threadId` | UUID | FOREIGN KEY → CommentThread.id, CASCADE DELETE | Thread parent |
+| `authorId` | UUID | FOREIGN KEY → User.id, CASCADE DELETE | Auteur du commentaire |
+| `parentId` | UUID | FOREIGN KEY → Comment.id, NULLABLE | Commentaire parent (pour les réponses) |
+| `createdAt` | TIMESTAMP | DEFAULT now() | Date de création |
+| `updatedAt` | TIMESTAMP | DEFAULT now(), AUTO UPDATE | Date de modification |
+| `deletedAt` | TIMESTAMP | NULLABLE | Date de suppression (soft delete) |
+
+**Relations :**
+- `thread` : Many-to-One avec `CommentThread`
+- `author` : Many-to-One avec `User`
+- `parent` : Many-to-One avec `Comment` (auto-référence, pour les réponses)
+- `replies` : One-to-Many avec `Comment` (réponses à ce commentaire)
+- `mentions` : One-to-Many avec `CommentMention`
+
+**Index :**
+- Index sur `(threadId, createdAt)` pour trier les commentaires par thread
+- Index sur `authorId` pour rechercher les commentaires d'un auteur
+- Index sur `parentId` pour les réponses
+
+**Threading :**
+- Les commentaires peuvent avoir des réponses imbriquées via `parentId`
+- Un commentaire sans `parentId` est un commentaire racine dans le thread
+
+---
+
+#### `CommentMention`
+Représente une mention d'utilisateur dans un commentaire.
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY, DEFAULT uuid() | Identifiant unique |
+| `commentId` | UUID | FOREIGN KEY → Comment.id, CASCADE DELETE | Commentaire contenant la mention |
+| `mentionedUserId` | UUID | FOREIGN KEY → User.id, CASCADE DELETE | Utilisateur mentionné |
+| `createdAt` | TIMESTAMP | DEFAULT now() | Date de création |
+
+**Relations :**
+- `comment` : Many-to-One avec `Comment`
+- `mentionedUser` : Many-to-One avec `User`
+
+**Index :**
+- UNIQUE sur `(commentId, mentionedUserId)` pour éviter les doublons
+- Index sur `mentionedUserId` pour rechercher les mentions d'un utilisateur
+
+**Fonctionnalité :**
+- Les mentions sont extraites automatiquement du contenu du commentaire (format @username)
+- Les utilisateurs mentionnés reçoivent une notification automatique
+
+---
+
+### 10. Configuration
 
 #### `SystemSetting`
 Stocke les paramètres système configurables.
@@ -710,6 +841,23 @@ CREATE INDEX idx_notification_user ON "Notification"("userId");
 CREATE INDEX idx_notification_read ON "Notification"("read");
 CREATE INDEX idx_notification_user_read ON "Notification"("userId", "read");
 CREATE INDEX idx_notification_created ON "Notification"("createdAt" DESC);
+
+-- Commentaires : recherche par cible
+CREATE INDEX idx_comment_thread_target ON "CommentThread"("targetType", "targetId");
+CREATE INDEX idx_comment_thread_resolved ON "CommentThread"("resolved");
+CREATE INDEX idx_comment_thread_created ON "CommentThread"("createdAt" DESC);
+
+-- Commentaires : recherche par thread et auteur
+CREATE INDEX idx_comment_thread_created ON "Comment"("threadId", "createdAt");
+CREATE INDEX idx_comment_author ON "Comment"("authorId");
+CREATE INDEX idx_comment_parent ON "Comment"("parentId");
+
+-- Mentions : recherche des mentions d'un utilisateur
+CREATE INDEX idx_comment_mention_user ON "CommentMention"("mentionedUserId");
+
+-- Chat : recherche de conversations
+CREATE INDEX idx_chat_message_conversation ON "ChatMessage"("fromId", "toId", "createdAt" DESC);
+CREATE INDEX idx_chat_message_reverse ON "ChatMessage"("toId", "fromId", "createdAt" DESC);
 ```
 
 ---
@@ -729,7 +877,7 @@ Les colonnes `JSONB` sont utilisées pour stocker des données flexibles :
 - **`DataSource.config`** : Configuration de la source de données
 - **`DataSource.mapping`** : Mapping des colonnes
 - **`SystemSetting.value`** : Valeur du paramètre système
-- **`Notification.metadata`** : Métadonnées optionnelles (ex: changeRequestId, elementId, viewId)
+- **`Notification.metadata`** : Métadonnées optionnelles (ex: changeRequestId, elementId, viewId, threadId, commentId)
 
 **Avantages du JSONB :**
 - Indexation et recherche efficaces
@@ -739,6 +887,9 @@ Les colonnes `JSONB` sont utilisées pour stocker des données flexibles :
 ### Enums
 
 - **`WorkflowStatus`** : Statut du workflow (`DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED`)
+- **`CommentTargetType`** : Type de cible pour les commentaires (`ELEMENT`, `RELATIONSHIP`, `VIEW`)
+- **`NotificationType`** : Type de notification (voir section Notification pour la liste complète)
+- **`NotificationSeverity`** : Niveau de sévérité (`INFO`, `WARNING`, `ERROR`, `SUCCESS`)
 
 ---
 
@@ -749,7 +900,12 @@ User ──┬── Role (Many-to-Many)
        ├── Group (Many-to-Many)
        ├── ChangeRequest (requester)
        ├── ChangeRequest (reviewer)
-       └── Notification
+       ├── Notification
+       ├── ChatMessage (sent)
+       ├── ChatMessage (received)
+       ├── Comment (author)
+       ├── CommentMention (mentioned)
+       └── CommentThread (resolved)
 
 Role ── Permission (Many-to-Many)
 
@@ -786,6 +942,20 @@ Stereotype ──┬── ConceptType (Many-to-Many)
              ├── RelationType (Many-to-Many)
              ├── Element (Many-to-Many via ElementStereotype)
              └── Relationship (Many-to-Many via RelationshipStereotype)
+
+CommentThread ──┬── Comment
+                └── User (resolvedBy)
+
+Comment ──┬── CommentThread
+          ├── User (author)
+          ├── Comment (parent/replies, self-reference)
+          └── CommentMention
+
+CommentMention ──┬── Comment
+                 └── User (mentionedUser)
+
+ChatMessage ──┬── User (from)
+              └── User (to)
 ```
 
 ---
@@ -855,6 +1025,48 @@ Le script de seed (`packages/database/prisma/seed.ts`) initialise :
 
 ---
 
-*Document généré le : 2025-11-29*
-*Version du schéma : 1.0*
+---
+
+## Notes sur les Nouvelles Fonctionnalités
+
+### Système de Chat
+
+Le système de chat permet la communication en temps réel entre utilisateurs actifs dans le Studio. Les messages sont stockés dans `ChatMessage` et sont accessibles via WebSocket pour une communication instantanée.
+
+**Fonctionnalités :**
+- Messages directs entre deux utilisateurs
+- Historique des conversations
+- Notifications en temps réel pour les nouveaux messages
+- Badge de messages non lus
+
+### Système de Commentaires et Annotations
+
+Le système de commentaires permet d'ajouter des discussions contextuelles sur les éléments, relations et vues du modèle.
+
+**Fonctionnalités :**
+- Threads de discussion sur les éléments, relations et vues
+- Réponses imbriquées (threading)
+- Mentions d'utilisateurs (@username) avec notifications automatiques
+- Annotations visuelles sur le canvas (position X/Y)
+- Résolution de threads (marquage comme résolu)
+- Soft delete pour les commentaires (champ `deletedAt`)
+
+**Workflow :**
+1. Un utilisateur crée un `CommentThread` sur un élément/relation/vue
+2. Le thread contient un ou plusieurs `Comment`
+3. Les utilisateurs peuvent répondre aux commentaires (via `parentId`)
+4. Les mentions (@username) sont extraites et créent des `CommentMention`
+5. Les utilisateurs mentionnés reçoivent une notification automatique
+6. Les threads peuvent être marqués comme résolus
+
+**Notifications :**
+- `COMMENT_CREATED` : Nouveau commentaire créé
+- `COMMENT_REPLY` : Réponse à un commentaire
+- `COMMENT_MENTION` : Mention dans un commentaire
+- `COMMENT_RESOLVED` : Thread résolu
+
+---
+
+*Document généré le : 2025-11-30*
+*Version du schéma : 2.0*
 

@@ -11,11 +11,12 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
   - Portail Collaboratif
   - Chat en temps réel
   - Centre de notifications
+  - Système de commentaires et annotations
   - Gestion de l'état global (Zustand)
 - **`apps/server`** : Backend NestJS
   - API REST
   - WebSocket Gateway (Socket.io) pour collaboration temps réel
-  - Services Métier (Model, Search, Workflow, Notifications)
+  - Services Métier (Model, Search, Workflow, Notifications, Comments)
   - Gestion des packages de modèles
   - Intégration GitHub (prévu)
 - **`packages/database`** : Couche de données
@@ -56,6 +57,7 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
   - Packages de modèles (ModelPackage)
   - Utilisateurs, Rôles, Permissions
   - Notifications
+  - Commentaires et annotations (CommentThread, Comment, CommentMention)
   - Configuration système
   - Métamodèle ArchiMate
   - Stéréotypes et métadonnées
@@ -76,6 +78,11 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
 - **Chat Direct** : Communication en temps réel entre utilisateurs actifs
 - **Notifications** : Système de notifications en temps réel via WebSocket
 - **Présence** : Suivi des utilisateurs actifs par vue
+- **Commentaires** : Système de commentaires et annotations avec mises à jour en temps réel
+  - Threads de discussion sur les éléments et relations
+  - Mentions d'utilisateurs avec autocomplétion
+  - Annotations visuelles sur le canvas
+  - Notifications pour les réponses et mentions
 
 ## 🌍 Internationalisation (i18n)
 
@@ -93,6 +100,23 @@ ArchiModeler repose sur une architecture moderne, modulaire et hybride, conçue 
 - **Types** : AlertDialog, MessageDialog, PromptDialog
 - **Intégration** : Support i18n intégré dans tous les dialogues
 
-## 🛠️ Démarrage
+## 🚀 Déploiement
+
+### Développement Local
 Utiliser `npm run dev` à la racine pour lancer tous les services (Web + Server).
 Assurez-vous que les conteneurs Docker (PostgreSQL, OpenSearch) sont actifs.
+
+### Déploiement Production (Proxmox)
+Des scripts de déploiement automatisé sont disponibles pour Proxmox LXC :
+- **Script principal** : `scripts/deploy-proxmox.sh` - Déploiement complet automatisé
+- **Script d'installation** : `scripts/install-in-container.sh` - Installation dans un container existant
+- **Documentation** : Voir [DEPLOY_PROXMOX.md](./DEPLOY_PROXMOX.md) pour le guide complet
+
+Le script configure automatiquement :
+- Container LXC Ubuntu 22.04
+- Node.js 20.x
+- Docker et Docker Compose
+- PostgreSQL et OpenSearch
+- Services systemd pour le backend et frontend
+- Nginx comme reverse proxy
+- Configuration SSL (optionnel avec certbot)

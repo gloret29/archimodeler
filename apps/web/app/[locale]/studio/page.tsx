@@ -26,6 +26,7 @@ import { UserInfo } from '@/components/common/UserInfo';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import FormattingPanel from '@/components/canvas/FormattingPanel';
 import { Node, Edge } from '@xyflow/react';
+import { useToast } from '@/components/ui/use-toast-simple';
 
 function StudioContent() {
     const searchParams = useSearchParams();
@@ -33,6 +34,7 @@ function StudioContent() {
     const t = useTranslations('Studio');
     const router = useRouter();
     const { alert, prompt } = useDialog();
+    const { toast } = useToast();
     const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab, markTabAsModified, markTabAsSaved } = useTabsStore();
     const [isSaving, setIsSaving] = React.useState(false);
     const [repositoryWidth, setRepositoryWidth] = React.useState(320); // Default width: 320px (w-80)
@@ -48,6 +50,7 @@ function StudioContent() {
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
     const isInitialLoadRef = React.useRef<boolean>(true);
     const lastContentRef = React.useRef<string>('');
+    const handleSaveRef = React.useRef<(() => Promise<void>) | null>(null);
 
     // Check authentication FIRST, before rendering anything
     React.useEffect(() => {
@@ -250,7 +253,7 @@ function StudioContent() {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = React.useCallback(async () => {
         if (!activeTab) {
             return;
         }
@@ -290,6 +293,12 @@ function StudioContent() {
             await saveActiveTab(content);
             console.log('✓ View saved successfully');
             
+            // Show success toast
+            toast({
+                title: t('viewSaved') || 'View saved!',
+                description: activeTab.viewName || '',
+            });
+            
             // Notify other users via WebSocket
             if (currentUser && notifyViewSaved) {
                 notifyViewSaved({
@@ -307,7 +316,30 @@ function StudioContent() {
         } finally {
             setIsSaving(false);
         }
-    };
+    }, [activeTab, currentCanvasContent, saveActiveTab, currentUser, notifyViewSaved, alert, t, toast]);
+
+    // Keep handleSave ref up to date
+    React.useEffect(() => {
+        handleSaveRef.current = handleSave;
+    }, [handleSave]);
+
+    // Handle CTRL+S keyboard shortcut for saving
+    React.useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // Check for CTRL+S (Windows/Linux) or CMD+S (Mac)
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault(); // Prevent browser's default save dialog
+                if (activeTab && !isSaving && handleSaveRef.current) {
+                    handleSaveRef.current();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [activeTab?.id, isSaving]);
 
     const handleSaveAs = async () => {
         if (!activeTab || !packageId) {

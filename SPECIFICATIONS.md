@@ -27,6 +27,7 @@ ArchiModeler est une plateforme collaborative de modélisation d'architecture d'
 - **WebSocket**: Socket.io (collaboration temps réel)
 - **Versioning**: Octokit (GitHub API)
 - **Authentification**: JWT + RBAC (Passport.js)
+- **Services**: Model, Search, Workflow, Notifications, Comments
 
 #### Infrastructure de Données
 - **PostgreSQL 15** : Base de données principale pour :
@@ -36,6 +37,7 @@ ArchiModeler est une plateforme collaborative de modélisation d'architecture d'
   - Packages de modèles (ModelPackage)
   - Utilisateurs, Rôles, Permissions
   - Notifications
+  - Commentaires et annotations (CommentThread, Comment, CommentMention)
   - Configuration et Stéréotypes
   - Isolation des données par package
 - **OpenSearch 2.11** : Moteur de recherche pour :
@@ -125,9 +127,20 @@ model Role {
 - **Notifications** : 
   - Centre de notifications avec badge de compteur non lus
   - Notifications automatiques pour les change requests (création, soumission, approbation, rejet, publication)
+  - Notifications pour les mentions dans les commentaires
+  - Notifications pour les réponses aux commentaires
   - Notifications en temps réel via WebSocket
   - Gestion des notifications (marquer comme lues, supprimer)
 - **Thème Sombre** : Support complet du thème sombre avec adaptation automatique des couleurs et SVG.
+- **Commentaires et Annotations** :
+  - Système de commentaires sur les éléments et relations
+  - Threads de discussion avec réponses imbriquées
+  - Mentions d'utilisateurs (@username) avec autocomplétion
+  - Annotations visuelles sur le canvas (badges de commentaires)
+  - Notifications automatiques pour les mentions et réponses
+  - Résolution/marquage des commentaires comme résolus
+  - Panneau de commentaires repliable dans le panneau des propriétés
+  - Mises à jour en temps réel via WebSocket
 - **Préférences** : Stockage des paramètres utilisateur (Thème, Langue, Affichage par défaut).
 
 ### 3.2 Modélisation Avancée

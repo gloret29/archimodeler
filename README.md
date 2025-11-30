@@ -77,6 +77,13 @@ ArchiModeler est une application web moderne pour créer, gérer et visualiser d
 - **Notifications de Chat** - Alertes visuelles (toast) pour les nouveaux messages
 - **Badge Messages Non Lus** - Indicateur de messages non lus sur les avatars
 - **Gestion des Conversations** - Accès rapide aux conversations depuis l'avatar utilisateur
+- **Commentaires et Annotations** - Système de commentaires sur les éléments et relations
+  - Threads de discussion sur les éléments
+  - Mentions d'utilisateurs (@username) avec autocomplétion
+  - Annotations visuelles sur le canvas (badges de commentaires)
+  - Notifications pour les réponses et mentions
+  - Résolution/marquage des commentaires comme résolus
+  - Panneau de commentaires repliable dans le panneau des propriétés
 
 ### Notifications
 
@@ -224,8 +231,8 @@ npm run dev
 
 L'application sera accessible à :
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:3002
-- Documentation: http://localhost:3001
+- Backend API: http://localhost:3001
+- Documentation Swagger: http://localhost:3001/api
 
 ## 📖 Utilisation
 
@@ -265,6 +272,17 @@ L'application sera accessible à :
    - **Force-Directed** : Simulation de forces pour une disposition naturelle
 3. Les éléments sont automatiquement réorganisés
 
+### Commenter un Élément
+
+1. Sélectionnez un élément ou une relation sur le canvas
+2. Le panneau des propriétés s'affiche à droite
+3. Cliquez sur l'onglet "Comments" (ou utilisez le panneau repliable)
+4. Tapez votre commentaire dans la zone de texte
+5. Mentionnez des utilisateurs avec @username (autocomplétion disponible)
+6. Cliquez sur "Start Discussion" pour créer un thread
+7. Les autres utilisateurs peuvent répondre et être notifiés
+8. Les éléments avec commentaires affichent un badge sur le canvas
+
 ### Menu Contextuel
 
 **Sur un élément** (clic droit) :
@@ -278,12 +296,19 @@ L'application sera accessible à :
 
 ## 📚 Documentation
 
+### Pour les Utilisateurs
+- [Manuel Utilisateur](./USER_MANUAL.md) - Guide complet pour utiliser ArchiModeler
+
+### Pour les Développeurs
 - [Spécifications Techniques](./SPECIFICATIONS.md) - Architecture et implémentation détaillée
 - [Guide de Développement](./DEV_GUIDE.md) - Guide pour les développeurs
+- [Architecture Technique](./ARCHITECTURE.md) - Vue d'ensemble de l'architecture
 - [Status d'Implémentation](./IMPLEMENTATION_STATUS.md) - Fonctionnalités implémentées
 - [Internationalisation (i18n)](./docs/I18N.md) - Guide complet de l'internationalisation
 - [Guide de Test i18n](./docs/I18N_TEST_GUIDE.md) - Guide de test de l'internationalisation
 - [Déploiement Proxmox](./DEPLOY_PROXMOX.md) - Guide de déploiement sur Proxmox
+- [Base de Données](./README_DATABASE.md) - Documentation de la base de données
+- [Modèle de Données](./DATABASE_MODEL.md) - Documentation détaillée du modèle de données
 
 ## 🛠️ Développement
 
@@ -304,6 +329,11 @@ cd packages/database
 npx prisma studio        # Interface graphique Prisma
 npx prisma migrate dev   # Créer une migration
 npx prisma generate      # Générer le client Prisma
+npx prisma migrate deploy # Appliquer les migrations (production)
+
+# Déploiement Proxmox
+chmod +x scripts/deploy-proxmox.sh
+./scripts/deploy-proxmox.sh [container-id] [container-name]
 ```
 
 ### Tests
@@ -366,6 +396,8 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 - [x] Édition multi-onglets
 - [x] Collaboration temps réel avec curseurs
 - [x] Chat collaboratif entre utilisateurs actifs
+- [x] Commentaires et annotations sur les éléments
+- [x] Mentions d'utilisateurs dans les commentaires
 - [x] Affichage des relations dans le repository
 - [x] Export/Import des relations
 - [x] Support thème sombre complet
