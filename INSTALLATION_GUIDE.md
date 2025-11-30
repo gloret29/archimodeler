@@ -831,3 +831,4 @@ docker exec -i archimodeler-postgres-1 psql -U user archimodeler < backup_202411
 *Guide d'Installation ArchiModeler - Version 1.0*  
 *Dernière mise à jour : 2025-11-30*
 
+
