@@ -5,7 +5,7 @@ import { useRouter, Link } from "@/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag, Package, Home } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag, Package, Home, Megaphone } from "lucide-react";
 import { useTranslations } from 'next-intl';
 import { API_CONFIG } from '@/lib/api/config';
 
@@ -51,11 +51,13 @@ export default function AdminLayout({
 
                 const user: User = await response.json();
                 
-                // Check if user has Admin role
-                const hasAdminRole = user.roles?.some(role => role.name === 'Admin') || false;
+                // Check if user has System Administrator or Lead Designer role
+                const hasAdminRole = user.roles?.some(role => 
+                    role.name === 'System Administrator' || role.name === 'Lead Designer'
+                ) || false;
                 
                 if (!hasAdminRole) {
-                    console.warn("User does not have Admin role, redirecting to home");
+                    console.warn("User does not have required admin role, redirecting to home");
                     router.push("/home");
                     return;
                 }
@@ -127,6 +129,12 @@ export default function AdminLayout({
                             <Button variant="ghost" className="w-full justify-start">
                                 <Package className="mr-2 h-4 w-4" />
                                 Model Packages
+                            </Button>
+                        </Link>
+                        <Link href="/admin/broadcast">
+                            <Button variant="ghost" className="w-full justify-start">
+                                <Megaphone className="mr-2 h-4 w-4" />
+                                Broadcast Messages
                             </Button>
                         </Link>
                         <div className="pt-4">

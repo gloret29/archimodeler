@@ -113,4 +113,17 @@ export class UsersController {
             );
         }
     }
+
+    @Get('me/chat/:targetUserId')
+    @ApiOperation({ summary: 'Get chat history', description: 'Get chat message history with a specific user' })
+    @ApiParam({ name: 'targetUserId', description: 'Target user ID' })
+    @ApiResponse({ status: 200, description: 'Chat history retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async getChatHistory(@Request() req: any, @Param('targetUserId') targetUserId: string) {
+        const userId = req.user?.userId;
+        if (!userId) {
+            throw new HttpException('User not found in token', HttpStatus.UNAUTHORIZED);
+        }
+        return this.usersService.getChatHistory(userId, targetUserId);
+    }
 }

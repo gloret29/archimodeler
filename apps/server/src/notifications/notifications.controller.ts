@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { NotificationType, NotificationSeverity } from '@prisma/client';
 
 @ApiTags('Notifications')
@@ -17,8 +19,20 @@ export class NotificationsController {
     @ApiResponse({ status: 200, description: 'Notifications retrieved successfully' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async getUserNotifications(@Request() req: any, @Query('unreadOnly') unreadOnly?: string) {
-        const unread = unreadOnly === 'true';
-        return this.notificationsService.getUserNotifications(req.user.userId, unread);
+        const userId = req.user?.userId;
+        if (!userId) {
+            throw new HttpException('User ID not found in request', HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            const unread = unreadOnly === 'true';
+            return await this.notificationsService.getUserNotifications(userId, unread);
+        } catch (error) {
+            console.error('Error getting user notifications:', error);
+            throw new HttpException(
+                'Failed to get user notifications',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
     }
 
     @Get('unread-count')
@@ -26,8 +40,20 @@ export class NotificationsController {
     @ApiResponse({ status: 200, description: 'Unread count retrieved successfully' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async getUnreadCount(@Request() req: any) {
-        const count = await this.notificationsService.getUnreadCount(req.user.userId);
-        return { count };
+        const userId = req.user?.userId;
+        if (!userId) {
+            throw new HttpException('User ID not found in request', HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            const count = await this.notificationsService.getUnreadCount(userId);
+            return { count };
+        } catch (error) {
+            console.error('Error getting unread count:', error);
+            throw new HttpException(
+                'Failed to get unread count',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
     }
 
     @Put(':id/read')
@@ -64,6 +90,51 @@ export class NotificationsController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async deleteAllRead(@Request() req: any) {
         return this.notificationsService.deleteAllRead(req.user.userId);
+    }
+
+    @Post('broadcast')
+    @UseGuards(AuthGuard('jwt'), RolesGuard)
+    @Roles('System Administrator')
+    @ApiOperation({ summary: 'Broadcast notification to all users', description: 'Send a notification to all users in the platform (Admin only)' })
+    @ApiResponse({ status: 201, description: 'Notification broadcasted successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+    async broadcastNotification(
+        @Request() req: any,
+        @Body() body: {
+            title: string;
+            message: string;
+            severity?: NotificationSeverity;
+            metadata?: any;
+        }
+    ) {
+        try {
+            if (!body.title || !body.message) {
+                throw new HttpException(
+                    'Title and message are required',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            const result = await this.notificationsService.broadcastNotification({
+                type: NotificationType.SYSTEM_ALERT,
+                severity: body.severity || NotificationSeverity.INFO,
+                title: body.title.trim(),
+                message: body.message.trim(),
+                metadata: body.metadata || {},
+            });
+
+            return result;
+        } catch (error) {
+            console.error('Error broadcasting notification:', error);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                error.message || 'Failed to broadcast notification',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
     }
 }
 

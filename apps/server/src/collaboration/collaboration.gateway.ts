@@ -11,6 +11,8 @@ import { Server, Socket } from 'socket.io';
 import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationType, NotificationSeverity } from '@prisma/client';
 
 interface User {
     id: string;
@@ -42,19 +44,46 @@ export class CollaborationGateway
 
     private readonly logger = new Logger(CollaborationGateway.name);
     private viewSessions: Map<string, ViewSession> = new Map();
+    private notificationRooms: Map<string, Set<string>> = new Map(); // userId -> Set of socketIds
 
     constructor(
         @Inject(forwardRef(() => NotificationsService))
         private notificationsService: NotificationsService,
         @Inject(forwardRef(() => UsersService))
         private usersService: UsersService,
+        private prisma: PrismaService,
     ) {}
 
     handleConnection(client: Socket) {
-        this.logger.log(`Client connected: ${client.id}`);
+        this.logger.log(`Client connected to collaboration namespace: ${client.id}`);
+    }
+
+    @SubscribeMessage('join-notifications')
+    handleJoinNotifications(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { userId: string },
+    ) {
+        const { userId } = data;
+        if (!userId) {
+            this.logger.warn('join-notifications called without userId');
+            return;
+        }
+
+        // Create room for user notifications
+        const room = `notifications:${userId}`;
+        client.join(room);
+        
+        // Track which sockets are listening for this user's notifications
+        if (!this.notificationRooms.has(userId)) {
+            this.notificationRooms.set(userId, new Set());
+        }
+        this.notificationRooms.get(userId)!.add(client.id);
+        
+        this.logger.log(`Client ${client.id} joined notification room for user ${userId}`);
     }
 
     handleDisconnect(client: Socket) {
+        this.logger.log(`Client disconnected from collaboration namespace: ${client.id}`);
         this.logger.log(`Client disconnected: ${client.id}`);
 
         // Remove user from all view sessions
@@ -63,16 +92,35 @@ export class CollaborationGateway
                 session.users.delete(client.id);
                 session.cursors.delete(client.id);
 
+                // Filter out users with invalid names before sending
+                const validUsers = Array.from(session.users.values()).filter(u => 
+                    u.name && 
+                    u.name.trim() !== '' && 
+                    u.name !== 'User' && 
+                    !u.name.startsWith('User ') &&
+                    u.id &&
+                    u.id !== '' &&
+                    !u.id.startsWith('User ')
+                );
+
                 // Notify other users in the view
                 this.server.to(viewId).emit('user-left', {
                     userId: client.id,
-                    users: Array.from(session.users.values()),
+                    users: validUsers,
                 });
 
                 // Clean up empty sessions
                 if (session.users.size === 0) {
                     this.viewSessions.delete(viewId);
                 }
+            }
+        });
+
+        // Remove client from notification rooms
+        this.notificationRooms.forEach((socketIds, userId) => {
+            socketIds.delete(client.id);
+            if (socketIds.size === 0) {
+                this.notificationRooms.delete(userId);
             }
         });
     }
@@ -86,15 +134,37 @@ export class CollaborationGateway
 
         // Enrich user with name from database if missing or empty
         let enrichedUser = { ...user };
-        if (!enrichedUser.name || enrichedUser.name.trim() === '' || enrichedUser.name === 'User') {
-            try {
-                const dbUser = await this.usersService.findById(user.id);
-                if (dbUser) {
-                    enrichedUser.name = dbUser.name || dbUser.email || 'User';
+        if (!enrichedUser.name || enrichedUser.name.trim() === '' || enrichedUser.name === 'User' || enrichedUser.name.startsWith('User ')) {
+            // Only try to fetch if the ID looks like a valid UUID or database ID
+            if (user.id && user.id.length > 10 && !user.id.startsWith('User ')) {
+                try {
+                    const dbUser = await this.usersService.findById(user.id);
+                    if (dbUser) {
+                        enrichedUser.name = dbUser.name || dbUser.email || 'User';
+                    } else {
+                        // User not found in database, reject the connection
+                        this.logger.warn(`User ${user.id} not found in database, rejecting join`);
+                        client.emit('error', { message: 'User not found' });
+                        return;
+                    }
+                } catch (error) {
+                    this.logger.warn(`Failed to fetch user ${user.id} from database: ${error}`);
+                    client.emit('error', { message: 'Failed to verify user' });
+                    return;
                 }
-            } catch (error) {
-                this.logger.warn(`Failed to fetch user ${user.id} from database: ${error}`);
+            } else {
+                // Invalid user ID, reject the connection
+                this.logger.warn(`Invalid user ID ${user.id}, rejecting join`);
+                client.emit('error', { message: 'Invalid user ID' });
+                return;
             }
+        }
+        
+        // Final check: reject if name is still invalid
+        if (!enrichedUser.name || enrichedUser.name.trim() === '' || enrichedUser.name === 'User' || enrichedUser.name.startsWith('User ')) {
+            this.logger.warn(`User ${user.id} has invalid name "${enrichedUser.name}", rejecting join`);
+            client.emit('error', { message: 'Invalid user name' });
+            return;
         }
 
         // Leave previous rooms
@@ -129,18 +199,37 @@ export class CollaborationGateway
         const enrichedUsersMap = new Map<string, User>();
         for (const [clientId, u] of session.users.entries()) {
             let enriched = u;
-            if (!u.name || u.name.trim() === '' || u.name === 'User') {
+            if (!u.name || u.name.trim() === '' || u.name === 'User' || u.name.startsWith('User ')) {
                 try {
-                    const dbUser = await this.usersService.findById(u.id);
-                    if (dbUser) {
-                        enriched = { ...u, name: dbUser.name || dbUser.email || 'User' };
-                        session.users.set(clientId, enriched);
+                    // Only try to fetch if the ID looks like a valid UUID or database ID
+                    if (u.id && u.id.length > 10 && !u.id.startsWith('User ')) {
+                        const dbUser = await this.usersService.findById(u.id);
+                        if (dbUser) {
+                            enriched = { ...u, name: dbUser.name || dbUser.email || 'User' };
+                            session.users.set(clientId, enriched);
+                        } else {
+                            // User not found in database, remove from session
+                            this.logger.warn(`User ${u.id} not found in database, removing from session`);
+                            session.users.delete(clientId);
+                            continue;
+                        }
+                    } else {
+                        // Invalid user ID, remove from session
+                        this.logger.warn(`Invalid user ID ${u.id}, removing from session`);
+                        session.users.delete(clientId);
+                        continue;
                     }
                 } catch (error) {
                     this.logger.warn(`Failed to fetch user ${u.id} from database: ${error}`);
+                    // Remove user if we can't fetch it
+                    session.users.delete(clientId);
+                    continue;
                 }
             }
-            enrichedUsersMap.set(clientId, enriched);
+            // Only add users with valid names (not generic "User" or "User XXX")
+            if (enriched.name && enriched.name.trim() !== '' && enriched.name !== 'User' && !enriched.name.startsWith('User ')) {
+                enrichedUsersMap.set(clientId, enriched);
+            }
         }
 
         const enrichedUsers = Array.from(enrichedUsersMap.values());
@@ -152,10 +241,26 @@ export class CollaborationGateway
             users: enrichedUsers,
         });
 
+        // Convert cursors from socket ID to user ID mapping
+        const cursorsByUserId: Record<string, CursorPosition> = {};
+        for (const [socketId, cursor] of session.cursors.entries()) {
+            const user = session.users.get(socketId);
+            if (user) {
+                cursorsByUserId[user.id] = cursor;
+            }
+        }
+
+        // Create socket ID to user ID mapping
+        const socketIdToUserId: Record<string, string> = {};
+        for (const [socketId, user] of session.users.entries()) {
+            socketIdToUserId[socketId] = user.id;
+        }
+
         // Send current session state to the joining user
         client.emit('session-state', {
             users: enrichedUsers,
-            cursors: Object.fromEntries(session.cursors),
+            cursors: cursorsByUserId,
+            socketIdToUserId,
         });
 
         this.logger.log(`User ${enrichedUser.name} joined view ${viewId}`);
@@ -175,9 +280,20 @@ export class CollaborationGateway
 
             client.leave(viewId);
 
+            // Filter out users with invalid names before sending
+            const validUsers = Array.from(session.users.values()).filter(u => 
+                u.name && 
+                u.name.trim() !== '' && 
+                u.name !== 'User' && 
+                !u.name.startsWith('User ') &&
+                u.id &&
+                u.id !== '' &&
+                !u.id.startsWith('User ')
+            );
+
             this.server.to(viewId).emit('user-left', {
                 userId: client.id,
-                users: Array.from(session.users.values()),
+                users: validUsers,
             });
 
             // Clean up empty sessions
@@ -197,10 +313,17 @@ export class CollaborationGateway
 
         if (session) {
             session.cursors.set(client.id, position);
+            
+            // Get user ID for this socket
+            const user = session.users.get(client.id);
+            if (!user) {
+                this.logger.warn(`User not found in session for client ${client.id}`);
+                return; // User not found in session
+            }
 
-            // Broadcast to all other users in the view
+            // Broadcast to all other users in the view with user ID
             client.to(viewId).emit('cursor-update', {
-                userId: client.id,
+                userId: user.id, // Send user ID instead of socket ID
                 position,
             });
         }
@@ -212,10 +335,29 @@ export class CollaborationGateway
         @MessageBody() data: { viewId: string; node: any },
     ) {
         const { viewId, node } = data;
+        const session = this.viewSessions.get(viewId);
 
-        // Broadcast to all other users in the view
-        client.to(viewId).emit('node-changed', {
-            userId: client.id,
+        if (!session) {
+            this.logger.warn(`View session not found for ${viewId}`);
+            return;
+        }
+
+        // Get user ID for this socket
+        const user = session.users.get(client.id);
+        if (!user) {
+            this.logger.warn(`User not found in session for client ${client.id}`);
+            return;
+        }
+
+        // Ensure client is in the view room
+        if (!client.rooms.has(viewId)) {
+            client.join(viewId);
+        }
+
+        // Broadcast to all users in the view (including sender for consistency)
+        // Client will filter out its own messages using user ID
+        this.server.to(viewId).emit('node-changed', {
+            userId: user.id, // Send user ID instead of socket ID
             node,
         });
     }
@@ -226,10 +368,24 @@ export class CollaborationGateway
         @MessageBody() data: { viewId: string; edge: any },
     ) {
         const { viewId, edge } = data;
+        const session = this.viewSessions.get(viewId);
 
-        // Broadcast to all other users in the view
-        client.to(viewId).emit('edge-changed', {
-            userId: client.id,
+        if (!session) {
+            this.logger.warn(`View session not found for ${viewId}`);
+            return;
+        }
+
+        // Get user ID for this socket
+        const user = session.users.get(client.id);
+        if (!user) {
+            this.logger.warn(`User not found in session for client ${client.id}`);
+            return;
+        }
+
+        // Broadcast to all users in the view (including sender for consistency)
+        // Client will filter out its own messages using user ID
+        this.server.to(viewId).emit('edge-changed', {
+            userId: user.id, // Send user ID instead of socket ID
             edge,
         });
     }
@@ -240,10 +396,24 @@ export class CollaborationGateway
         @MessageBody() data: { viewId: string; nodeId: string },
     ) {
         const { viewId, nodeId } = data;
+        const session = this.viewSessions.get(viewId);
 
-        // Broadcast to all other users in the view
-        client.to(viewId).emit('node-deleted', {
-            userId: client.id,
+        if (!session) {
+            this.logger.warn(`View session not found for ${viewId}`);
+            return;
+        }
+
+        // Get user ID for this socket
+        const user = session.users.get(client.id);
+        if (!user) {
+            this.logger.warn(`User not found in session for client ${client.id}`);
+            return;
+        }
+
+        // Broadcast to all users in the view (including sender for consistency)
+        // Client will filter out its own messages using user ID
+        this.server.to(viewId).emit('node-deleted', {
+            userId: user.id, // Send user ID instead of socket ID
             nodeId,
         });
     }
@@ -254,10 +424,24 @@ export class CollaborationGateway
         @MessageBody() data: { viewId: string; edgeId: string },
     ) {
         const { viewId, edgeId } = data;
+        const session = this.viewSessions.get(viewId);
 
-        // Broadcast to all other users in the view
-        client.to(viewId).emit('edge-deleted', {
-            userId: client.id,
+        if (!session) {
+            this.logger.warn(`View session not found for ${viewId}`);
+            return;
+        }
+
+        // Get user ID for this socket
+        const user = session.users.get(client.id);
+        if (!user) {
+            this.logger.warn(`User not found in session for client ${client.id}`);
+            return;
+        }
+
+        // Broadcast to all users in the view (including sender for consistency)
+        // Client will filter out its own messages using user ID
+        this.server.to(viewId).emit('edge-deleted', {
+            userId: user.id, // Send user ID instead of socket ID
             edgeId,
         });
     }
@@ -293,7 +477,7 @@ export class CollaborationGateway
     }
 
     @SubscribeMessage('chat-message')
-    handleChatMessage(
+    async handleChatMessage(
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { from: string; to: string; message: string; timestamp: string; senderName?: string },
     ) {
@@ -319,16 +503,63 @@ export class CollaborationGateway
             senderName: senderName || 'User',
         };
         
+        // Save message to database
+        let savedMessageId: string | undefined;
+        try {
+            const savedMessage = await this.prisma.chatMessage.create({
+                data: {
+                    fromId: data.from,
+                    toId: data.to,
+                    message: data.message,
+                },
+            });
+            savedMessageId = savedMessage.id;
+            this.logger.log(`Chat message saved to database: ${data.from} -> ${data.to} (ID: ${savedMessageId})`);
+        } catch (error) {
+            this.logger.error(`Failed to save chat message to database: ${error}`);
+            // Continue even if save fails
+        }
+        
+        // Include database ID in message data if available
+        const messageDataWithId = {
+            ...messageData,
+            messageId: savedMessageId || data.timestamp,
+        };
+        
         // Broadcast to all clients in both rooms using server.to() to ensure all clients receive it
         // Exclude sender by using client.to() for the sender's room, but include in target's room
-        this.server.to(room1).emit('chat-message', messageData);
-        this.server.to(room2).emit('chat-message', messageData);
+        this.server.to(room1).emit('chat-message', messageDataWithId);
+        this.server.to(room2).emit('chat-message', messageDataWithId);
+        
+        // Create notification for the recipient
+        try {
+            await this.notificationsService.createNotification({
+                userId: data.to,
+                type: NotificationType.CHAT_MESSAGE,
+                severity: NotificationSeverity.INFO,
+                title: `Nouveau message de ${senderName || 'User'}`,
+                message: data.message.length > 100 ? data.message.substring(0, 100) + '...' : data.message,
+                metadata: {
+                    from: data.from,
+                    fromName: senderName || 'User',
+                    messageId: data.timestamp,
+                    fullMessage: data.message,
+                },
+            });
+            this.logger.log(`Notification created for user ${data.to} for chat message from ${data.from}`);
+        } catch (error) {
+            this.logger.error(`Failed to create notification for chat message: ${error}`);
+            // Don't fail the message sending if notification creation fails
+        }
         
         this.logger.log(`Chat message from ${data.from} to ${data.to} - rooms: ${room1}, ${room2}`);
     }
 
     // Method to emit notifications to specific users
     emitNotification(userId: string, notification: any) {
-        this.server.emit(`notification:${userId}`, notification);
+        // Send to user-specific notification room
+        const room = `notifications:${userId}`;
+        this.server.to(room).emit(`notification:${userId}`, notification);
+        this.logger.log(`Notification emitted to room ${room} for user ${userId}`);
     }
 }

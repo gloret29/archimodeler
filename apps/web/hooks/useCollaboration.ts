@@ -17,9 +17,10 @@ export interface CursorPosition {
 
 export interface CollaborationState {
     users: User[];
-    cursors: Record<string, CursorPosition>;
+    cursors: Record<string, CursorPosition>; // user.id -> position
     selections: Record<string, string[]>; // userId -> nodeIds
     isConnected: boolean;
+    socketIdToUserId: Record<string, string>; // socket.id -> user.id mapping
 }
 
 interface UseCollaborationOptions {
@@ -42,6 +43,7 @@ export function useCollaboration({
     onSelectionChanged,
 }: UseCollaborationOptions) {
     const socketRef = useRef<Socket | null>(null);
+    const socketIdRef = useRef<string | null>(null);
     const onNodeChangedRef = useRef(onNodeChanged);
     const onEdgeChangedRef = useRef(onEdgeChanged);
     const onNodeDeletedRef = useRef(onNodeDeleted);
@@ -64,6 +66,7 @@ export function useCollaboration({
         cursors: {},
         selections: {},
         isConnected: false,
+        socketIdToUserId: {},
     });
 
     // Initialize socket connection
@@ -85,7 +88,7 @@ export function useCollaboration({
         socketRef.current = socket;
 
         socket.on('connect', () => {
-            console.log('✓ Connected to collaboration server');
+            socketIdRef.current = socket.id;
             setState((prev) => ({ ...prev, isConnected: true }));
 
             // Join the view
@@ -107,7 +110,7 @@ export function useCollaboration({
             console.warn('Collaboration error:', error?.message || error);
         });
 
-        socket.on('session-state', (data: { users: User[]; cursors: Record<string, CursorPosition> }) => {
+        socket.on('session-state', (data: { users: User[]; cursors: Record<string, CursorPosition>; socketIdToUserId?: Record<string, string> }) => {
             // Filter out duplicate users
             const uniqueUsers = data.users.filter((user, index, self) => 
                 index === self.findIndex(u => u.id === user.id)
@@ -115,20 +118,28 @@ export function useCollaboration({
             setState((prev) => ({
                 ...prev,
                 users: uniqueUsers,
-                cursors: data.cursors,
+                cursors: data.cursors, // Cursors should already be mapped by user.id from server
+                socketIdToUserId: data.socketIdToUserId || prev.socketIdToUserId, // Store mapping if provided
             }));
         });
 
         socket.on('user-joined', (data: { userId: string; user: User; users: User[] }) => {
-            console.log('User joined:', data.user.name);
+            console.log('User joined:', data.user.name, 'socket ID:', data.userId);
             // Filter out duplicate users
             const uniqueUsers = data.users.filter((user, index, self) => 
                 index === self.findIndex(u => u.id === user.id)
             );
-            setState((prev) => ({
-                ...prev,
-                users: uniqueUsers,
-            }));
+            setState((prev) => {
+                // Create mapping: data.userId is socket ID, data.user.id is user ID
+                const newMapping = { ...prev.socketIdToUserId };
+                newMapping[data.userId] = data.user.id;
+                
+                return {
+                    ...prev,
+                    users: uniqueUsers,
+                    socketIdToUserId: newMapping,
+                };
+            });
         });
 
         socket.on('user-left', (data: { userId: string; users: User[] }) => {
@@ -139,24 +150,56 @@ export function useCollaboration({
             );
             setState((prev) => {
                 const newCursors = { ...prev.cursors };
+                // data.userId might be socket ID, try to find user ID
+                const userToRemove = uniqueUsers.find(u => u.id === data.userId) || 
+                                    prev.users.find(u => prev.socketIdToUserId[data.userId] === u.id);
+                if (userToRemove) {
+                    delete newCursors[userToRemove.id];
+                }
+                // Also try socket ID directly
                 delete newCursors[data.userId];
                 
                 const newSelections = { ...prev.selections };
+                if (userToRemove) {
+                    delete newSelections[userToRemove.id];
+                }
                 delete newSelections[data.userId];
+                
+                // Clean up mapping
+                const newMapping = { ...prev.socketIdToUserId };
+                delete newMapping[data.userId];
 
                 return {
                     ...prev,
                     users: uniqueUsers,
                     cursors: newCursors,
                     selections: newSelections,
+                    socketIdToUserId: newMapping,
                 };
             });
         });
 
         socket.on('cursor-update', (data: { userId: string; position: CursorPosition }) => {
-            // Only update if position actually changed
+            // The userId might be a socket ID if server hasn't been restarted
+            // Try to find the corresponding user ID
             setState((prev) => {
-                const currentPos = prev.cursors[data.userId];
+                // Check if userId is actually a user ID (exists in users)
+                const isUserId = prev.users.some(u => u.id === data.userId);
+                let actualUserId = data.userId;
+                
+                // If it's a socket ID, try to find the user
+                if (!isUserId) {
+                    // Check if we have a mapping
+                    const mappedUserId = prev.socketIdToUserId[data.userId];
+                    if (mappedUserId) {
+                        actualUserId = mappedUserId;
+                    } else {
+                        // Store cursor with socket ID for now, will be cleaned up when user mapping is available
+                        actualUserId = data.userId;
+                    }
+                }
+                
+                const currentPos = prev.cursors[actualUserId];
                 if (currentPos && 
                     currentPos.x === data.position.x && 
                     currentPos.y === data.position.y) {
@@ -166,28 +209,44 @@ export function useCollaboration({
                     ...prev,
                     cursors: {
                         ...prev.cursors,
-                        [data.userId]: data.position,
+                        [actualUserId]: data.position,
                     },
                 };
             });
         });
 
         socket.on('node-changed', (data: { userId: string; node: any }) => {
+            // Filter out our own messages by comparing user IDs
+            if (data.userId === userRef.current.id) {
+                return;
+            }
             if (onNodeChangedRef.current) {
                 onNodeChangedRef.current(data);
             }
         });
         socket.on('edge-changed', (data: { userId: string; edge: any }) => {
+            // Filter out our own messages by comparing user IDs
+            if (data.userId === userRef.current.id) {
+                return;
+            }
             if (onEdgeChangedRef.current) {
                 onEdgeChangedRef.current(data);
             }
         });
         socket.on('node-deleted', (data: { userId: string; nodeId: string }) => {
+            // Filter out our own messages by comparing user IDs
+            if (data.userId === userRef.current.id) {
+                return;
+            }
             if (onNodeDeletedRef.current) {
                 onNodeDeletedRef.current(data);
             }
         });
         socket.on('edge-deleted', (data: { userId: string; edgeId: string }) => {
+            // Filter out our own messages by comparing user IDs
+            if (data.userId === userRef.current.id) {
+                return;
+            }
             if (onEdgeDeletedRef.current) {
                 onEdgeDeletedRef.current(data);
             }
@@ -220,7 +279,9 @@ export function useCollaboration({
     }, [viewId]);
 
     const updateNode = useCallback((node: any) => {
-        socketRef.current?.emit('node-update', { viewId, node });
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('node-update', { viewId, node });
+        }
     }, [viewId]);
 
     const updateEdge = useCallback((edge: any) => {

@@ -23,17 +23,34 @@ export default function ActiveUsers({ users, isConnected, currentUser }: ActiveU
     const { getUnreadCount } = useUnreadMessages();
     const { openChat, chatTarget, isChatOpen, closeChat } = useChatContext();
 
-    // Filter out duplicate users based on ID
+    // Filter out duplicate users, users with invalid names, and current user
     const uniqueUsers = React.useMemo(() => {
         const seen = new Set<string>();
         return users.filter(user => {
+            // Filter out current user
+            if (user.id === currentUser.id) {
+                return false;
+            }
+            
+            // Filter out duplicates
             if (seen.has(user.id)) {
                 return false;
             }
             seen.add(user.id);
+            
+            // Filter out users with invalid names (generic "User" or "User XXX")
+            if (!user.name || 
+                user.name.trim() === '' || 
+                user.name === 'User' || 
+                user.name.startsWith('User ') ||
+                user.id === '' ||
+                user.id.startsWith('User ')) {
+                return false;
+            }
+            
             return true;
         });
-    }, [users]);
+    }, [users, currentUser.id]);
 
     const handleChatClick = (user: User) => {
         openChat(user.id, user.name, user.color);

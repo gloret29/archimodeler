@@ -1,27 +1,72 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, CursorPosition } from '@/hooks/useCollaboration';
 
 interface CollaborativeCursorsProps {
     users: User[];
     cursors: Record<string, CursorPosition>;
+    reactFlowInstance: any;
 }
 
-export default function CollaborativeCursors({ users, cursors }: CollaborativeCursorsProps) {
+export default function CollaborativeCursors({ users, cursors, reactFlowInstance }: CollaborativeCursorsProps) {
+    const [paneRect, setPaneRect] = useState<DOMRect | null>(null);
+
+    // Update pane rect when React Flow instance changes or on resize
+    useEffect(() => {
+        if (!reactFlowInstance) return;
+
+        const updatePaneRect = () => {
+            const reactFlowPane = document.querySelector('.react-flow__pane') as HTMLElement;
+            if (reactFlowPane) {
+                setPaneRect(reactFlowPane.getBoundingClientRect());
+            }
+        };
+
+        updatePaneRect();
+        window.addEventListener('resize', updatePaneRect);
+        window.addEventListener('scroll', updatePaneRect, true);
+
+        // Update periodically to catch React Flow viewport changes
+        const interval = setInterval(updatePaneRect, 100);
+
+        return () => {
+            window.removeEventListener('resize', updatePaneRect);
+            window.removeEventListener('scroll', updatePaneRect, true);
+            clearInterval(interval);
+        };
+    }, [reactFlowInstance]);
+
+    if (!reactFlowInstance || !paneRect) {
+        return null;
+    }
+
     return (
         <>
             {users.map((user) => {
                 const cursor = cursors[user.id];
-                if (!cursor) return null;
+                if (!cursor) {
+                    return null;
+                }
 
+                // Check if cursor position is valid
+                if (typeof cursor.x !== 'number' || typeof cursor.y !== 'number') {
+                    return null;
+                }
+
+                // Convert flow coordinates to screen coordinates
+                const screenPosition = reactFlowInstance.flowToScreenPosition({
+                    x: cursor.x,
+                    y: cursor.y,
+                });
+                
                 return (
                     <div
                         key={user.id}
-                        className="pointer-events-none absolute z-50 transition-all duration-100"
+                        className="pointer-events-none fixed z-50 transition-all duration-100"
                         style={{
-                            left: `${cursor.x}px`,
-                            top: `${cursor.y}px`,
+                            left: `${paneRect.left + screenPosition.x}px`,
+                            top: `${paneRect.top + screenPosition.y}px`,
                             transform: 'translate(-50%, -50%)',
                         }}
                     >

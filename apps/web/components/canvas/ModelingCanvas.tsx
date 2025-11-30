@@ -50,6 +50,7 @@ export interface ModelingCanvasProps {
     setEdges?: Dispatch<SetStateAction<Edge[]>>;
     onNodeClick?: (nodeId: string, elementId: string | undefined, elementName: string, elementType: string) => void;
     onEdgeClick?: (edgeId: string, relationshipId: string | undefined, relationshipName: string, relationshipType: string) => void;
+    onReactFlowInit?: (instance: any) => void;
 }
 
 export default function ModelingCanvas({
@@ -63,6 +64,7 @@ export default function ModelingCanvas({
     setEdges: controlledSetEdges,
     onNodeClick,
     onEdgeClick,
+    onReactFlowInit,
 }: ModelingCanvasProps) {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     
@@ -486,7 +488,12 @@ export default function ModelingCanvas({
                         onEdgeClick('', undefined, '', '');
                     }
                 }}
-                onInit={setReactFlowInstance}
+                onInit={(instance) => {
+                    setReactFlowInstance(instance);
+                    if (onReactFlowInit) {
+                        onReactFlowInit(instance);
+                    }
+                }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 isValidConnection={isValidConnection}

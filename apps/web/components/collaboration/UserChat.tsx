@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, MessageCircle } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -16,6 +16,7 @@ import { io, Socket } from 'socket.io-client';
 import { useOpenChats } from '@/hooks/useOpenChats';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { API_CONFIG } from '@/lib/api/config';
+import { api } from '@/lib/api/client';
 
 interface Message {
     id: string;
@@ -55,6 +56,38 @@ export function UserChat({ currentUser, targetUser, isOpen, onClose }: UserChatP
             unregisterOpenChat(targetUser.id);
         };
     }, [isOpen, targetUser.id, registerOpenChat, unregisterOpenChat, clearUnread]);
+
+    // Load chat history when dialog opens
+    useEffect(() => {
+        if (!isOpen) {
+            setMessages([]);
+            return;
+        }
+
+        const loadChatHistory = async () => {
+            try {
+                const history = await api.get(`/users/me/chat/${targetUser.id}`);
+                // Convert history to Message format
+                const formattedMessages: Message[] = history.map((msg: any) => ({
+                    id: msg.id,
+                    from: msg.from,
+                    to: msg.to,
+                    message: msg.message,
+                    timestamp: new Date(msg.timestamp),
+                }));
+                setMessages(formattedMessages);
+                // Scroll to bottom after loading history
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+                }, 100);
+            } catch (error) {
+                console.error('Failed to load chat history:', error);
+                // Continue even if history loading fails
+            }
+        };
+
+        loadChatHistory();
+    }, [isOpen, targetUser.id]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -145,6 +178,8 @@ export function UserChat({ currentUser, targetUser, isOpen, onClose }: UserChatP
         });
 
         // Add to local state immediately for instant feedback
+        // Note: The message will also be added when received via WebSocket
+        // But we add it here for instant UI feedback
         const message: Message = {
             id: messageId,
             from: currentUser.id,
@@ -153,7 +188,14 @@ export function UserChat({ currentUser, targetUser, isOpen, onClose }: UserChatP
             timestamp: new Date(timestamp),
         };
         
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+            // Check if message already exists (shouldn't happen, but just in case)
+            const exists = prev.some(m => m.id === messageId);
+            if (exists) {
+                return prev;
+            }
+            return [...prev, message];
+        });
         setInput('');
     };
 
@@ -168,19 +210,14 @@ export function UserChat({ currentUser, targetUser, isOpen, onClose }: UserChatP
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
                 <DialogHeader className="px-4 pt-4 pb-2 border-b">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div
-                                className="h-3 w-3 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: targetUser.color }}
-                            />
-                            <DialogTitle className="text-lg">
-                                Chat with {targetUser.name}
-                            </DialogTitle>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={onClose}>
-                            <X className="h-4 w-4" />
-                        </Button>
+                    <div className="flex items-center gap-2">
+                        <div
+                            className="h-3 w-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: targetUser.color }}
+                        />
+                        <DialogTitle className="text-lg">
+                            Chat with {targetUser.name}
+                        </DialogTitle>
                     </div>
                 </DialogHeader>
                 

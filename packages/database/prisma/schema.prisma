@@ -28,6 +28,8 @@ model User {
   reviewedChanges  ChangeRequest[] @relation("Reviewer")
   
   notifications Notification[]
+  sentMessages ChatMessage[] @relation("SentMessages")
+  receivedMessages ChatMessage[] @relation("ReceivedMessages")
 }
 
 model Role {
@@ -357,6 +359,7 @@ enum NotificationType {
   VIEW_UPDATED
   SYSTEM_ALERT
   COLLABORATION_INVITE
+  CHAT_MESSAGE
 }
 
 enum NotificationSeverity {
@@ -385,4 +388,17 @@ model Notification {
   
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  fromId    String
+  from      User     @relation("SentMessages", fields: [fromId], references: [id], onDelete: Cascade)
+  toId      String
+  to        User     @relation("ReceivedMessages", fields: [toId], references: [id], onDelete: Cascade)
+  message   String
+  createdAt DateTime @default(now())
+  
+  @@index([fromId, toId, createdAt])
+  @@index([toId, fromId, createdAt])
 }

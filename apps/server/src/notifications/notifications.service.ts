@@ -45,25 +45,43 @@ export class NotificationsService {
     }
 
     async getUserNotifications(userId: string, unreadOnly: boolean = false) {
-        const where: any = { userId };
-        if (unreadOnly) {
-            where.read = false;
+        if (!userId) {
+            this.logger.error('getUserNotifications called with null/undefined userId');
+            return [];
         }
+        try {
+            const where: any = { userId };
+            if (unreadOnly) {
+                where.read = false;
+            }
 
-        return this.prisma.notification.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-            take: 100, // Limit to last 100 notifications
-        });
+            return await this.prisma.notification.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                take: 100, // Limit to last 100 notifications
+            });
+        } catch (error) {
+            this.logger.error(`Error fetching notifications for user ${userId}:`, error);
+            throw error;
+        }
     }
 
     async getUnreadCount(userId: string): Promise<number> {
-        return this.prisma.notification.count({
-            where: {
-                userId,
-                read: false,
-            },
-        });
+        if (!userId) {
+            this.logger.error('getUnreadCount called with null/undefined userId');
+            return 0;
+        }
+        try {
+            return await this.prisma.notification.count({
+                where: {
+                    userId,
+                    read: false,
+                },
+            });
+        } catch (error) {
+            this.logger.error(`Error counting unread notifications for user ${userId}:`, error);
+            throw error;
+        }
     }
 
     async markAsRead(notificationId: string, userId: string) {
@@ -108,6 +126,72 @@ export class NotificationsService {
                 read: true,
             },
         });
+    }
+
+    /**
+     * Send a notification to all users in the platform
+     * Used for system-wide announcements
+     */
+    async broadcastNotification(data: {
+        type: NotificationType;
+        severity?: NotificationSeverity;
+        title: string;
+        message: string;
+        metadata?: any;
+    }) {
+        try {
+            // Get all users
+            const users = await this.prisma.user.findMany({
+                select: { id: true },
+            });
+
+            if (users.length === 0) {
+                this.logger.warn('No users found in database for broadcast');
+                return { count: 0, notifications: [] };
+            }
+
+            this.logger.log(`Broadcasting notification to ${users.length} users`);
+
+            // Create notification for each user
+            const notifications = await Promise.all(
+                users.map(async (user) => {
+                    try {
+                        return await this.prisma.notification.create({
+                            data: {
+                                userId: user.id,
+                                type: data.type,
+                                severity: data.severity || NotificationSeverity.INFO,
+                                title: data.title,
+                                message: data.message,
+                                metadata: data.metadata || {},
+                            },
+                        });
+                    } catch (error) {
+                        this.logger.error(`Failed to create notification for user ${user.id}:`, error);
+                        throw error;
+                    }
+                })
+            );
+
+            // Emit notification via WebSocket to all users
+            if (this.collaborationGateway) {
+                notifications.forEach(notification => {
+                    try {
+                        this.collaborationGateway!.emitNotification(notification.userId, notification);
+                    } catch (error) {
+                        this.logger.error(`Failed to emit notification to user ${notification.userId}:`, error);
+                    }
+                });
+            } else {
+                this.logger.warn('CollaborationGateway not available, notifications not sent via WebSocket');
+            }
+
+            this.logger.log(`Broadcast notification sent to ${notifications.length} users`);
+            return { count: notifications.length, notifications };
+        } catch (error) {
+            this.logger.error('Error in broadcastNotification:', error);
+            throw error;
+        }
     }
 }
 

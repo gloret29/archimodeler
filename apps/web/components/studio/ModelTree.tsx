@@ -424,9 +424,7 @@ function ModelTree({ packageId, onElementSelect, onRelationshipSelect }: ModelTr
 
         try {
             await api.put(`/model/elements/${elementId}`, {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name: newName })
+                name: newName
             });
             fetchData();
         } catch (err) {

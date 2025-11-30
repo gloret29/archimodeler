@@ -54,4 +54,28 @@ export class UsersService {
             where: { id },
         });
     }
+
+    async getChatHistory(userId: string, targetUserId: string) {
+        // Get messages in both directions (from user to target and from target to user)
+        const messages = await this.prisma.chatMessage.findMany({
+            where: {
+                OR: [
+                    { fromId: userId, toId: targetUserId },
+                    { fromId: targetUserId, toId: userId },
+                ],
+            },
+            orderBy: {
+                createdAt: 'asc',
+            },
+            take: 100, // Limit to last 100 messages
+        });
+
+        return messages.map(msg => ({
+            id: msg.id,
+            from: msg.fromId,
+            to: msg.toId,
+            message: msg.message,
+            timestamp: msg.createdAt,
+        }));
+    }
 }

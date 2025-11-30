@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from '@/navigation';
+import { useRouter, Link } from '@/navigation';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api/client';
 import { API_CONFIG } from '@/lib/api/config';

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react';
-import { ReactFlowProvider, useNodesState, useEdgesState, Node, Edge, NodeChange, EdgeChange } from '@xyflow/react';
+import { ReactFlowProvider, useNodesState, useEdgesState, Node, Edge, NodeChange, EdgeChange, useReactFlow } from '@xyflow/react';
 import ModelingCanvas from '@/components/canvas/ModelingCanvas';
 import { useCollaboration, User } from '@/hooks/useCollaboration';
 import CollaborativeCursors from '@/components/collaboration/CollaborativeCursors';
@@ -11,6 +11,7 @@ interface CollaborativeCanvasProps {
     viewId: string;
     viewName: string;
     packageId: string | null;
+    currentUser?: User | null;
     onContentChange?: (content: { nodes: Node[]; edges: Edge[] }) => void;
     onNodeClick?: (nodeId: string, elementId: string | undefined, elementName: string, elementType: string) => void;
     onEdgeClick?: (edgeId: string, relationshipId: string | undefined, relationshipName: string, relationshipType: string) => void;
@@ -30,6 +31,7 @@ export default function CollaborativeCanvas({
     viewId,
     viewName,
     packageId,
+    currentUser: propCurrentUser,
     onContentChange,
     onNodeClick,
     onEdgeClick
@@ -39,12 +41,24 @@ export default function CollaborativeCanvas({
     const [edges, setEdges, onEdgesChangeInternal] = useEdgesState([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Create user object (in a real app, this would come from auth)
-    const currentUser = useMemo<User>(() => ({
-        id: Math.random().toString(36).substring(7),
-        name: `User ${Math.floor(Math.random() * 1000)}`, // Replace with actual user name
-        color: generateUserColor(),
-    }), []);
+    // Use provided user or create a fallback (should not happen in production)
+    const currentUser = useMemo<User | null>(() => {
+        if (propCurrentUser && propCurrentUser.id && propCurrentUser.name) {
+            // Generate color based on user ID for consistency
+            const colors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+                '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
+                '#F8B739', '#52B788', '#E76F51', '#2A9D8F'
+            ];
+            const colorIndex = parseInt(propCurrentUser.id.slice(-1), 16) % colors.length;
+            return {
+                id: propCurrentUser.id,
+                name: propCurrentUser.name,
+                color: propCurrentUser.color || colors[colorIndex],
+            };
+        }
+        return null;
+    }, [propCurrentUser]);
 
     // Fetch initial view data
     useEffect(() => {
@@ -87,6 +101,21 @@ export default function CollaborativeCanvas({
     // This prevents race conditions where socket events overwrite initial load or vice-versa
     const collaborationEnabled = isLoaded && !!viewId;
 
+    // Flag to prevent broadcasting changes that come from remote users
+    const isApplyingRemoteChangeRef = useRef(false);
+    // Ref to store current nodes for broadcasting
+    const nodesRef = useRef<Node[]>(nodes);
+    const edgesRef = useRef<Edge[]>(edges);
+
+    // Update refs when nodes/edges change
+    useEffect(() => {
+        nodesRef.current = nodes;
+    }, [nodes]);
+
+    useEffect(() => {
+        edgesRef.current = edges;
+    }, [edges]);
+
     const {
         users,
         cursors,
@@ -99,22 +128,35 @@ export default function CollaborativeCanvas({
         deleteEdge,
         updateSelection,
     } = useCollaboration({
-        viewId: collaborationEnabled ? viewId : '', // Don't connect if not enabled
-        user: currentUser,
+        viewId: collaborationEnabled && currentUser ? viewId : '', // Don't connect if not enabled or no user
+        user: currentUser || { id: '', name: '', color: '#4ECDC4' }, // Fallback user (will be rejected by server)
         onNodeChanged: (data) => {
-            if (data.userId === currentUser.id) return;
-            
+            // This callback is only called for remote changes (filtered in useCollaboration)
+            isApplyingRemoteChangeRef.current = true;
             setNodes((nds) => {
                 const nodeExists = nds.some((n) => n.id === data.node.id);
                 if (nodeExists) {
-                    return nds.map((n) => (n.id === data.node.id ? data.node : n));
+                    const existingNode = nds.find((n) => n.id === data.node.id);
+                    // Only update if position or data actually changed
+                    if (existingNode && (
+                        existingNode.position.x !== data.node.position?.x ||
+                        existingNode.position.y !== data.node.position?.y ||
+                        JSON.stringify(existingNode.data) !== JSON.stringify(data.node.data)
+                    )) {
+                        return nds.map((n) => (n.id === data.node.id ? data.node : n));
+                    }
+                    return nds;
                 }
                 return [...nds, data.node];
             });
+            // Reset flag after state update
+            setTimeout(() => {
+                isApplyingRemoteChangeRef.current = false;
+            }, 100);
         },
         onEdgeChanged: (data) => {
-            if (data.userId === currentUser.id) return;
-            
+            // This callback is only called for remote changes (filtered in useCollaboration)
+            isApplyingRemoteChangeRef.current = true;
             setEdges((eds) => {
                 const edgeExists = eds.some((e) => e.id === data.edge.id);
                 if (edgeExists) {
@@ -122,41 +164,77 @@ export default function CollaborativeCanvas({
                 }
                 return [...eds, data.edge];
             });
+            // Reset flag after state update
+            setTimeout(() => {
+                isApplyingRemoteChangeRef.current = false;
+            }, 100);
         },
         onNodeDeleted: (data) => {
-            if (data.userId === currentUser.id) return;
+            // This callback is only called for remote changes (filtered in useCollaboration)
+            isApplyingRemoteChangeRef.current = true;
             setNodes((nds) => nds.filter((n) => n.id !== data.nodeId));
+            setTimeout(() => {
+                isApplyingRemoteChangeRef.current = false;
+            }, 100);
         },
         onEdgeDeleted: (data) => {
-            if (data.userId === currentUser.id) return;
+            // This callback is only called for remote changes (filtered in useCollaboration)
+            isApplyingRemoteChangeRef.current = true;
             setEdges((eds) => eds.filter((e) => e.id !== data.edgeId));
+            setTimeout(() => {
+                isApplyingRemoteChangeRef.current = false;
+            }, 100);
         },
     });
 
     const onNodesChange = useCallback(
         (changes: NodeChange[]) => {
-            // Apply changes locally
+            // Apply changes locally first
             onNodesChangeInternal(changes);
 
-            // Broadcast changes
-            if (isConnected) {
-                changes.forEach((change) => {
-                    if (change.type === 'position' || change.type === 'dimensions') {
-                        const node = nodes.find((n) => n.id === change.id);
-                        if (node) {
-                            const updatedNode = { ...node };
-                            if (change.type === 'position' && change.position) {
-                                updatedNode.position = change.position;
+            // Broadcast changes only if they come from local user (not from remote sync)
+            if (isConnected && !isApplyingRemoteChangeRef.current) {
+                // Process changes immediately using the current nodes state
+                // We'll use a small delay to ensure React Flow has processed the change
+                requestAnimationFrame(() => {
+                    if (!isApplyingRemoteChangeRef.current && isConnected) {
+                        // Get the latest nodes from ref (should be updated by now)
+                        const currentNodes = nodesRef.current;
+                        
+                        changes.forEach((change) => {
+                            if (change.type === 'position' || change.type === 'dimensions') {
+                                // For position changes, use the position from the change directly
+                                if (change.type === 'position' && change.position) {
+                                    const node = currentNodes.find((n) => n.id === change.id);
+                                    if (node) {
+                                        const updatedNode = {
+                                            ...node,
+                                            position: change.position,
+                                        };
+                                        updateNode(updatedNode);
+                                    } else {
+                                        // If node not found yet, try again after a short delay
+                                        setTimeout(() => {
+                                            const delayedNode = nodesRef.current.find((n) => n.id === change.id);
+                                            if (delayedNode) {
+                                                const updatedNode = {
+                                                    ...delayedNode,
+                                                    position: change.position,
+                                                };
+                                                updateNode(updatedNode);
+                                            }
+                                        }, 100);
+                                    }
+                                }
+                            } else if (change.type === 'remove') {
+                                deleteNode(change.id);
                             }
-                            updateNode(updatedNode);
-                        }
-                    } else if (change.type === 'remove') {
-                        deleteNode(change.id);
+                        });
                     }
                 });
             }
         },
-        [nodes, onNodesChangeInternal, updateNode, deleteNode, isConnected]
+        [onNodesChangeInternal, updateNode, deleteNode, isConnected]
     );
 
     // Broadcast selection changes
@@ -186,7 +264,8 @@ export default function CollaborativeCanvas({
         setNodes((prevNodes) => {
             const newNodes = typeof value === 'function' ? (value as any)(prevNodes) : value;
             
-            if (isConnected) {
+            // Only broadcast if change comes from local user (not from remote sync)
+            if (isConnected && !isApplyingRemoteChangeRef.current) {
                 // Find added nodes
                 const addedNodes = newNodes.filter((n: Node) => !prevNodes.some((pn: Node) => pn.id === n.id));
                 addedNodes.forEach((node: Node) => {
@@ -214,7 +293,8 @@ export default function CollaborativeCanvas({
         setEdges((prevEdges) => {
             const newEdges = typeof value === 'function' ? (value as any)(prevEdges) : value;
             
-            if (isConnected) {
+            // Only broadcast if change comes from local user (not from remote sync)
+            if (isConnected && !isApplyingRemoteChangeRef.current) {
                 const addedEdges = newEdges.filter((e: Edge) => !prevEdges.some((pe: Edge) => pe.id === e.id));
                 addedEdges.forEach((edge: Edge) => {
                     updateEdge(edge);
@@ -225,27 +305,58 @@ export default function CollaborativeCanvas({
         });
     }, [setEdges, updateEdge, isConnected]);
 
+    // Track React Flow instance for coordinate conversion
+    const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+    const lastCursorUpdateRef = useRef<{ x: number; y: number } | null>(null);
+
     useEffect(() => {
+        if (!isConnected || !reactFlowInstance) return;
+
         const handleMouseMove = (e: MouseEvent) => {
-            if (canvasRef.current && isConnected) {
-                const rect = canvasRef.current.getBoundingClientRect();
-                updateCursor({
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top,
-                });
+            if (canvasRef.current) {
+                // Get React Flow viewport element
+                const reactFlowPane = canvasRef.current.querySelector('.react-flow__pane') as HTMLElement;
+                if (reactFlowPane) {
+                    const rect = reactFlowPane.getBoundingClientRect();
+                    // Check if mouse is within the pane bounds
+                    if (
+                        e.clientX >= rect.left &&
+                        e.clientX <= rect.right &&
+                        e.clientY >= rect.top &&
+                        e.clientY <= rect.bottom
+                    ) {
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        // Convert screen coordinates to flow coordinates (accounting for zoom and pan)
+                        const flowPosition = reactFlowInstance.screenToFlowPosition({ x, y });
+                        
+                        // Throttle cursor updates (only send if position changed significantly)
+                        const lastPos = lastCursorUpdateRef.current;
+                        if (!lastPos || 
+                            Math.abs(lastPos.x - flowPosition.x) > 5 || 
+                            Math.abs(lastPos.y - flowPosition.y) > 5) {
+                            lastCursorUpdateRef.current = { x: flowPosition.x, y: flowPosition.y };
+                            updateCursor({
+                                x: flowPosition.x,
+                                y: flowPosition.y,
+                            });
+                        }
+                    }
+                }
             }
         };
 
-        const canvas = canvasRef.current;
-        if (canvas) {
-            canvas.addEventListener('mousemove', handleMouseMove);
-            return () => {
-                canvas.removeEventListener('mousemove', handleMouseMove);
-            };
-        }
-    }, [updateCursor, isConnected]);
+        // Use document to catch mouse movements even outside the canvas
+        document.addEventListener('mousemove', handleMouseMove);
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [updateCursor, isConnected, reactFlowInstance]);
 
     const nodesWithSelection = useMemo(() => {
+        if (!currentUser) return nodes;
+        
         return nodes.map(node => {
             const selectedBy: { name: string; color: string }[] = [];
             
@@ -271,7 +382,7 @@ export default function CollaborativeCanvas({
             
             return node;
         });
-    }, [nodes, users, selections, currentUser.id]);
+    }, [nodes, users, selections, currentUser]);
 
     // Notify parent of content changes
     const lastContentRef = useRef<string>('');
@@ -332,11 +443,16 @@ export default function CollaborativeCanvas({
                     setEdges={handleSetEdges}
                     onNodeClick={onNodeClick}
                     onEdgeClick={onEdgeClick}
+                    onReactFlowInit={setReactFlowInstance}
                 />
             </ReactFlowProvider>
 
-            {isConnected && (
-                <CollaborativeCursors users={users} cursors={cursors} />
+            {isConnected && reactFlowInstance && currentUser && (
+                <CollaborativeCursors 
+                    users={users.filter(u => u.id !== currentUser.id)} 
+                    cursors={cursors}
+                    reactFlowInstance={reactFlowInstance}
+                />
             )}
         </div>
     );

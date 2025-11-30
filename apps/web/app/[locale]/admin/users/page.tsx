@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "@/navigation";
+import { useRouter, Link } from "@/navigation";
 import { Button } from "@/components/ui/button";
 import { api } from '@/lib/api/client';
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Pencil, Trash2, Home } from "lucide-react";
-import { Link } from "@/navigation";
 import { useTranslations } from "next-intl";
 
 interface User {

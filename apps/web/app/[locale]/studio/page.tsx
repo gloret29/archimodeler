@@ -21,6 +21,8 @@ import { API_CONFIG } from '@/lib/api/config';
 import { Home, Save, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useRouter } from '@/navigation';
+import { UserInfo } from '@/components/common/UserInfo';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
 function StudioContent() {
     const searchParams = useSearchParams();
@@ -177,12 +179,8 @@ function StudioContent() {
                 }
             } catch (error) {
                 console.error('Failed to fetch current user:', error);
-                // Fallback to random user
-                setCurrentUser({
-                    id: Math.random().toString(36).substring(7),
-                    name: 'User',
-                    color: '#4ECDC4',
-                });
+                // Don't set a fallback user - collaboration requires a valid authenticated user
+                setCurrentUser(null);
             }
         };
         fetchCurrentUser();
@@ -190,9 +188,9 @@ function StudioContent() {
 
     const { users, isConnected } = useCollaboration({
         viewId: activeTab?.viewId || '',
-        user: currentUser && currentUser.name && currentUser.name !== 'User' 
+        user: currentUser && currentUser.name && currentUser.name !== 'User' && currentUser.id
             ? currentUser 
-            : currentUser || { id: '', name: 'User', color: '#4ECDC4' },
+            : { id: '', name: '', color: '#4ECDC4' },
         onNodeChanged: () => { },
         onEdgeChanged: () => { },
     });
@@ -333,6 +331,8 @@ function StudioContent() {
                     {activeTab && currentUser && (
                         <ActiveUsers users={users} isConnected={isConnected} currentUser={currentUser} />
                     )}
+                    <NotificationCenter />
+                    <UserInfo />
                 </div>
             </header>
 
@@ -348,6 +348,7 @@ function StudioContent() {
                             viewId={activeTab.viewId}
                             viewName={activeTab.viewName}
                             packageId={activeTab.packageId}
+                            currentUser={currentUser}
                             onContentChange={handleContentChange}
                             onNodeClick={(nodeId, elementId, elementName, elementType) => {
                                 if (elementId && nodeId) {

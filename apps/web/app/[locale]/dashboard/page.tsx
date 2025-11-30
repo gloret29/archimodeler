@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Home } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api/client';
+import { UserInfo } from '@/components/common/UserInfo';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
 export default function DashboardPage() {
     const t = useTranslations('Home');
@@ -26,18 +28,26 @@ export default function DashboardPage() {
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
     return (
-        <div className="p-8">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold">Dashboard</h1>
-                <Link href="/home">
-                    <Button variant="outline" title={t('backToHome')}>
-                        <Home className="mr-2 h-4 w-4" />
-                        {t('backToHome')}
-                    </Button>
-                </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="min-h-screen">
+            <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+                <div className="container mx-auto px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-2xl font-bold">Dashboard</h1>
+                        <div className="flex items-center gap-3">
+                            <Link href="/home">
+                                <Button variant="outline" title={t('backToHome')}>
+                                    <Home className="mr-2 h-4 w-4" />
+                                    {t('backToHome')}
+                                </Button>
+                            </Link>
+                            <NotificationCenter />
+                            <UserInfo />
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-card p-6 rounded-lg shadow border">
                     <h2 className="text-xl font-semibold mb-4">Elements by Type</h2>
                     <div className="h-80">
@@ -83,6 +93,7 @@ export default function DashboardPage() {
                         </ResponsiveContainer>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );
