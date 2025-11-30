@@ -1,239 +1,503 @@
-# Guide de déploiement ArchiModeler sur Proxmox
+# Guide de Déploiement ArchiModeler sur Proxmox
 
-Ce guide explique comment utiliser le script `deploy-proxmox.sh` pour déployer automatiquement ArchiModeler sur une VM Proxmox.
+Ce guide explique comment déployer ArchiModeler sur un container LXC Proxmox.
 
 ## Prérequis
 
-### Sur le serveur Proxmox
+- Serveur Proxmox VE installé et fonctionnel
+- Accès root ou sudo sur le serveur Proxmox
+- Template Ubuntu 22.04 disponible dans Proxmox
+- Au moins 2GB de RAM et 20GB d'espace disque disponibles
 
-1. **Proxmox VE** installé et fonctionnel
-2. **Template Ubuntu 22.04 Cloud Image** disponible
-   - Télécharger depuis: https://cloud-images.ubuntu.com/jammy/current/
-   - Uploader dans Proxmox: `qm create 9000 --name ubuntu-22.04-cloud --memory 1024 --net0 virtio,bridge=vmbr0`
-   - Importer l'image: `qm disk import 9000 jammy-server-cloudimg-amd64.img local-lvm`
-   - Configurer: `qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0`
-   - Convertir en template: `qm template 9000`
-3. **Accès SSH** configuré avec clés SSH
-4. **Privilèges root** ou sudo sur le serveur Proxmox
-5. **Outils Proxmox** installés (`pve-cluster`, `pve-manager`)
+## Méthode 1: Script Automatique (Recommandé)
 
-### Base de données PostgreSQL
+### Étape 1: Préparer le script
 
-- PostgreSQL 14+ installé et accessible depuis la VM
-- Base de données créée (ou le script peut la créer si vous avez les droits)
-- Utilisateur avec les permissions nécessaires
-
-## Utilisation
-
-### 1. Préparer le script
+Le script `scripts/deploy-proxmox.sh` automatise tout le processus de déploiement.
 
 ```bash
-# Sur le serveur Proxmox, rendre le script exécutable
-chmod +x deploy-proxmox.sh
+# Rendre le script exécutable
+chmod +x scripts/deploy-proxmox.sh
 ```
 
-### 2. Exécuter le script
+### Étape 2: Exécuter le script
 
 ```bash
-sudo ./deploy-proxmox.sh
+# Déploiement avec paramètres par défaut
+./scripts/deploy-proxmox.sh
+
+# Ou avec paramètres personnalisés
+./scripts/deploy-proxmx.sh [container-id] [container-name] [storage] [node] [memory] [disk] [cpu-cores]
+
+# Exemple:
+./scripts/deploy-proxmox.sh 100 archimodeler local-lvm pve1 4096 30 4
 ```
 
-### 3. Répondre aux questions
+**Paramètres:**
+- `container-id`: ID du container (défaut: 100)
+- `container-name`: Nom du container (défaut: archimodeler)
+- `storage`: Stockage Proxmox (défaut: local-lvm)
+- `node`: Nom du nœud Proxmox (défaut: hostname)
+- `memory`: Mémoire en MB (défaut: 2048)
+- `disk`: Taille du disque en GB (défaut: 20)
+- `cpu-cores`: Nombre de cœurs CPU (défaut: 2)
 
-Le script vous demandera les informations suivantes :
+### Étape 3: Copier le projet dans le container
 
-#### Configuration Proxmox
-- **ID de la VM** : Un ID unique (ex: 100, 101, etc.)
-- **Nom de la VM** : Nom descriptif (ex: archimodeler-prod)
-- **Stockage Proxmox** : Nom du stockage (ex: local-lvm, local-zfs)
-- **Pool Proxmox** : Optionnel, laissez vide si aucun pool
-- **Réseau Proxmox** : Interface réseau (ex: vmbr0)
-- **Taille du disque** : En GB (recommandé: 50GB minimum)
-- **Mémoire RAM** : En MB (recommandé: 4096MB minimum, 8192MB pour production)
-- **Nombre de CPU** : Nombre de cores (recommandé: 2 minimum, 4 pour production)
-- **ID du template** : ID du template Ubuntu (ex: 9000)
-- **Adresse IP de la VM** : IP statique avec masque (ex: 192.168.1.100/24)
-- **Passerelle** : IP de la passerelle (ex: 192.168.1.1)
-- **Serveurs DNS** : DNS servers (ex: 8.8.8.8 8.8.4.4)
-- **Clé publique SSH** : Chemin vers la clé ou contenu de la clé
+Si vous n'utilisez pas Git, copiez le projet manuellement:
 
-#### Configuration Base de données
-- **Hôte PostgreSQL** : IP ou hostname du serveur PostgreSQL
-- **Port PostgreSQL** : Port (défaut: 5432)
-- **Nom de la base de données** : Nom de la base (ex: archimodeler)
-- **Utilisateur PostgreSQL** : Nom d'utilisateur
-- **Mot de passe PostgreSQL** : Mot de passe (masqué)
+```bash
+# Depuis le système hôte Proxmox
+pct push 100 /chemin/vers/archimodeler /opt/archimodeler
+```
 
-#### Configuration Application
-- **JWT Secret** : Clé secrète pour JWT (laissez vide pour génération automatique)
-- **Port du serveur backend** : Port de l'API (défaut: 3002)
-- **URL publique de l'API** : URL complète de l'API (ex: https://api.votredomaine.com)
-- **URL publique du frontend** : URL complète du frontend (ex: https://votredomaine.com)
+Ou depuis un autre serveur:
 
-#### Configuration optionnelle
-- **Neo4j URI** : Optionnel, URI de connexion Neo4j
-- **Neo4j User** : Optionnel, utilisateur Neo4j
-- **Neo4j Password** : Optionnel, mot de passe Neo4j
-- **OpenSearch Node** : Optionnel, URL du nœud OpenSearch
-- **OpenAI API Key** : Optionnel, clé API OpenAI pour les fonctionnalités AI
+```bash
+# Sur le serveur source
+tar czf archimodeler.tar.gz archimodeler/
+scp archimodeler.tar.gz root@proxmox-server:/tmp/
 
-#### Configuration Git
-- **URL du repository Git** : URL du repository (ex: https://github.com/gloret29/archimodeler.git)
-- **Branche à déployer** : Branche Git (défaut: main)
+# Sur le serveur Proxmox
+pct push 100 /tmp/archimodeler.tar.gz /tmp/
+pct exec 100 -- tar xzf /tmp/archimodeler.tar.gz -C /opt/
+```
 
-## Ce que fait le script
+## Méthode 2: Installation Manuelle
 
-Le script effectue automatiquement les étapes suivantes :
+### Étape 1: Créer le container LXC
 
-1. **Création de la VM** sur Proxmox avec la configuration spécifiée
-2. **Démarrage de la VM** et attente de la disponibilité SSH
-3. **Installation des dépendances** :
-   - Mise à jour du système
-   - Installation de Node.js 22.x
-   - Installation de npm, git, nginx, certbot
-   - Installation de PM2 pour la gestion des processus
-   - Configuration du firewall (UFW)
-4. **Configuration de l'application** :
-   - Clonage du repository Git
-   - Installation des dépendances npm
-   - Configuration des variables d'environnement
-   - Génération du client Prisma
-   - Exécution des migrations de base de données
-   - Seed de la base de données
-   - Build de l'application
-5. **Configuration des services systemd** :
-   - Service pour le backend (archimodeler-backend)
-   - Service pour le frontend (archimodeler-frontend)
-   - Démarrage automatique au boot
-6. **Configuration de Nginx** :
-   - Reverse proxy pour le frontend (port 3000)
-   - Reverse proxy pour l'API (port 3002)
-   - Configuration WebSocket pour la collaboration
-   - Configuration pour la documentation API
+```bash
+# Créer un container Ubuntu 22.04
+pct create 100 \
+    local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst \
+    --hostname archimodeler \
+    --storage local-lvm \
+    --memory 2048 \
+    --cores 2 \
+    --rootfs local-lvm:20 \
+    --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+    --unprivileged 0 \
+    --features nesting=1,keyctl=1
 
-## Après le déploiement
+# Démarrer le container
+pct start 100
+
+# Accéder au container
+pct enter 100
+```
+
+### Étape 2: Installer les dépendances système
+
+```bash
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get upgrade -y
+apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    postgresql-client \
+    docker.io \
+    docker-compose \
+    nginx \
+    certbot \
+    python3-certbot-nginx
+```
+
+### Étape 3: Installer Node.js
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+
+# Vérifier l'installation
+node --version
+npm --version
+```
+
+### Étape 4: Configurer Docker
+
+```bash
+systemctl enable docker
+systemctl start docker
+```
+
+### Étape 5: Cloner et installer le projet
+
+```bash
+# Créer le répertoire
+mkdir -p /opt/archimodeler
+cd /opt
+
+# Cloner le projet (ou copier depuis le système hôte)
+git clone https://github.com/your-org/archimodeler.git
+cd archimodeler
+
+# Installer les dépendances
+npm install
+
+# Générer le client Prisma
+cd packages/database
+npx prisma generate
+cd ../..
+```
+
+### Étape 6: Configurer l'environnement
+
+Créer les fichiers `.env`:
+
+**`apps/server/.env`:**
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/archimodeler?schema=public
+JWT_SECRET=$(openssl rand -base64 32)
+JWT_EXPIRES_IN=7d
+API_PORT=3001
+API_URL=http://localhost:3001
+WS_URL=http://localhost:3001
+OPENSEARCH_URL=http://localhost:9200
+NODE_ENV=production
+```
+
+**`apps/web/.env`:**
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_WS_URL=http://localhost:3001
+NODE_ENV=production
+```
+
+**`packages/database/.env`:**
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/archimodeler?schema=public
+```
+
+### Étape 7: Démarrer les services Docker
+
+```bash
+cd /opt/archimodeler
+docker-compose up -d
+
+# Vérifier que les services sont démarrés
+docker ps
+```
+
+### Étape 8: Exécuter les migrations
+
+```bash
+cd /opt/archimodeler/packages/database
+npx prisma migrate deploy
+```
+
+### Étape 9: Compiler le projet
+
+```bash
+cd /opt/archimodeler
+npm run build
+```
+
+### Étape 10: Configurer les services systemd
+
+**`/etc/systemd/system/archimodeler-server.service`:**
+```ini
+[Unit]
+Description=ArchiModeler Server
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/archimodeler/apps/server
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start:prod
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**`/etc/systemd/system/archimodeler-web.service`:**
+```ini
+[Unit]
+Description=ArchiModeler Web
+After=network.target archimodeler-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/archimodeler/apps/web
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Activer et démarrer les services:
+
+```bash
+systemctl daemon-reload
+systemctl enable archimodeler-server archimodeler-web
+systemctl start archimodeler-server archimodeler-web
+
+# Vérifier le statut
+systemctl status archimodeler-server
+systemctl status archimodeler-web
+```
+
+### Étape 11: Configurer Nginx
+
+**`/etc/nginx/sites-available/archimodeler`:**
+```nginx
+server {
+    listen 80;
+    server_name votre-domaine.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # WebSocket
+    location /socket.io {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+Activer la configuration:
+
+```bash
+ln -sf /etc/nginx/sites-available/archimodeler /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t
+systemctl reload nginx
+```
+
+### Étape 12: Configurer SSL (Optionnel)
+
+```bash
+certbot --nginx -d votre-domaine.com
+```
+
+## Vérification du Déploiement
 
 ### Vérifier les services
 
 ```bash
-# Se connecter à la VM
-ssh root@<IP_VM>
-
-# Vérifier le statut des services
-systemctl status archimodeler-backend
-systemctl status archimodeler-frontend
+# Vérifier les services systemd
+systemctl status archimodeler-server
+systemctl status archimodeler-web
 systemctl status nginx
+systemctl status docker
+
+# Vérifier les containers Docker
+docker ps
+
+# Vérifier les logs
+journalctl -u archimodeler-server -f
+journalctl -u archimodeler-web -f
 ```
 
-### Voir les logs
+### Tester l'application
+
+- Frontend: http://IP_DU_CONTAINER:3000
+- Backend API: http://IP_DU_CONTAINER:3001
+- Via Nginx: http://IP_DU_CONTAINER
+
+## Commandes Utiles
+
+### Gestion du container
 
 ```bash
-# Logs du backend
-journalctl -u archimodeler-backend -f
+# Accéder au container
+pct enter 100
 
-# Logs du frontend
-journalctl -u archimodeler-frontend -f
+# Arrêter le container
+pct stop 100
 
-# Logs Nginx
-journalctl -u nginx -f
+# Démarrer le container
+pct start 100
+
+# Redémarrer le container
+pct reboot 100
+
+# Voir les informations du container
+pct config 100
 ```
 
-### Redémarrer les services
+### Gestion des services
 
 ```bash
-systemctl restart archimodeler-backend
-systemctl restart archimodeler-frontend
-systemctl restart nginx
+# Redémarrer les services
+systemctl restart archimodeler-server
+systemctl restart archimodeler-web
+
+# Voir les logs
+journalctl -u archimodeler-server -f
+journalctl -u archimodeler-web -f
+
+# Arrêter les services
+systemctl stop archimodeler-server archimodeler-web
 ```
 
-### Configurer SSL/TLS avec Let's Encrypt
+### Mise à jour du projet
 
 ```bash
-# Sur la VM
-certbot --nginx -d votre-domaine.com -d api.votre-domaine.com
-```
+# Accéder au container
+pct enter 100
 
-Le certificat sera automatiquement renouvelé grâce à systemd timer.
-
-### Mettre à jour l'application
-
-```bash
-# Se connecter à la VM
-ssh root@<IP_VM>
-
-# Passer en utilisateur archimodeler
-su - archimodeler
-
-# Aller dans le répertoire de l'application
+# Aller dans le répertoire du projet
 cd /opt/archimodeler
 
-# Mettre à jour le code
+# Mettre à jour depuis Git
 git pull origin main
 
-# Rebuild l'application
+# Installer les nouvelles dépendances
+npm install
+
+# Exécuter les migrations
+cd packages/database
+npx prisma migrate deploy
+cd ../..
+
+# Recompiler
 npm run build
 
 # Redémarrer les services
-exit
-systemctl restart archimodeler-backend
-systemctl restart archimodeler-frontend
+systemctl restart archimodeler-server archimodeler-web
 ```
 
 ## Dépannage
 
-### La VM ne démarre pas
+### Le container ne démarre pas
 
-- Vérifier les logs Proxmox : `journalctl -u pve-cluster`
-- Vérifier la configuration réseau dans Proxmox
-- Vérifier que le template est correctement configuré
+```bash
+# Vérifier les logs
+pct enter 100
+journalctl -xe
+```
 
 ### Les services ne démarrent pas
 
-- Vérifier les logs : `journalctl -u archimodeler-backend -n 50`
-- Vérifier les variables d'environnement : `cat /opt/archimodeler/apps/server/.env`
-- Vérifier la connexion à la base de données : `psql $DATABASE_URL -c "SELECT 1;"`
+```bash
+# Vérifier les logs
+journalctl -u archimodeler-server -n 50
+journalctl -u archimodeler-web -n 50
 
-### Erreur de connexion à la base de données
+# Vérifier les ports
+netstat -tlnp | grep -E '3000|3001'
+```
 
-- Vérifier que PostgreSQL est accessible depuis la VM
-- Vérifier les credentials dans le fichier `.env`
-- Vérifier que le firewall PostgreSQL autorise les connexions depuis la VM
+### Problèmes de base de données
 
-### Nginx ne fonctionne pas
+```bash
+# Vérifier que PostgreSQL est démarré
+docker ps | grep postgres
 
-- Vérifier la configuration : `nginx -t`
-- Vérifier les logs : `tail -f /var/log/nginx/error.log`
-- Vérifier que les services backend et frontend sont démarrés
+# Vérifier la connexion
+docker exec -it archimodeler-postgres-1 psql -U user -d archimodeler
+```
+
+### Problèmes de compilation
+
+```bash
+# Nettoyer et réinstaller
+cd /opt/archimodeler
+rm -rf node_modules
+rm -rf apps/*/node_modules
+rm -rf packages/*/node_modules
+npm install
+npm run build
+```
 
 ## Sécurité
 
 ### Recommandations
 
-1. **Changer les mots de passe par défaut** après le premier déploiement
-2. **Configurer SSL/TLS** avec Let's Encrypt
-3. **Configurer un firewall** strict (déjà fait par le script)
-4. **Mettre à jour régulièrement** le système et l'application
-5. **Configurer des sauvegardes** régulières de la base de données
-6. **Utiliser des clés SSH** au lieu de mots de passe
-7. **Configurer fail2ban** (déjà installé par le script)
+1. **Changer les mots de passe par défaut** dans les fichiers `.env`
+2. **Configurer un pare-feu** pour limiter l'accès aux ports
+3. **Utiliser SSL/TLS** avec certbot pour les connexions sécurisées
+4. **Configurer des sauvegardes régulières** de la base de données
+5. **Mettre à jour régulièrement** le système et les dépendances
 
-### Sauvegardes
+### Configuration du pare-feu
 
 ```bash
-# Script de sauvegarde de la base de données (à exécuter régulièrement)
+# Installer ufw
+apt-get install -y ufw
+
+# Autoriser SSH, HTTP, HTTPS
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+
+# Activer le pare-feu
+ufw enable
+```
+
+## Sauvegarde
+
+### Sauvegarde de la base de données
+
+```bash
+# Créer un script de sauvegarde
+cat > /opt/backup-db.sh << 'EOF'
 #!/bin/bash
-BACKUP_DIR="/var/backups/archimodeler"
-mkdir -p $BACKUP_DIR
+BACKUP_DIR="/opt/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
-pg_dump $DATABASE_URL > $BACKUP_DIR/archimodeler_$DATE.sql
-# Garder seulement les 30 derniers backups
-find $BACKUP_DIR -name "*.sql" -mtime +30 -delete
+mkdir -p $BACKUP_DIR
+docker exec archimodeler-postgres-1 pg_dump -U user archimodeler > $BACKUP_DIR/archimodeler_$DATE.sql
+# Garder seulement les 7 derniers backups
+ls -t $BACKUP_DIR/archimodeler_*.sql | tail -n +8 | xargs rm -f
+EOF
+
+chmod +x /opt/backup-db.sh
+
+# Ajouter au crontab (sauvegarde quotidienne à 2h du matin)
+(crontab -l 2>/dev/null; echo "0 2 * * * /opt/backup-db.sh") | crontab -
+```
+
+### Sauvegarde complète du container
+
+```bash
+# Depuis le serveur Proxmox
+vzdump 100 --storage local --compress gzip
 ```
 
 ## Support
 
-Pour toute question ou problème, consultez :
-- La documentation du projet : [README.md](README.md)
-- Les issues GitHub : [GitHub Issues](https://github.com/gloret29/archimodeler/issues)
-
-
+Pour plus d'informations, consultez:
+- [README.md](./README.md)
+- [DEV_GUIDE.md](./DEV_GUIDE.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)

@@ -141,4 +141,13 @@ export class UsersController {
         }
         return this.usersService.update(userId, { locale: body.locale });
     }
+
+    @Get('mentions')
+    @ApiOperation({ summary: 'Get users for mentions', description: 'Get a list of users for mention autocomplete. Returns only id, name, and email.' })
+    @ApiResponse({ status: 200, description: 'List of users retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async getUsersForMentions(@Request() req: any) {
+        // This endpoint is accessible to all authenticated users (no role restriction)
+        return this.usersService.findAllForMentions();
+    }
 }

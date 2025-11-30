@@ -275,6 +275,22 @@ export function useCollaboration({
             }
         });
 
+        // Listen for comment events
+        socket.on('comment-thread-created', (thread: any) => {
+            // Dispatch global event for comment panels to listen to
+            window.dispatchEvent(new CustomEvent('comment-thread-created', { detail: thread }));
+        });
+
+        socket.on('comment-added', (data: { threadId: string; comment: any }) => {
+            // Dispatch global event for comment panels to listen to
+            window.dispatchEvent(new CustomEvent('comment-added', { detail: data }));
+        });
+
+        socket.on('thread-resolved', (data: { threadId: string; resolved: boolean }) => {
+            // Dispatch global event for comment panels to listen to
+            window.dispatchEvent(new CustomEvent('thread-resolved', { detail: data }));
+        });
+
         return () => {
             if (socket.connected) {
                 socket.emit('leave-view', { viewId });

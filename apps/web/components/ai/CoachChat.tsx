@@ -14,7 +14,11 @@ interface Message {
     content: string;
 }
 
-export default function CoachChat() {
+interface CoachChatProps {
+    sidebarWidth?: number;
+}
+
+export default function CoachChat({ sidebarWidth = 320 }: CoachChatProps) {
     const t = useTranslations('Coach');
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -44,8 +48,7 @@ export default function CoachChat() {
         }
     };
 
-    // Calculate position to be left of the Repository sidebar (which is ~320px wide)
-    const sidebarWidth = 320; // Repository sidebar width
+    // Calculate position to be left of the Repository sidebar
     const margin = 16; // 1rem = 16px
     const rightPosition = sidebarWidth + margin;
 

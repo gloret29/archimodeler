@@ -19,7 +19,7 @@ import { UserChat } from '@/components/collaboration/UserChat';
 import { API_CONFIG } from '@/lib/api/config';
 import { useDialog } from '@/contexts/DialogContext';
 
-import { Home, Save, Package } from 'lucide-react';
+import { Home, Save, Package, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useRouter } from '@/navigation';
 import { UserInfo } from '@/components/common/UserInfo';
@@ -32,7 +32,7 @@ function StudioContent() {
     const packageId = searchParams.get('packageId');
     const t = useTranslations('Studio');
     const router = useRouter();
-    const { alert } = useDialog();
+    const { alert, prompt } = useDialog();
     const { tabs, activeTabId, addTab, addTabWithPersistence, saveActiveTab, markTabAsModified, markTabAsSaved } = useTabsStore();
     const [isSaving, setIsSaving] = React.useState(false);
     const [repositoryWidth, setRepositoryWidth] = React.useState(320); // Default width: 320px (w-80)
@@ -309,6 +309,69 @@ function StudioContent() {
         }
     };
 
+    const handleSaveAs = async () => {
+        if (!activeTab || !packageId) {
+            return;
+        }
+
+        // Get actual canvas content
+        if (!currentCanvasContent) {
+            await alert({
+                title: t('warning') || 'Warning',
+                message: t('noContentToSave'),
+                type: 'warning',
+            });
+            return;
+        }
+
+        const newName = await prompt({
+            title: t('saveAsTitle') || 'Save View As',
+            label: t('saveAsLabel') || 'New View Name',
+            placeholder: t('saveAsPlaceholder') || 'Enter new view name',
+            defaultValue: `${activeTab.viewName} (Copy)`,
+            required: true,
+        });
+
+        if (!newName || !newName.trim()) {
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const content = {
+                nodes: currentCanvasContent.nodes,
+                edges: currentCanvasContent.edges,
+                savedAt: new Date().toISOString(),
+            };
+
+            // Create new view with the new name
+            const newTab = await addTabWithPersistence(newName.trim(), packageId, activeTab.folderId);
+            
+            // Save content to the new view
+            const { viewsApi } = await import('@/lib/api/views');
+            await viewsApi.update(newTab.viewId, { content });
+            
+            console.log('✓ View saved as:', newName);
+            
+            // Notify other users via WebSocket
+            if (currentUser && notifyViewSaved) {
+                notifyViewSaved({
+                    id: currentUser.id,
+                    name: currentUser.name,
+                });
+            }
+        } catch (error: any) {
+            console.error('Failed to save view as:', error);
+            await alert({
+                title: t('error') || 'Error',
+                message: t('failedToSave', { error: error.message || 'Unknown error' }),
+                type: 'error',
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     // Check authentication synchronously before rendering (client-side only)
     if (typeof window !== 'undefined') {
         const token = localStorage.getItem('accessToken');
@@ -362,6 +425,17 @@ function StudioContent() {
                             title={t('saveView', { viewName: activeTab.viewName })}
                         >
                             <Save className={`h-5 w-5 ${isSaving ? 'animate-pulse' : ''}`} />
+                        </Button>
+                    )}
+                    {activeTab && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleSaveAs}
+                            disabled={isSaving}
+                            title={t('saveAs') || 'Save As'}
+                        >
+                            <Copy className={`h-5 w-5 ${isSaving ? 'animate-pulse' : ''}`} />
                         </Button>
                     )}
                     {activeTab && currentUser && (
@@ -460,7 +534,7 @@ function StudioContent() {
                         </div>
                         </div>
                     )}
-                    <CoachChat />
+                    <CoachChat sidebarWidth={repositoryWidth} />
                 </main>
                 
                 {/* Global Chat Dialog */}
@@ -502,6 +576,7 @@ function StudioContent() {
                             selectedRelationshipId={selectedRelationship?.id || null}
                             selectedRelationshipName={selectedRelationship?.name}
                             selectedRelationshipType={selectedRelationship?.type}
+                            currentUserId={currentUser?.id}
                         />
                     </div>
                 </Suspense>

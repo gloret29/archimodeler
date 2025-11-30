@@ -17,9 +17,10 @@ import { RolesModule } from './roles/roles.module';
 import { CollaborationModule } from './collaboration/collaboration.module';
 import { StereotypesModule } from './stereotypes/stereotypes.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, SettingsModule, RolesModule, CollaborationModule, StereotypesModule, NotificationsModule],
+  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, SettingsModule, RolesModule, CollaborationModule, StereotypesModule, NotificationsModule, CommentsModule],
   controllers: [AppController],
   providers: [AppService],
 })

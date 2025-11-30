@@ -617,12 +617,6 @@ export default function ModelingCanvas({
                         edges={edges}
                         onUpdateNodes={setNodes}
                     />
-                    <button
-                        onClick={onSave}
-                        className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm hover:bg-blue-700"
-                    >
-                        Save As...
-                    </button>
                     <DiagramDescriber nodes={nodes} edges={edges} />
                 </div>
             </ReactFlow>

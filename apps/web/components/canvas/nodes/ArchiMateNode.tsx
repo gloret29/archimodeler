@@ -2,6 +2,8 @@ import React, { memo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import Image from 'next/image';
 import { api } from '@/lib/api/client';
+import { MessageSquare } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // Map ArchiMate types to their SVG filenames
 const svgMapping: Record<string, string> = {
@@ -88,12 +90,14 @@ interface SelectedBy {
 }
 
 const ArchiMateNode = ({ data, selected }: NodeProps) => {
-    const { label, type, selectedBy, style, elementId } = data as { 
+    const { label, type, selectedBy, style, elementId, commentCount, hasUnresolvedComments } = data as { 
         label: string; 
         type: string; 
         layer: string;
         elementId?: string;
         selectedBy?: SelectedBy[];
+        commentCount?: number;
+        hasUnresolvedComments?: boolean;
         style?: {
             backgroundColor?: string;
             borderColor?: string;
@@ -320,6 +324,19 @@ const ArchiMateNode = ({ data, selected }: NodeProps) => {
                             {user.name}
                         </div>
                     ))}
+                </div>
+            )}
+            
+            {/* Comment Badge */}
+            {commentCount !== undefined && commentCount > 0 && (
+                <div className="absolute -top-2 -right-2 z-50">
+                    <Badge 
+                        variant={hasUnresolvedComments ? "destructive" : "secondary"}
+                        className="h-5 w-5 p-0 flex items-center justify-center rounded-full shadow-md"
+                        title={`${commentCount} comment${commentCount > 1 ? 's' : ''}`}
+                    >
+                        <MessageSquare className="h-3 w-3" />
+                    </Badge>
                 </div>
             )}
         </div>

@@ -20,6 +20,19 @@ export class UsersService {
         });
     }
 
+    async findAllForMentions() {
+        return this.prisma.user.findMany({
+            select: {
+                id: true,
+                name: true,
+                email: true,
+            },
+            orderBy: {
+                name: 'asc',
+            },
+        });
+    }
+
     async findById(id: string): Promise<User | null> {
         return this.prisma.user.findUnique({
             where: { id },

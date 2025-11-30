@@ -589,4 +589,24 @@ export class CollaborationGateway
         this.server.to(room).emit(`notification:${userId}`, notification);
         this.logger.log(`Notification emitted to room ${room} for user ${userId}`);
     }
+
+    // Methods for comment events
+    emitCommentCreated(thread: any) {
+        // Emit to all users viewing the target (element, relationship, or view)
+        const targetRoom = `${thread.targetType.toLowerCase()}:${thread.targetId}`;
+        this.server.to(targetRoom).emit('comment-thread-created', thread);
+        this.logger.log(`Comment thread created event emitted for ${thread.targetType}:${thread.targetId}`);
+    }
+
+    emitCommentAdded(threadId: string, comment: any) {
+        // Emit to all users viewing the target
+        // We need to get the thread to know the target
+        this.server.emit('comment-added', { threadId, comment });
+        this.logger.log(`Comment added event emitted for thread ${threadId}`);
+    }
+
+    emitThreadResolved(threadId: string, resolved: boolean) {
+        this.server.emit('thread-resolved', { threadId, resolved });
+        this.logger.log(`Thread resolved event emitted for thread ${threadId}: ${resolved}`);
+    }
 }

@@ -13,6 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { api } from '@/lib/api/client';
 import { useTranslations } from 'next-intl';
 import { useDialog } from '@/contexts/DialogContext';
+import CommentPanel from '@/components/comments/CommentPanel';
+import { CommentTargetType } from '@/lib/types/comments';
 
 interface Stereotype {
     id: string;
@@ -51,6 +53,7 @@ interface PropertiesPanelProps {
     selectedRelationshipId?: string | null;
     selectedRelationshipName?: string;
     selectedRelationshipType?: string;
+    currentUserId?: string;
 }
 
 export default function PropertiesPanel({ 
@@ -59,7 +62,8 @@ export default function PropertiesPanel({
     selectedElementType,
     selectedRelationshipId,
     selectedRelationshipName,
-    selectedRelationshipType
+    selectedRelationshipType,
+    currentUserId
 }: PropertiesPanelProps) {
     const t = useTranslations('Properties');
     const { alert, confirm } = useDialog();
@@ -628,6 +632,20 @@ export default function PropertiesPanel({
                 </div>
             </CardContent>
             )}
+
+            {/* Comments Section */}
+            <CommentPanel
+                targetType={
+                    selectedElementId
+                        ? CommentTargetType.ELEMENT
+                        : selectedRelationshipId
+                        ? CommentTargetType.RELATIONSHIP
+                        : CommentTargetType.VIEW
+                }
+                targetId={selectedElementId || selectedRelationshipId || null}
+                targetName={selectedElementName || selectedRelationshipName}
+                currentUserId={currentUserId}
+            />
         </Card>
     );
 }

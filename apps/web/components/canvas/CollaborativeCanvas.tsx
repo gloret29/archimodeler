@@ -6,6 +6,8 @@ import ModelingCanvas from '@/components/canvas/ModelingCanvas';
 import { useCollaboration, User } from '@/hooks/useCollaboration';
 import CollaborativeCursors from '@/components/collaboration/CollaborativeCursors';
 import { api } from '@/lib/api/client';
+import { useComments } from '@/hooks/useComments';
+import { CommentTargetType } from '@/lib/types/comments';
 
 interface CollaborativeCanvasProps {
     viewId: string;
@@ -210,6 +212,59 @@ export default function CollaborativeCanvas({
         },
     });
 
+    // Load comment counts for visible elements and relationships
+    const commentTargets = useMemo(() => {
+        const targets: Array<{ type: CommentTargetType; id: string }> = [];
+        
+        // Add all element IDs from nodes
+        nodes.forEach(node => {
+            const elementId = node.data?.elementId;
+            if (elementId && typeof elementId === 'string') {
+                targets.push({ type: CommentTargetType.ELEMENT, id: elementId });
+            }
+        });
+        
+        // Add all relationship IDs from edges
+        edges.forEach(edge => {
+            const relationshipId = edge.data?.relationshipId;
+            if (relationshipId && typeof relationshipId === 'string') {
+                targets.push({ type: CommentTargetType.RELATIONSHIP, id: relationshipId });
+            }
+        });
+        
+        return targets;
+    }, [nodes, edges]);
+
+    const { commentsMap, refresh: refreshComments } = useComments(commentTargets);
+
+    // Listen for comment events via WebSocket to refresh comments
+    useEffect(() => {
+        if (!isConnected) return;
+
+        const handleCommentCreated = () => {
+            refreshComments();
+        };
+
+        const handleCommentAdded = () => {
+            refreshComments();
+        };
+
+        const handleThreadResolved = () => {
+            refreshComments();
+        };
+
+        // Listen to global events (we'll need to add these to the collaboration gateway)
+        window.addEventListener('comment-thread-created', handleCommentCreated);
+        window.addEventListener('comment-added', handleCommentAdded);
+        window.addEventListener('thread-resolved', handleThreadResolved);
+
+        return () => {
+            window.removeEventListener('comment-thread-created', handleCommentCreated);
+            window.removeEventListener('comment-added', handleCommentAdded);
+            window.removeEventListener('thread-resolved', handleThreadResolved);
+        };
+    }, [isConnected, refreshComments]);
+
     const onNodesChange = useCallback(
         (changes: NodeChange[]) => {
             // Apply changes locally first
@@ -398,35 +453,55 @@ export default function CollaborativeCanvas({
         };
     }, [updateCursor, isConnected, reactFlowInstance]);
 
-    const nodesWithSelection = useMemo(() => {
-        if (!currentUser) return nodes;
-        
+    const nodesWithSelectionAndComments = useMemo(() => {
         return nodes.map(node => {
             const selectedBy: { name: string; color: string }[] = [];
             
-            users.forEach(user => {
-                if (user.id === currentUser.id) return;
-                
-                const userSelection = selections[user.id];
-                if (userSelection && userSelection.includes(node.id)) {
-                    selectedBy.push({ name: user.name, color: user.color });
-                }
-            });
-            
-            if (selectedBy.length > 0) {
-                 return {
-                     ...node,
-                     draggable: false,
-                     data: {
-                         ...node.data,
-                         selectedBy
-                     }
-                 };
+            // Add remote selection info
+            if (currentUser) {
+                users.forEach(user => {
+                    if (user.id === currentUser.id) return;
+                    
+                    const userSelection = selections[user.id];
+                    if (userSelection && userSelection.includes(node.id)) {
+                        selectedBy.push({ name: user.name, color: user.color });
+                    }
+                });
             }
             
-            return node;
+            // Add comment counts
+            const elementId = node.data?.elementId;
+            const commentInfo = (elementId && typeof elementId === 'string') ? commentsMap[elementId] : null;
+            
+            return {
+                ...node,
+                draggable: selectedBy.length === 0,
+                data: {
+                    ...node.data,
+                    selectedBy: selectedBy.length > 0 ? selectedBy : undefined,
+                    commentCount: commentInfo?.count || 0,
+                    hasUnresolvedComments: (commentInfo?.unresolvedCount || 0) > 0,
+                }
+            };
         });
-    }, [nodes, users, selections, currentUser]);
+    }, [nodes, users, selections, currentUser, commentsMap]);
+
+    // Add comment counts to edges
+    const edgesWithComments = useMemo(() => {
+        return edges.map(edge => {
+            const relationshipId = edge.data?.relationshipId;
+            const commentInfo = (relationshipId && typeof relationshipId === 'string') ? commentsMap[relationshipId] : null;
+            
+            return {
+                ...edge,
+                data: {
+                    ...edge.data,
+                    commentCount: commentInfo?.count || 0,
+                    hasUnresolvedComments: (commentInfo?.unresolvedCount || 0) > 0,
+                }
+            };
+        });
+    }, [edges, commentsMap]);
 
     // Notify parent of content changes
     const lastContentRef = useRef<string>('');
@@ -479,8 +554,8 @@ export default function CollaborativeCanvas({
                 <ModelingCanvas 
                     packageId={packageId}
                     viewName={viewName}
-                    nodes={nodesWithSelection}
-                    edges={edges}
+                    nodes={nodesWithSelectionAndComments}
+                    edges={edgesWithComments}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     setNodes={handleSetNodes}

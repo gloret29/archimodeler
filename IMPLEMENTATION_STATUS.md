@@ -195,13 +195,16 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 - [ ] Historique des opérations pour le rollback
 
 ### 11.7.2 Commentaires et Annotations
-**Statut**: 🔴 **À faire**
-- [ ] Système de commentaires sur les éléments et relations
-- [ ] Annotations visuelles sur le canvas
-- [ ] Threads de discussion sur les éléments
-- [ ] Mentions d'utilisateurs dans les commentaires
-- [ ] Notifications pour les réponses aux commentaires
-- [ ] Résolution/marquage des commentaires comme résolus
+**Statut**: 🟢 **Terminé**
+- [x] Système de commentaires sur les éléments et relations
+- [x] Annotations visuelles sur le canvas (badges de commentaires)
+- [x] Threads de discussion sur les éléments
+- [x] Mentions d'utilisateurs dans les commentaires (@username)
+- [x] Notifications pour les réponses aux commentaires
+- [x] Notifications pour les mentions dans les commentaires
+- [x] Résolution/marquage des commentaires comme résolus
+- [x] Panneau de commentaires repliable dans PropertiesPanel
+- [x] Mises à jour en temps réel via WebSocket
 
 ### 11.7.3 Partage et Permissions
 **Statut**: 🔴 **À faire**
@@ -250,7 +253,7 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
 ### 11.7.8 Notifications Collaboratives
 **Statut**: 🔴 **À faire**
 - [ ] Notifications pour les modifications importantes (création/suppression d'éléments)
-- [ ] Notifications pour les mentions dans les commentaires
+- [x] Notifications pour les mentions dans les commentaires (déjà implémenté dans 11.7.2)
 - [ ] Notifications pour les invitations à collaborer
 - [ ] Préférences de notification par utilisateur
 - [ ] Notifications push (si supporté par le navigateur)

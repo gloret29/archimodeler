@@ -79,6 +79,10 @@
         "failedToSave": "Échec de l'enregistrement : {error}",
         "viewSaved": "Vue enregistrée !",
         "saveView": "Enregistrer {viewName}",
+        "saveAs": "Sauvegarder sous",
+        "saveAsTitle": "Sauvegarder la vue sous",
+        "saveAsLabel": "Nom de la nouvelle vue",
+        "saveAsPlaceholder": "Entrez le nom de la nouvelle vue",
         "newView": "Nouvelle vue",
         "closeTab": "Fermer l'onglet",
         "rename": "Renommer",
@@ -195,5 +199,32 @@
     "Chat": {
         "sendMessage": "Envoyer un message...",
         "send": "Envoyer"
+    },
+    "Comments": {
+        "title": "Commentaires",
+        "addComment": "Ajouter un commentaire...",
+        "createThread": "Démarrer une discussion",
+        "loading": "Chargement...",
+        "noComments": "Aucun commentaire pour le moment. Démarrez une discussion !",
+        "selectTarget": "Sélectionnez un élément ou une relation pour voir les commentaires",
+        "error": "Erreur",
+        "failedToFetchThreads": "Échec de la récupération des discussions",
+        "failedToCreateThread": "Échec de la création de la discussion",
+        "reply": "Répondre",
+        "addReply": "Ajouter une réponse",
+        "writeReply": "Écrire une réponse...",
+        "cancel": "Annuler",
+        "resolve": "Résoudre",
+        "unresolve": "Rouvrir",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "save": "Enregistrer",
+        "edited": "modifié",
+        "confirmDelete": "Supprimer le commentaire",
+        "confirmDeleteMessage": "Êtes-vous sûr de vouloir supprimer ce commentaire ?",
+        "failedToAddReply": "Échec de l'ajout de la réponse",
+        "failedToResolve": "Échec de la résolution de la discussion",
+        "failedToEdit": "Échec de la modification du commentaire",
+        "failedToDelete": "Échec de la suppression du commentaire"
     }
 }
