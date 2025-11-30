@@ -49,11 +49,17 @@ export function UserInfo() {
                 const userData = await api.get('/users/me');
                 setUser(userData);
             } catch (error: any) {
-                console.error('Failed to fetch user:', error);
+                // Ne logger l'erreur que si ce n'est pas une erreur d'authentification attendue
                 if (error.status === 401) {
-                    // Token expired or invalid
+                    // Token expired or invalid - redirection silencieuse
                     localStorage.removeItem('accessToken');
-                    router.push('/');
+                    // Ne pas rediriger si on est déjà sur la page de login
+                    if (window.location.pathname !== '/') {
+                        router.push('/');
+                    }
+                } else {
+                    // Autres erreurs (réseau, serveur, etc.)
+                    console.error('Failed to fetch user:', error);
                 }
             } finally {
                 setLoading(false);
