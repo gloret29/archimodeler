@@ -5,7 +5,7 @@ import { useRouter, Link } from "@/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag, Package, Home, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Database, GitBranch, Shield, Tag, Package, Home, Megaphone, Download } from "lucide-react";
 import { useTranslations } from 'next-intl';
 import { API_CONFIG } from '@/lib/api/config';
 
@@ -137,6 +137,17 @@ export default function AdminLayout({
                                 Broadcast Messages
                             </Button>
                         </Link>
+                        <div className="pt-4">
+                            <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                Import
+                            </h3>
+                            <Link href="/admin/bizdesign">
+                                <Button variant="ghost" className="w-full justify-start">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    BizDesign Import
+                                </Button>
+                            </Link>
+                        </div>
                         <div className="pt-4">
                             <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Infrastructure

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -37,7 +38,6 @@ async function main() {
     console.log('Roles seeded successfully.');
 
     // --- Admin User Seeding ---
-    const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash('admin123', 10);
 
     const adminRole = await prisma.role.findUnique({ where: { name: 'System Administrator' } });

@@ -8,6 +8,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { ChatProvider } from "@/contexts/ChatContext"
 import { DialogProvider } from "@/contexts/DialogContext"
 import { LocaleSync } from "@/components/common/LocaleSync"
+import { SkipToContent } from "@/components/accessibility/SkipToContent"
+import { LiveRegion } from "@/components/accessibility/LiveRegion"
 
 const geistSans = localFont({
     src: "../fonts/GeistVF.woff",
@@ -45,6 +47,8 @@ export default async function RootLayout({
                     >
                         <ChatProvider>
                             <DialogProvider>
+                                <SkipToContent />
+                                <LiveRegion message="" />
                                 <LocaleSync />
                                 {children}
                                 <Toaster />

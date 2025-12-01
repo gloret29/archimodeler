@@ -58,6 +58,7 @@ interface NavigationItem {
 
 export default function HomePage() {
     const t = useTranslations('Home');
+    const tA11y = useTranslations('Accessibility');
     const router = useRouter();
     const [packages, setPackages] = useState<ModelPackage[]>([]);
     const [user, setUser] = useState<UserData | null>(null);
@@ -177,14 +178,14 @@ export default function HomePage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
             {/* Header */}
-            <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+            <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50" role="banner">
                 <div className="container mx-auto px-6 py-4">
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                                 ArchiModeler
                             </h1>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-sm text-muted-foreground mt-1" aria-live="polite">
                                 {user ? `Bienvenue, ${user.name || user.email}` : 'Plateforme de modélisation d\'architecture'}
                             </p>
                         </div>
@@ -205,9 +206,9 @@ export default function HomePage() {
                 </div>
             </header>
 
-            <main className="container mx-auto px-6 py-8 space-y-8">
+            <main id="main-content" className="container mx-auto px-6 py-8 space-y-8" role="main" aria-label={tA11y('mainContent')}>
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <section aria-label="Statistiques" className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {stats.map((stat) => {
                         const Icon = stat.icon;
                         return (
@@ -216,9 +217,9 @@ export default function HomePage() {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                                            <p className="text-3xl font-bold mt-2">{stat.value}</p>
+                                            <p className="text-3xl font-bold mt-2" aria-label={`${stat.label}: ${stat.value}`}>{stat.value}</p>
                                         </div>
-                                        <div className={`p-3 rounded-lg bg-muted ${stat.color}`}>
+                                        <div className={`p-3 rounded-lg bg-muted ${stat.color}`} aria-hidden="true">
                                             <Icon className="h-6 w-6 text-white" />
                                         </div>
                                     </div>
@@ -226,25 +227,34 @@ export default function HomePage() {
                             </Card>
                         );
                     })}
-                </div>
+                </section>
 
                 {/* Navigation Grid */}
-                <div>
+                <nav aria-label={tA11y('navigation')}>
                     <h2 className="text-2xl font-bold mb-6">Navigation</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {filteredNavigation.map((item) => {
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" role="list">
+                        {filteredNavigation.map((item, index) => {
                             const Icon = item.icon;
                             return (
                                 <Card
                                     key={item.id}
-                                    className="group cursor-pointer border-2 hover:border-primary/50 hover:shadow-lg transition-all duration-200 h-full"
+                                    role="listitem"
+                                    className="group cursor-pointer border-2 hover:border-primary/50 hover:shadow-lg transition-all duration-200 h-full focus-visible-ring"
                                     onClick={() => {
                                         router.push(item.href);
                                     }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            router.push(item.href);
+                                        }
+                                    }}
+                                    tabIndex={0}
+                                    aria-label={`${item.title}: ${item.description}`}
                                 >
                                     <CardHeader>
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-lg ${item.color} group-hover:scale-110 transition-transform`}>
+                                            <div className={`p-3 rounded-lg ${item.color} group-hover:scale-110 transition-transform`} aria-hidden="true">
                                                 <Icon className="h-6 w-6 text-white" />
                                             </div>
                                             <div className="flex-1">
@@ -254,7 +264,7 @@ export default function HomePage() {
                                     </CardHeader>
                                     <CardContent>
                                         <CardDescription className="text-sm">{item.description}</CardDescription>
-                                        <div className="mt-4 flex items-center text-primary group-hover:translate-x-1 transition-transform">
+                                        <div className="mt-4 flex items-center text-primary group-hover:translate-x-1 transition-transform" aria-hidden="true">
                                             <span className="text-sm font-medium">Accéder</span>
                                             <ArrowRight className="h-4 w-4 ml-1" />
                                         </div>
@@ -263,7 +273,7 @@ export default function HomePage() {
                             );
                         })}
                     </div>
-                </div>
+                </nav>
 
                 {/* Recent Packages */}
                 <div>
