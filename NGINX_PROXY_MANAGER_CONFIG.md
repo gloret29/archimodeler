@@ -119,3 +119,4 @@ Pour activer HTTPS :
 3. Cochez **"Force SSL"** et **"HTTP/2 Support"**
 4. Cliquez sur **"Save"**
 
+
