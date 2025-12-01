@@ -67,21 +67,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40">
+    <main id="main-content" role="main" className="flex items-center justify-center min-h-screen bg-muted/40">
       <Card className="w-[400px] shadow-lg">
         <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-4" role="img" aria-label="ArchiModeler Logo">
             <div className="p-3 bg-primary rounded-full">
-              <Lock className="w-6 h-6 text-primary-foreground" />
+              <Lock className="w-6 h-6 text-primary-foreground" aria-hidden="true" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">ArchiModeler</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-2xl text-center" id="login-title">ArchiModeler</CardTitle>
+          <CardDescription className="text-center" id="login-description">
             {t('loginSubtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4" aria-labelledby="login-title" aria-describedby="login-description">
             <div className="space-y-2">
               <Label htmlFor="email">{t('emailLabel')}</Label>
               <Input
@@ -91,6 +91,10 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                aria-required="true"
+                aria-invalid={error ? 'true' : 'false'}
+                aria-describedby={error ? 'email-error' : undefined}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -101,20 +105,39 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                aria-required="true"
+                aria-invalid={error ? 'true' : 'false'}
+                aria-describedby={error ? 'password-error' : undefined}
+                autoComplete="current-password"
               />
             </div>
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && (
+              <p 
+                id="login-error" 
+                className="text-sm text-red-500 text-center" 
+                role="alert" 
+                aria-live="assertive"
+              >
+                {error}
+              </p>
+            )}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={loading}
+              aria-busy={loading}
+              aria-describedby={error ? 'login-error' : undefined}
+            >
               {loading ? t('loggingIn') : t('loginButton')}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground" role="note">
             Demo: admin@archimodeler.com / admin123
           </p>
         </CardFooter>
       </Card>
-    </div>
+    </main>
   );
 }

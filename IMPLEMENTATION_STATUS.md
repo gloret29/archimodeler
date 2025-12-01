@@ -136,10 +136,25 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
   - [x] Support i18n dans les dialogues
 
 ### 10.2 Accessibilité
-**Statut**: 🔴 **À faire**
-- [ ] Navigation au clavier
-- [ ] Support lecteur d'écran
-- [ ] Contraste et lisibilité
+**Statut**: 🟢 **Terminé**
+- [x] Navigation au clavier
+  - [x] Composant "Skip to content" pour navigation rapide
+  - [x] Hooks pour gestion des raccourcis clavier (useKeyboardNavigation, useKeyboardShortcuts)
+  - [x] Navigation Tab/Shift+Tab dans tous les composants interactifs
+  - [x] Support des flèches haut/bas pour navigation dans les listes
+  - [x] Raccourcis clavier globaux (Enter, Escape, Home, End)
+- [x] Support lecteur d'écran
+  - [x] Composant LiveRegion pour annonces aux lecteurs d'écran
+  - [x] Attributs ARIA (aria-label, aria-describedby, roles, aria-live)
+  - [x] Attributs ARIA sur les formulaires (aria-required, aria-invalid)
+  - [x] Rôles sémantiques (main, navigation, banner, list, listitem)
+  - [x] Support des régions live (polite, assertive)
+- [x] Contraste et lisibilité
+  - [x] Classes utilitaires pour contraste élevé (prefers-contrast: high)
+  - [x] Support du mode réduit de mouvement (prefers-reduced-motion)
+  - [x] Styles de focus visibles pour navigation clavier
+  - [x] Tailles de cible tactiles minimales (44x44px)
+  - [x] Classes sr-only pour contenu accessible uniquement aux lecteurs d'écran
 
 ## ✅ Phase 11 : Collaboration Temps Réel (Terminé)
 
