@@ -259,6 +259,17 @@ Le script configure automatiquement :
 
 **Documentation complète** : Voir [DEPLOY_PROXMOX.md](./DEPLOY_PROXMOX.md)
 
+### Option 1.5 : Déploiement sur Container Proxmox Existant
+
+Si vous avez déjà un container Proxmox LXC Debian avec PostgreSQL installé, utilisez le guide dédié :
+
+**Documentation complète** : Voir [DEPLOY_EXISTING_CONTAINER.md](./DEPLOY_EXISTING_CONTAINER.md)
+
+Ce guide vous explique comment :
+- Utiliser votre PostgreSQL existant (pas besoin de Docker pour PostgreSQL)
+- Installer uniquement OpenSearch via Docker
+- Configurer ArchiModeler pour se connecter à votre base de données existante
+
 ### Option 2 : Installation Manuelle sur Serveur
 
 #### Prérequis Serveur
@@ -830,5 +841,7 @@ docker exec -i archimodeler-postgres-1 psql -U user archimodeler < backup_202411
 
 *Guide d'Installation ArchiModeler - Version 1.0*  
 *Dernière mise à jour : 2025-11-30*
+
+
 
 
