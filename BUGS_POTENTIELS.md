@@ -107,6 +107,133 @@ app.enableCors({
 
 ---
 
+## 🔴 Bug Sécurité 1 : Token JWT dans localStorage
+
+**Problème** : Le token JWT est stocké dans `localStorage`, ce qui le rend vulnérable aux attaques XSS (Cross-Site Scripting). Un script malveillant injecté pourrait voler le token.
+
+**Fichiers** : 
+- `apps/web/lib/api/config.ts` ligne 55
+- Multiple fichiers utilisent `localStorage.getItem('accessToken')` (28 occurrences)
+
+**Impact** : Risque de sécurité élevé - vol de session possible via XSS.
+
+**Solution** : Migrer vers des cookies HttpOnly qui ne sont pas accessibles via JavaScript.
+
+**TODO** : Déjà documenté dans `apps/web/lib/api/config.ts` ligne 51 : `// TODO: Migrer vers cookies HttpOnly (Bug #1)`
+
+---
+
+## 🟡 Bug Sécurité 2 : Logs de Mots de Passe
+
+**Problème** : Le service d'authentification log des informations sensibles dans la console, notamment si le mot de passe correspond (`Password match: ${isMatch}`).
+
+**Fichier** : `apps/server/src/auth/auth.service.ts` lignes 16, 20
+
+**Impact** : Fuite d'informations sensibles dans les logs. Risque de sécurité moyen.
+
+**Solution** : Retirer les logs de debug ou utiliser un logger avec niveaux de log appropriés.
+
+```typescript
+// ❌ À éviter
+console.log(`User found: ${email}, Password match: ${isMatch}`);
+
+// ✅ Préférer
+this.logger.debug(`User authentication attempt: ${email}`);
+```
+
+---
+
+## 🟡 Bug Sécurité 3 : Certificat SAML Fake
+
+**Problème** : La stratégie SAML utilise un certificat fake (`'fake-cert'`) en dur dans le code.
+
+**Fichier** : `apps/server/src/auth/strategies/saml.strategy.ts` ligne 12
+
+**Impact** : L'authentification SAML ne fonctionnera pas en production. Risque de sécurité moyen.
+
+**Solution** : Configurer le certificat réel via une variable d'environnement.
+
+```typescript
+cert: process.env.SAML_CERT || process.env.SAML_CERT_PATH,
+```
+
+**TODO** : Déjà documenté dans le code : `// TODO: Configure with real IdP certificate`
+
+---
+
+## 🟡 Bug Sécurité 4 : Mot de Passe Neo4j par Défaut
+
+**Problème** : Le service Neo4j utilise un mot de passe par défaut `'password'` si la variable d'environnement n'est pas définie.
+
+**Fichier** : `apps/server/src/neo4j/neo4j.service.ts` ligne 11
+
+**Impact** : Si `NEO4J_PASSWORD` n'est pas défini, utilisation d'un mot de passe faible par défaut. Risque de sécurité moyen.
+
+**Solution** : Forcer l'utilisation d'une variable d'environnement ou lancer une erreur si elle n'est pas définie.
+
+```typescript
+const password = process.env.NEO4J_PASSWORD;
+if (!password) {
+    throw new Error('NEO4J_PASSWORD environment variable is required');
+}
+```
+
+---
+
+## 🟢 Bug Code 1 : Utilisation de console.log au lieu d'un Logger
+
+**Problème** : De nombreux fichiers utilisent `console.log`, `console.error`, `console.warn` au lieu du logger NestJS approprié.
+
+**Fichiers** : 
+- `apps/server/src/main.ts` lignes 63-64
+- `apps/server/src/auth/auth.service.ts` lignes 16, 20
+- `apps/server/src/model/model.service.ts` (plusieurs occurrences)
+- `apps/server/src/neo4j/neo4j.service.ts` lignes 19, 21-22
+- `apps/server/src/comments/comments.controller.ts` (plusieurs occurrences)
+- Et beaucoup d'autres...
+
+**Impact** : Pas de contrôle sur les niveaux de log, pas de formatage cohérent, difficulté à filtrer les logs en production.
+
+**Solution** : Utiliser le `Logger` de NestJS partout.
+
+```typescript
+import { Logger } from '@nestjs/common';
+
+export class MyService {
+    private readonly logger = new Logger(MyService.name);
+    
+    someMethod() {
+        this.logger.log('Info message');
+        this.logger.error('Error message', error);
+        this.logger.warn('Warning message');
+    }
+}
+```
+
+---
+
+## 🟢 Bug Code 2 : onModuleDestroy sans Gestion d'Erreur
+
+**Problème** : La méthode `onModuleDestroy` dans `Neo4jService` n'a pas de gestion d'erreur. Si `driver.close()` échoue, cela pourrait causer des problèmes lors de l'arrêt de l'application.
+
+**Fichier** : `apps/server/src/neo4j/neo4j.service.ts` lignes 27-29
+
+**Impact** : Risque faible, mais pourrait empêcher un arrêt propre de l'application.
+
+**Solution** : Ajouter un try-catch pour gérer les erreurs.
+
+```typescript
+async onModuleDestroy() {
+    try {
+        await this.driver.close();
+    } catch (error) {
+        this.logger.error('Error closing Neo4j driver:', error);
+    }
+}
+```
+
+---
+
 ## 📋 Recommandations
 
 1. **Priorité Haute** : Corriger le bug SSR (Bug Critique 1)

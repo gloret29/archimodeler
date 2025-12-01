@@ -27,13 +27,29 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Log pour débogage (seulement en développement)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Login Debug] Base URL:', API_CONFIG.baseUrl);
+        console.log('[Login Debug] Endpoint:', '/auth/login');
+        console.log('[Login Debug] NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+        console.log('[Login Debug] Window origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
+      }
+
       const res = await API_CONFIG.fetch('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email: email, password }),
       });
 
       if (!res.ok) {
-        throw new Error('Invalid credentials');
+        const errorText = await res.text();
+        let errorMessage = 'Invalid credentials';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch {
+          errorMessage = errorText || `HTTP ${res.status}: ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await res.json();
@@ -60,7 +76,22 @@ export default function LoginPage() {
         router.push('/home', { locale: currentLocale });
       }
     } catch (err: any) {
-      setError(err.message);
+      // Améliorer le message d'erreur pour les erreurs réseau
+      let errorMessage = err.message || 'An error occurred';
+      
+      if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
+        errorMessage = `Network error: Unable to connect to the server. Please check:
+- The backend server is running
+- The reverse proxy is correctly configured
+- The API URL is correct (check browser console for details)`;
+      }
+      
+      setError(errorMessage);
+      
+      // Log l'erreur complète en développement
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Login Error]', err);
+      }
     } finally {
       setLoading(false);
     }

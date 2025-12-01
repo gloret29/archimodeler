@@ -444,3 +444,71 @@ Ce fichier retrace l'historique du développement et définit la roadmap des fut
   - [ ] Guide de configuration SAML pour les administrateurs
   - [ ] Documentation des attributs SAML requis
   - [ ] Exemples de configuration pour différents IdP (Azure AD, Okta, etc.)
+
+## 🔴 Phase 17 : Corrections de Bugs et Sécurité (En cours)
+
+> **Note** : Voir [BUGS_POTENTIELS.md](./BUGS_POTENTIELS.md) pour les détails complets de chaque bug.
+
+### 17.1 Bugs Critiques et Moyens (Corrigés)
+**Statut**: 🟢 **Terminé**
+- [x] Bug Critique 1 : SSR avec Reverse Proxy - Utilisation de `SSR_API_URL`
+- [x] Bug Moyen 1 : NEXT_PUBLIC_API_URL avec Reverse Proxy - Détection automatique
+- [x] Bug Moyen 2 : Endpoint qui commence déjà par /api - Normalisation des endpoints
+- [x] Bug Moyen 3 : WebSocket avec Reverse Proxy - Amélioration de la logique
+
+### 17.2 Bugs de Sécurité
+**Statut**: 🔴 **À faire**
+
+#### 17.2.1 Bug Sécurité 1 : Token JWT dans localStorage
+**Statut**: 🔴 **À faire**
+- [ ] Migrer le stockage du token JWT vers des cookies HttpOnly
+- [ ] Mettre à jour tous les composants utilisant `localStorage.getItem('accessToken')` (28 occurrences)
+- [ ] Implémenter la gestion des cookies côté serveur (NestJS)
+- [ ] Tester la compatibilité avec le reverse proxy
+- [ ] Mettre à jour la documentation de sécurité
+
+#### 17.2.2 Bug Sécurité 2 : Logs de Mots de Passe
+**Statut**: 🔴 **À faire**
+- [ ] Retirer les logs de debug dans `auth.service.ts`
+- [ ] Remplacer `console.log` par un logger NestJS approprié
+- [ ] Configurer les niveaux de log pour la production
+
+#### 17.2.3 Bug Sécurité 3 : Certificat SAML Fake
+**Statut**: 🔴 **À faire**
+- [ ] Configurer le certificat SAML via variables d'environnement
+- [ ] Implémenter la validation de la configuration SAML
+- [ ] Mettre à jour la documentation SAML
+
+#### 17.2.4 Bug Sécurité 4 : Mot de Passe Neo4j par Défaut
+**Statut**: 🔴 **À faire**
+- [ ] Forcer l'utilisation de `NEO4J_PASSWORD` via variable d'environnement
+- [ ] Lancer une erreur si la variable n'est pas définie
+- [ ] Mettre à jour la documentation d'installation
+
+### 17.3 Bugs Mineurs
+**Statut**: 🟡 **Partiellement à faire**
+
+#### 17.3.1 Bug Mineur 1 : Swagger Documentation
+**Statut**: 🟡 **À faire**
+- [ ] Déplacer Swagger sur `/api/api-docs` OU configurer une route dans le reverse proxy
+- [ ] Mettre à jour la documentation d'accès à Swagger
+
+#### 17.3.2 Bug Mineur 2 : Headers CORS en Production
+**Statut**: 🟡 **À faire**
+- [ ] Configurer CORS via variable d'environnement `CORS_ORIGIN`
+- [ ] Restreindre les origines en production
+- [ ] Tester la configuration avec le reverse proxy
+
+### 17.4 Améliorations du Code
+**Statut**: 🟡 **Partiellement à faire**
+
+#### 17.4.1 Remplacement des console.log par Logger
+**Statut**: 🟡 **À faire**
+- [ ] Remplacer tous les `console.log/error/warn` par le Logger NestJS (54 occurrences)
+- [ ] Configurer les niveaux de log appropriés
+- [ ] Standardiser le formatage des logs
+
+#### 17.4.2 Gestion d'Erreur dans onModuleDestroy
+**Statut**: 🟡 **À faire**
+- [ ] Ajouter try-catch dans `neo4j.service.ts` pour `onModuleDestroy`
+- [ ] Logger les erreurs de fermeture proprement
