@@ -265,3 +265,4 @@ function MyComponent() {
 *Dernière mise à jour : Phase 10.2 - Accessibilité*
 
 
+
