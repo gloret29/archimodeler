@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { io, Socket, Manager } from 'socket.io-client';
 import { API_CONFIG } from '@/lib/api/config';
 
 export interface User {
@@ -77,6 +77,7 @@ export function useCollaboration({
 }: UseCollaborationOptions) {
     const socketRef = useRef<Socket | null>(null);
     const socketIdRef = useRef<string | null>(null);
+    const errorLogCountRef = useRef(0); // Compteur persistant pour les logs d'erreur
     const onNodeChangedRef = useRef(onNodeChanged);
     const onEdgeChangedRef = useRef(onEdgeChanged);
     const onNodeDeletedRef = useRef(onNodeDeleted);
@@ -112,13 +113,24 @@ export function useCollaboration({
             return;
         }
 
-        const socket = io(API_CONFIG.wsUrl, {
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionAttempts: 5,
-            timeout: 5000,
-        });
+        // Socket.io client: NestJS attend /socket.io/?ns=/collaboration
+        // Test réussi: curl "http://localhost:3002/socket.io/?EIO=4&transport=polling&ns=/collaboration"
+        // 
+        // Solution: Utiliser Manager pour créer une connexion au namespace /collaboration
+        // Cela construit correctement /socket.io/?ns=/collaboration au lieu de /collaboration/socket.io/
+        const options = API_CONFIG.getSocketIOOptions('/collaboration');
+        
+        // Réduire les tentatives de reconnexion pour éviter le spam de logs
+        // La collaboration est optionnelle, donc on limite les tentatives
+        const collaborationOptions = {
+            ...options,
+            reconnectionAttempts: 3, // Réduire à 3 tentatives seulement
+            reconnectionDelay: 3000, // Augmenter le délai entre les tentatives à 3s
+            reconnectionDelayMax: 5000, // Maximum 5s entre les tentatives
+        };
+        
+        const manager = new Manager(API_CONFIG.wsBaseUrl, collaborationOptions);
+        const socket = manager.socket('/collaboration');
 
         socketRef.current = socket;
 
@@ -135,9 +147,33 @@ export function useCollaboration({
             setState((prev) => ({ ...prev, isConnected: false }));
         });
 
-        socket.on('connect_error', (error) => {
-            // Silently handle connection errors - collaboration is optional
-            console.warn('Collaboration server unavailable (this is optional)');
+        const MAX_ERROR_LOGS = 2; // Logger seulement les 2 premières erreurs
+        
+        socket.on('connect_error', (error: Error & { type?: string; description?: string }) => {
+            errorLogCountRef.current++;
+            
+            // Ignorer les erreurs vides ou sans informations utiles
+            const hasUsefulInfo = error?.message && error.message.trim().length > 0;
+            if (!hasUsefulInfo) {
+                // Erreur vide - ignorer silencieusement
+                setState((prev) => ({ ...prev, isConnected: false }));
+                return;
+            }
+            
+            // Logger seulement les premières erreurs pour éviter le spam
+            if (errorLogCountRef.current <= MAX_ERROR_LOGS) {
+                console.warn(`[useCollaboration] WebSocket connection error (${errorLogCountRef.current}/${MAX_ERROR_LOGS}):`, {
+                    message: error.message,
+                    type: error.type,
+                    description: error.description,
+                    wsBaseUrl: API_CONFIG.wsBaseUrl,
+                    timestamp: new Date().toISOString(),
+                });
+                if (errorLogCountRef.current === MAX_ERROR_LOGS) {
+                    console.warn('[useCollaboration] Further connection errors will be silently ignored. Collaboration server unavailable (this is optional).');
+                }
+            }
+            
             setState((prev) => ({ ...prev, isConnected: false }));
         });
 

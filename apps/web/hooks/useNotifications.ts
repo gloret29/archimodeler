@@ -24,9 +24,7 @@ export function useNotifications(userId?: string) {
         if (!userId) return;
 
         // Connect to WebSocket
-        const newSocket = io(API_CONFIG.wsUrl, {
-            transports: ['websocket'],
-        });
+        const newSocket = io(API_CONFIG.wsUrl, API_CONFIG.getSocketIOOptions());
 
         newSocket.on('connect', () => {
             console.log('Notifications WebSocket connected');

@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useLocale } from 'next-intl';
-import { io, Socket } from 'socket.io-client';
+import { io, Socket, Manager } from 'socket.io-client';
 import { API_CONFIG } from '@/lib/api/config';
 import { useChatContext } from '@/contexts/ChatContext';
 
@@ -139,58 +139,152 @@ export function NotificationCenter() {
             fetchUnreadCount();
 
             // Connect to WebSocket for real-time notifications
-            const socket = io(API_CONFIG.wsUrl, {
-                transports: ['websocket'],
-                reconnection: true,
-                reconnectionDelay: 1000,
-                reconnectionAttempts: 5,
+            // Utiliser Manager pour créer une connexion au namespace /collaboration
+            // Cela construit correctement /socket.io/?ns=/collaboration au lieu de /collaboration/socket.io/
+            const options = API_CONFIG.getSocketIOOptions('/collaboration');
+            const wsBaseUrl = API_CONFIG.wsBaseUrl;
+            
+            // Log détaillé avant connexion
+            console.log('[NotificationCenter] Connecting to WebSocket:', {
+                wsBaseUrl,
+                namespace: '/collaboration',
+                options: options,
+                expectedUrl: `${wsBaseUrl}/socket.io/?EIO=4&transport=polling&ns=/collaboration`,
             });
-
-            socket.on('connect', () => {
-                console.log('Notification WebSocket connected');
-                // Join user-specific notification room
-                socket.emit('join-notifications', { userId });
-            });
-
-            // Listen for real-time notifications
-            socket.on(`notification:${userId}`, (notification: Notification) => {
-                console.log('Received real-time notification:', notification);
-                // Add notification to the list
-                setNotifications(prev => {
-                    // Check if notification already exists (avoid duplicates)
-                    const exists = prev.some(n => n.id === notification.id);
-                    if (exists) {
-                        return prev;
-                    }
-                    // Add new notification at the beginning
-                    return [notification, ...prev];
+            
+            let socket: Socket | null = null;
+            
+            try {
+                const manager = new Manager(wsBaseUrl, options);
+                socket = manager.socket('/collaboration');
+                
+                // Log après création du socket
+                console.log('[NotificationCenter] Socket created:', {
+                    id: socket.id,
+                    connected: socket.connected,
+                    disconnected: socket.disconnected,
+                    manager: {
+                        uri: manager.uri,
+                        nsps: Object.keys(manager.nsps || {}),
+                    },
                 });
-                // Update unread count
-                if (!notification.read) {
-                    setUnreadCount(prev => prev + 1);
-                    // Trigger blinking animation for system alerts
-                    if (notification.type === 'SYSTEM_ALERT') {
-                        setIsBlinking(true);
-                        // Stop blinking after 10 seconds
-                        setTimeout(() => setIsBlinking(false), 10000);
+                
+                // Stocker le socket dans la ref
+                socketRef.current = socket;
+                
+                // Configurer les listeners (voir ci-dessous)
+                setupSocketListeners(socket, userId);
+                
+            } catch (error) {
+                console.error('[NotificationCenter] Failed to create socket:', error);
+                // Continuer même si la création échoue - le polling fonctionnera
+                socket = null;
+            }
+            
+            // Fonction pour configurer les listeners du socket
+            function setupSocketListeners(socket: Socket, userId: string) {
+
+                socket.on('connect', () => {
+                    console.log('✅ [NotificationCenter] WebSocket connected successfully:', {
+                        socketId: socket.id,
+                        userId,
+                        namespace: '/collaboration',
+                        wsBaseUrl: API_CONFIG.wsBaseUrl,
+                    });
+                    // Join user-specific notification room
+                    socket.emit('join-notifications', { userId });
+                    console.log('[NotificationCenter] Sent join-notifications for userId:', userId);
+                });
+
+                // Listen for real-time notifications
+                socket.on(`notification:${userId}`, (notification: Notification) => {
+                    console.log('Received real-time notification:', notification);
+                    // Add notification to the list
+                    setNotifications(prev => {
+                        // Check if notification already exists (avoid duplicates)
+                        const exists = prev.some(n => n.id === notification.id);
+                        if (exists) {
+                            return prev;
+                        }
+                        // Add new notification at the beginning
+                        return [notification, ...prev];
+                    });
+                    // Update unread count
+                    if (!notification.read) {
+                        setUnreadCount(prev => prev + 1);
+                        // Trigger blinking animation for system alerts
+                        if (notification.type === 'SYSTEM_ALERT') {
+                            setIsBlinking(true);
+                            // Stop blinking after 10 seconds
+                            setTimeout(() => setIsBlinking(false), 10000);
+                        }
                     }
-                }
-                // Refresh notifications to ensure consistency (but don't duplicate)
-                setTimeout(() => {
-                    fetchNotifications();
-                    fetchUnreadCount();
-                }, 500);
-            });
+                    // Refresh notifications to ensure consistency (but don't duplicate)
+                    setTimeout(() => {
+                        fetchNotifications();
+                        fetchUnreadCount();
+                    }, 500);
+                });
 
-            socket.on('disconnect', () => {
-                console.log('Notification WebSocket disconnected');
-            });
+                socket.on('disconnect', (reason) => {
+                    console.log('[NotificationCenter] WebSocket disconnected:', {
+                        reason,
+                        socketId: socket.id,
+                    });
+                });
+                
+                socket.on('reconnect', (attemptNumber) => {
+                    console.log('[NotificationCenter] WebSocket reconnected:', {
+                        attemptNumber,
+                        socketId: socket.id,
+                    });
+                });
+                
+                socket.on('reconnect_attempt', (attemptNumber) => {
+                    console.log('[NotificationCenter] WebSocket reconnection attempt:', attemptNumber);
+                });
+                
+                socket.on('reconnect_error', (error) => {
+                    console.warn('[NotificationCenter] WebSocket reconnection error:', error);
+                });
+                
+                socket.on('reconnect_failed', () => {
+                    console.error('[NotificationCenter] WebSocket reconnection failed after all attempts');
+                });
 
-            socket.on('connect_error', (error) => {
-                console.error('Notification WebSocket connection error:', error);
-            });
-
-            socketRef.current = socket;
+                socket.on('connect_error', (error) => {
+                    // Ignorer silencieusement les erreurs de connexion vides ou sans informations utiles
+                    // Ces erreurs sont normales pendant les tentatives de connexion initiales
+                    // Socket.io gère automatiquement la reconnexion
+                    
+                    // Vérifier si l'erreur a des informations utiles
+                    try {
+                        const errorStr = error ? JSON.stringify(error) : 'null';
+                        const hasMessage = error?.message && String(error.message).trim().length > 0;
+                        const hasType = (error as any)?.type;
+                        const hasDescription = (error as any)?.description;
+                        const errorKeys = error ? Object.keys(error) : [];
+                        
+                        // Si l'erreur est vide ({}) ou n'a pas d'informations utiles, ignorer complètement
+                        if (errorStr === '{}' || (!hasMessage && !hasType && !hasDescription && errorKeys.length === 0)) {
+                            // Erreur vide - ignorer silencieusement
+                            return;
+                        }
+                        
+                        // Seulement logger les erreurs avec des informations utiles
+                        console.warn('[NotificationCenter] WebSocket connection error (will retry):', {
+                            message: error?.message,
+                            type: (error as any)?.type,
+                            description: (error as any)?.description,
+                            wsBaseUrl: API_CONFIG.wsBaseUrl,
+                            namespace: '/collaboration',
+                        });
+                    } catch (e) {
+                        // Si la vérification échoue, ignorer l'erreur
+                        return;
+                    }
+                });
+            }
 
             // Poll for updates every 30 seconds as backup
             const interval = setInterval(() => {
@@ -201,10 +295,15 @@ export function NotificationCenter() {
                 }
             }, 30000);
 
+            // Retourner une fonction de nettoyage
             return () => {
                 clearInterval(interval);
                 if (socket) {
                     socket.disconnect();
+                }
+                if (socketRef.current) {
+                    socketRef.current.disconnect();
+                    socketRef.current = null;
                 }
             };
         };

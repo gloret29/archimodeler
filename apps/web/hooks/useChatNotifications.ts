@@ -26,9 +26,7 @@ export function useChatNotifications({ currentUser, enabled, activeUsers = [] }:
         if (!enabled || !currentUser) return;
 
         // Connect to WebSocket for chat notifications
-        const socket = io(API_CONFIG.wsUrl, {
-            transports: ['websocket'],
-        });
+        const socket = io(API_CONFIG.wsUrl, API_CONFIG.getSocketIOOptions());
 
         socketRef.current = socket;
 

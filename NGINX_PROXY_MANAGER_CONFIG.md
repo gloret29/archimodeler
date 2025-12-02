@@ -67,6 +67,28 @@ proxy_set_header Connection "upgrade";
 
 5. Cliquez sur **"Save"**
 
+### Étape 3 : Vérifier la Configuration pour Socket.io
+
+**Comment Socket.io fonctionne avec le namespace `/collaboration`** :
+
+1. Le client appelle : `io('http://domain.com/api/collaboration')`
+2. Socket.io détecte le namespace `/collaboration` depuis l'URL
+3. Socket.io utilise le path par défaut `/socket.io/` pour le handshake
+4. L'URL complète devient : `http://domain.com/api/collaboration/socket.io/`
+5. Le reverse proxy reçoit : `/api/collaboration/socket.io/`
+6. Le rewrite dans `/api` transforme : `/api/collaboration/socket.io/` → `/collaboration/socket.io/`
+7. Le backend reçoit : `/collaboration/socket.io/` (correct pour le namespace)
+
+**Conclusion** : La location `/api` avec le rewrite devrait suffire pour gérer les WebSockets Socket.io. 
+
+**Si les WebSockets ne fonctionnent toujours pas**, vous pouvez ajouter une location plus spécifique pour les requêtes Socket.io qui passent par `/api`. Cependant, cette location ne sera utilisée que si Socket.io essaie de se connecter directement à `/api/socket.io/` (sans namespace), ce qui n'est pas notre cas.
+
+**La configuration actuelle avec `/api` devrait fonctionner**. Si vous rencontrez des problèmes, vérifiez :
+1. Que **Websockets Support** est bien activé pour `/api`
+2. Que les headers `Upgrade` et `Connection` sont configurés
+3. Que `proxy_http_version 1.1;` est présent
+4. Les logs Nginx pour voir comment les requêtes sont traitées
+
 ## Configuration Alternative (Sans rewrite)
 
 Si la configuration avec `rewrite` ne fonctionne pas, utilisez cette alternative :
@@ -106,9 +128,47 @@ Une fois configuré, testez :
 
 ### WebSocket ne fonctionne pas
 
-1. Assurez-vous que **Websockets Support** est activé pour la location `/api`
-2. Vérifiez que les headers `Upgrade` et `Connection` sont configurés
-3. Testez la connexion WebSocket : `wscat -c ws://votre-domaine.com/api/collaboration`
+**Points critiques à vérifier** :
+
+1. **Websockets Support activé** :
+   - ✅ Pour la location `/api` (obligatoire)
+   - ✅ Pour la location `/api/socket.io` si vous l'avez ajoutée (recommandé)
+
+2. **Headers WebSocket configurés** :
+   - `proxy_http_version 1.1;` (obligatoire)
+   - `proxy_set_header Upgrade $http_upgrade;`
+   - `proxy_set_header Connection "upgrade";`
+
+3. **Ordre des locations** :
+   - Les locations plus spécifiques (comme `/api/socket.io`) sont traitées avant les moins spécifiques (comme `/api`)
+   - Assurez-vous que le rewrite dans `/api` gère correctement les chemins Socket.io
+
+4. **Test de connexion** :
+   ```bash
+   # Installer wscat si nécessaire
+   npm install -g wscat
+   
+   # Tester le handshake Socket.io (polling) - avec namespace /collaboration
+   curl "http://votre-domaine.com/api/collaboration/socket.io/?EIO=4&transport=polling"
+   
+   # Devrait retourner une réponse JSON avec des informations Socket.io
+   # Si ça fonctionne, le reverse proxy transmet correctement les requêtes Socket.io
+   
+   # Tester la connexion WebSocket (nécessite un sid du handshake précédent)
+   # wscat -c "ws://votre-domaine.com/api/collaboration/socket.io/?EIO=4&transport=websocket&sid=..."
+   ```
+
+5. **Vérification dans le navigateur** :
+   - Ouvrez la console (F12)
+   - Cherchez les messages `[WebSocket Config]` qui indiquent l'URL utilisée
+   - Vérifiez les erreurs de connexion WebSocket dans l'onglet Network
+
+6. **Logs Nginx** :
+   - Vérifiez les Access Logs pour voir les requêtes vers `/api/collaboration/socket.io/`
+   - Vérifiez les Error Logs pour les erreurs de proxy
+
+7. **Consultez le guide de dépannage** :
+   - [REVERSE_PROXY_TROUBLESHOOTING.md](./docs/REVERSE_PROXY_TROUBLESHOOTING.md) pour plus de détails sur le dépannage WebSocket
 
 ## Configuration SSL (Optionnel)
 

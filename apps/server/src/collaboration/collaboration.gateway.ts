@@ -35,7 +35,9 @@ interface ViewSession {
     cors: {
         origin: '*',
     },
-    namespace: 'collaboration',
+    namespace: '/collaboration', // Namespace avec slash initial (requis par Socket.io)
+    // Note: Le path '/socket.io/' est configuré au niveau de l'adapter (SocketIOAdapter)
+    // Socket.io construira automatiquement le chemin: /collaboration/socket.io/
 })
 export class CollaborationGateway
     implements OnGatewayConnection, OnGatewayDisconnect {
@@ -52,7 +54,10 @@ export class CollaborationGateway
         @Inject(forwardRef(() => UsersService))
         private usersService: UsersService,
         private prisma: PrismaService,
-    ) {}
+    ) {
+        // Log pour vérifier que le gateway est initialisé
+        this.logger.log('CollaborationGateway initialized with namespace: collaboration');
+    }
 
     handleConnection(client: Socket) {
         this.logger.log(`Client connected to collaboration namespace: ${client.id}`);

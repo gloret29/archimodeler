@@ -93,9 +93,7 @@ export function UserChat({ currentUser, targetUser, isOpen, onClose }: UserChatP
         if (!isOpen) return;
 
         // Connect to WebSocket for chat
-        const newSocket = io(API_CONFIG.wsUrl, {
-            transports: ['websocket'],
-        });
+        const newSocket = io(API_CONFIG.wsUrl, API_CONFIG.getSocketIOOptions());
 
         newSocket.on('connect', () => {
             console.log('Chat WebSocket connected');

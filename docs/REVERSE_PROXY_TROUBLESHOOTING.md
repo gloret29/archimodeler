@@ -246,6 +246,75 @@ and the resource is in more-private address space 'local'.
 
 **Solution** : Le code devrait normalement gérer cela automatiquement. Vérifiez les logs de débogage dans la console.
 
+### Problème 7 : WebSocket ne se connecte pas / Erreurs de timeout
+
+**Erreurs typiques** :
+- `WebSocket connection to '...' failed: WebSocket is closed before the connection is established`
+- `Notification WebSocket connection error: Error: timeout`
+- `Collaboration server unavailable (this is optional)`
+
+**Cause** : Les WebSockets nécessitent une configuration spéciale du reverse proxy pour gérer l'upgrade HTTP vers WebSocket.
+
+**Solutions** :
+
+1. **Vérifiez que Websockets Support est activé** :
+   - Dans Nginx Proxy Manager, pour la Custom Location `/api`
+   - ✅ **Websockets Support** doit être **Activé**
+
+2. **Vérifiez la configuration Nginx pour les WebSockets** :
+   Dans la **Custom Nginx Configuration** de la location `/api`, assurez-vous d'avoir :
+   ```nginx
+   # Pour WebSocket
+   proxy_http_version 1.1;
+   proxy_set_header Upgrade $http_upgrade;
+   proxy_set_header Connection "upgrade";
+   ```
+
+3. **Vérifiez les timeouts** :
+   Les WebSockets peuvent nécessiter des timeouts plus longs :
+   ```nginx
+   proxy_connect_timeout 60s;
+   proxy_send_timeout 60s;
+   proxy_read_timeout 60s;
+   ```
+
+4. **Testez la connexion WebSocket** :
+   ```bash
+   # Installer wscat si nécessaire
+   npm install -g wscat
+   
+   # Tester la connexion WebSocket
+   wscat -c ws://votre-domaine.com/api/collaboration/socket.io/?EIO=4&transport=websocket
+   ```
+   
+   **Note** : Socket.io utilise un handshake HTTP initial avant d'upgrader vers WebSocket. Le path complet est `/collaboration/socket.io/` avec le namespace.
+
+5. **Vérifiez les logs de la console du navigateur** :
+   Ouvrez la console (F12) et cherchez les messages `[WebSocket Config]` qui indiquent :
+   - L'URL WebSocket utilisée
+   - Si le reverse proxy est détecté
+   - Les options Socket.io configurées
+
+6. **Vérifiez que Socket.io peut faire le handshake initial** :
+   Socket.io fait d'abord un handshake HTTP (polling) avant d'upgrader vers WebSocket. Testez :
+   ```bash
+   curl "http://votre-domaine.com/api/collaboration/socket.io/?EIO=4&transport=polling"
+   ```
+   
+   **Résultat attendu** : Une réponse JSON avec des informations sur la session Socket.io
+
+7. **Configuration Socket.io côté client** :
+   Le code configure automatiquement Socket.io pour :
+   - Utiliser WebSocket en priorité, puis polling en fallback
+   - Permettre l'upgrade de polling vers WebSocket
+   - Augmenter les timeouts pour le reverse proxy
+   - Utiliser le bon path avec le namespace `/collaboration`
+
+8. **Si le problème persiste** :
+   - Vérifiez les logs Nginx pour voir si les requêtes WebSocket arrivent
+   - Vérifiez les logs du backend pour voir si les connexions WebSocket sont acceptées
+   - Assurez-vous que le firewall n'bloque pas les connexions WebSocket
+
 ## 🔍 Étape 7 : Test Complet
 
 ### Test 1 : Backend direct

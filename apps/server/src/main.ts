@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SocketIOAdapter } from './websocket/socket-io.adapter';
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Point d'entrée de l'application NestJS.
@@ -12,6 +14,11 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Configurer l'adapter Socket.io personnalisé pour les WebSockets
+  // IMPORTANT: Doit être configuré avant app.listen()
+  // Utiliser notre adapter personnalisé pour mieux contrôler la configuration
+  app.useWebSocketAdapter(new SocketIOAdapter(app));
   
   // Faire confiance au reverse proxy pour les headers X-Forwarded-*
   // Cela permet à NestJS de correctement gérer les requêtes passant par un reverse proxy
@@ -31,6 +38,51 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Forwarded-For', 'X-Forwarded-Proto', 'X-Forwarded-Host'],
+  });
+
+
+  /**
+   * Middleware de log pour aider au débogage des erreurs "Failed to fetch" derrière un reverse proxy.
+   * On trace uniquement les routes critiques d'authentification et d'utilisateur afin de limiter le bruit.
+   */
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const criticalPrefixes = ['/auth', '/users', '/bizdesign'];
+    const shouldLog = criticalPrefixes.some((prefix) => req.originalUrl.startsWith(prefix));
+
+    if (!shouldLog) {
+      return next();
+    }
+
+    const startTime = Date.now();
+    const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const clientIp = Array.isArray(forwardedFor)
+      ? forwardedFor[0]
+      : forwardedFor?.split(',')[0]?.trim() ?? req.ip;
+
+    console.log('[HTTP Debug]', {
+      requestId,
+      phase: 'incoming',
+      method: req.method,
+      url: req.originalUrl,
+      clientIp,
+      host: req.headers.host,
+      forwardedProto: req.headers['x-forwarded-proto'],
+      forwardedHost: req.headers['x-forwarded-host'],
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.on('finish', () => {
+      console.log('[HTTP Debug]', {
+        requestId,
+        phase: 'response',
+        statusCode: res.statusCode,
+        durationMs: Date.now() - startTime,
+        contentLength: res.getHeader('content-length'),
+      });
+    });
+
+    next();
   });
 
   // Swagger configuration
