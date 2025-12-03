@@ -1,0 +1,284 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Base de données principale (pour migration)
+  postgres-main:
+    image: postgres:15-alpine
+    container_name: postgres-main
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_MAIN_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_main_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - IAM
+  postgres-iam:
+    image: postgres:15-alpine
+    container_name: postgres-iam
+    environment:
+      POSTGRES_USER: ${POSTGRES_IAM_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_IAM_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_IAM_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_iam_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_IAM_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Modeling
+  postgres-modeling:
+    image: postgres:15-alpine
+    container_name: postgres-modeling
+    environment:
+      POSTGRES_USER: ${POSTGRES_MODELING_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_MODELING_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_MODELING_DB}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_modeling_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_MODELING_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Comments
+  postgres-comments:
+    image: postgres:15-alpine
+    container_name: postgres-comments
+    environment:
+      POSTGRES_USER: ${POSTGRES_COMMENTS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_COMMENTS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_COMMENTS_DB}
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_comments_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_COMMENTS_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Notifications
+  postgres-notifications:
+    image: postgres:15-alpine
+    container_name: postgres-notifications
+    environment:
+      POSTGRES_USER: ${POSTGRES_NOTIFICATIONS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_NOTIFICATIONS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_NOTIFICATIONS_DB}
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_notifications_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_NOTIFICATIONS_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Workflow
+  postgres-workflow:
+    image: postgres:15-alpine
+    container_name: postgres-workflow
+    environment:
+      POSTGRES_USER: ${POSTGRES_WORKFLOW_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_WORKFLOW_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_WORKFLOW_DB}
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_workflow_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_WORKFLOW_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Stereotypes
+  postgres-stereotypes:
+    image: postgres:15-alpine
+    container_name: postgres-stereotypes
+    environment:
+      POSTGRES_USER: ${POSTGRES_STEREOTYPES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_STEREOTYPES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_STEREOTYPES_DB}
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres_stereotypes_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_STEREOTYPES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Connectors
+  postgres-connectors:
+    image: postgres:15-alpine
+    container_name: postgres-connectors
+    environment:
+      POSTGRES_USER: ${POSTGRES_CONNECTORS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_CONNECTORS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_CONNECTORS_DB}
+    ports:
+      - "5439:5432"
+    volumes:
+      - postgres_connectors_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CONNECTORS_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Settings
+  postgres-settings:
+    image: postgres:15-alpine
+    container_name: postgres-settings
+    environment:
+      POSTGRES_USER: ${POSTGRES_SETTINGS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_SETTINGS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_SETTINGS_DB}
+    ports:
+      - "5440:5432"
+    volumes:
+      - postgres_settings_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SETTINGS_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Metamodel
+  postgres-metamodel:
+    image: postgres:15-alpine
+    container_name: postgres-metamodel
+    environment:
+      POSTGRES_USER: ${POSTGRES_METAMODEL_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_METAMODEL_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_METAMODEL_DB}
+    ports:
+      - "5441:5432"
+    volumes:
+      - postgres_metamodel_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_METAMODEL_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NATS
+  nats:
+    image: nats:2.10-alpine
+    container_name: nats
+    command: ["-js", "-m", "8222", "-u", "${NATS_USER}", "-p", "${NATS_PASSWORD}"]
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # HTTP monitoring
+      - "6222:6222"  # Routing port
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # OpenSearch
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: opensearch
+    environment:
+      - cluster.name=archimodeler-cluster
+      - node.name=opensearch-node1
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # OpenSearch Dashboards
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.11.0
+    container_name: opensearch-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres_main_data:
+  postgres_iam_data:
+  postgres_modeling_data:
+  postgres_comments_data:
+  postgres_notifications_data:
+  postgres_workflow_data:
+  postgres_stereotypes_data:
+  postgres_connectors_data:
+  postgres_settings_data:
+  postgres_metamodel_data:
+  nats_data:
+  redis_data:
+  opensearch_data:
+
+networks:
+  default:
+    name: archimodeler-infra
+
+
+
+

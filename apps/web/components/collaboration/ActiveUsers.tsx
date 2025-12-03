@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { User } from '@/hooks/useCollaboration';
+import { User } from '@/lib/types/collaboration';
 import { Users, MessageCircle } from 'lucide-react';
 import {
     Popover,
@@ -9,7 +9,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from '@/components/ui/button';
-import { UserChat } from './UserChat';
+import { UserChatGraphQL } from './UserChatGraphQL';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { useChatContext } from '@/contexts/ChatContext';
 
@@ -125,7 +125,7 @@ export default function ActiveUsers({ users, isConnected, currentUser }: ActiveU
             </Popover>
 
             {chatTarget && (
-                <UserChat
+                <UserChatGraphQL
                     currentUser={currentUser}
                     targetUser={{ id: chatTarget.id, name: chatTarget.name, color: chatTarget.color }}
                     isOpen={isChatOpen}

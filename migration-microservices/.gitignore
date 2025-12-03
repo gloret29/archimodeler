@@ -1,0 +1,26 @@
+# Fichiers de configuration avec secrets
+config/.env
+config/secrets
+
+# Exports de migration
+data-migration/exports/
+data-migration/*.sql
+data-migration/*.dump
+
+# Backups
+backups/
+*.backup
+*.dump
+
+# Logs
+*.log
+logs/
+
+# Fichiers temporaires
+*.tmp
+*.temp
+.DS_Store
+
+
+
+

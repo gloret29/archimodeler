@@ -1,0 +1,51 @@
+# Template docker-compose.yml pour service microservice
+# Copier ce fichier dans chaque service et adapter :
+# - SERVICE_NAME: nom du service (iam, modeling, etc.)
+# - SERVICE_PATH: chemin API (/api/iam, /api/modeling, etc.)
+# - DATABASE_URL: URL de la base de données si nécessaire
+# - Variables d'environnement spécifiques
+
+version: '3.8'
+
+services:
+  SERVICE_NAME-service:
+    build:
+      context: ../../..
+      dockerfile: migration-microservices/services/SERVICE_NAME/Dockerfile
+    container_name: SERVICE_NAME-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Adapter selon le service
+      # - DATABASE_URL=postgresql://${POSTGRES_SERVICE_USER}:${POSTGRES_SERVICE_PASSWORD}@${LXC_INFRASTRUCTURE_IP}:PORT/${POSTGRES_SERVICE_DB}
+      - NATS_URL=${NATS_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      # Ajouter les variables spécifiques au service
+    ports:
+      - "3000:3000"
+    networks:
+      - gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.SERVICE_NAME.rule=Host(\`${GATEWAY_DOMAIN}\`) && PathPrefix(\`SERVICE_PATH\`)"
+      - "traefik.http.routers.SERVICE_NAME.entrypoints=websecure"
+      - "traefik.http.routers.SERVICE_NAME.tls.certresolver=letsencrypt"
+      - "traefik.http.services.SERVICE_NAME.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.SERVICE_NAME-stripprefix.stripprefix.prefixes=SERVICE_PATH"
+      - "traefik.http.routers.SERVICE_NAME.middlewares=SERVICE_NAME-stripprefix"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  gateway:
+    name: archimodeler-gateway
+    external: true
+
+
+
+

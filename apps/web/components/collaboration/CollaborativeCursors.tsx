@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { User, CursorPosition } from '@/hooks/useCollaboration';
+import { User, CursorPosition } from '@/lib/types/collaboration';
 
 interface CollaborativeCursorsProps {
     users: User[];

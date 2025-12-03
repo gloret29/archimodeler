@@ -1,0 +1,134 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type ChatMessage {
+  from: String!
+  id: String!
+  message: String!
+  senderName: String
+  timestamp: String!
+  to: String!
+}
+
+type CursorPosition {
+  x: Float!
+  y: Float!
+}
+
+input CursorPositionInput {
+  x: Float!
+  y: Float!
+}
+
+type CursorUpdate {
+  position: CursorPosition!
+  userId: String!
+  viewId: String!
+}
+
+type EdgeDelete {
+  edgeId: String!
+  userId: String!
+  viewId: String!
+}
+
+type EdgeUpdate {
+  edge: String!
+  userId: String!
+  viewId: String!
+}
+
+type Mutation {
+  deleteEdge(edgeId: String!, viewId: String!): Boolean!
+  deleteNode(nodeId: String!, viewId: String!): Boolean!
+  joinView(user: UserInput!, viewId: String!): Boolean!
+  leaveView(viewId: String!): Boolean!
+  notifyViewSaved(savedBy: SavedByInput!, viewId: String!): Boolean!
+  sendChatMessage(message: String!, to: String!): ChatMessage!
+  updateCursor(position: CursorPositionInput!, viewId: String!): Boolean!
+  updateEdge(edge: String!, viewId: String!): Boolean!
+  updateNode(node: String!, viewId: String!): Boolean!
+}
+
+type NodeDelete {
+  nodeId: String!
+  userId: String!
+  viewId: String!
+}
+
+type NodeUpdate {
+  node: String!
+  userId: String!
+  viewId: String!
+}
+
+type Notification {
+  createdAt: String!
+  id: String!
+  message: String!
+  metadata: String
+  read: Boolean!
+  severity: String!
+  title: String!
+  type: String!
+}
+
+type Query {
+  chatHistory(fromId: String!, toId: String!): [ChatMessage!]!
+  notifications: [Notification!]!
+  unreadNotificationCount: Float!
+}
+
+type SavedBy {
+  id: String!
+  name: String!
+}
+
+input SavedByInput {
+  id: String!
+  name: String!
+}
+
+type Subscription {
+  chatMessageAdded: ChatMessage!
+  cursorUpdates(viewId: String!): CursorUpdate!
+  edgeDeletes(viewId: String!): EdgeDelete!
+  edgeUpdates(viewId: String!): EdgeUpdate!
+  nodeDeletes(viewId: String!): NodeDelete!
+  nodeUpdates(viewId: String!): NodeUpdate!
+  notificationAdded: Notification!
+  userJoined(viewId: String!): UserJoined!
+  userLeft(viewId: String!): UserLeft!
+  viewSaved(viewId: String!): ViewSaved!
+}
+
+type User {
+  color: String!
+  id: String!
+  name: String!
+}
+
+input UserInput {
+  color: String!
+  id: String!
+  name: String!
+}
+
+type UserJoined {
+  user: User!
+  userId: String!
+  users: [User!]!
+  viewId: String!
+}
+
+type UserLeft {
+  userId: String!
+  users: [User!]!
+  viewId: String!
+}
+
+type ViewSaved {
+  savedBy: SavedBy!
+  viewId: String!
+}

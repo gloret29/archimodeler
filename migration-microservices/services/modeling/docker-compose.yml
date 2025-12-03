@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  modeling-service:
+    build:
+      context: ../../..
+      dockerfile: migration-microservices/services/modeling/Dockerfile
+    container_name: modeling-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_MODELING_USER}:${POSTGRES_MODELING_PASSWORD}@${LXC_INFRASTRUCTURE_IP}:5434/${POSTGRES_MODELING_DB}
+      - NATS_URL=${NATS_URL}
+      - REDIS_URL=${REDIS_URL}
+      - OPENSEARCH_URL=${OPENSEARCH_URL}
+    ports:
+      - "3000:3000"
+    networks:
+      - gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.modeling.rule=Host(`${GATEWAY_DOMAIN}`) && PathPrefix(`/api/modeling`)"
+      - "traefik.http.routers.modeling.entrypoints=websecure"
+      - "traefik.http.routers.modeling.tls.certresolver=letsencrypt"
+      - "traefik.http.services.modeling.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.modeling-stripprefix.stripprefix.prefixes=/api/modeling"
+      - "traefik.http.routers.modeling.middlewares=modeling-stripprefix"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  gateway:
+    name: archimodeler-gateway
+    external: true
+
+
+
+

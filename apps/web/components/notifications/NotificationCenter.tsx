@@ -14,9 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useLocale } from 'next-intl';
-import { io, Socket, Manager } from 'socket.io-client';
-import { API_CONFIG } from '@/lib/api/config';
 import { useChatContext } from '@/contexts/ChatContext';
+import { useNotificationsGraphQL } from '@/hooks/useNotificationsGraphQL';
 
 interface Notification {
     id: string;
@@ -44,66 +43,14 @@ const severityIcons = {
 };
 
 export function NotificationCenter() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [isBlinking, setIsBlinking] = useState(false);
     const locale = useLocale();
-    const socketRef = useRef<Socket | null>(null);
-    const userIdRef = useRef<string | null>(null);
     const { openChat } = useChatContext();
 
-    const fetchNotifications = async () => {
-        try {
-            // Vérifier si l'utilisateur est connecté avant de faire l'appel
-            const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-            if (!token) {
-                setNotifications([]);
-                return;
-            }
-
-            const data = await api.get<Notification[]>('/notifications');
-            // Update notifications, preserving any real-time notifications that might not be in the API response yet
-            setNotifications(prev => {
-                const newNotifications = data || [];
-                // Merge with existing notifications, avoiding duplicates
-                const existingIds = new Set(newNotifications.map((n: Notification) => n.id));
-                const additionalNotifications = prev.filter(n => !existingIds.has(n.id));
-                return [...newNotifications, ...additionalNotifications].sort((a, b) => 
-                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                );
-            });
-        } catch (error: any) {
-            // Ne logger que si ce n'est pas une erreur d'authentification attendue (401 ou 500 si userId manquant)
-            if (error.status !== 401 && error.status !== 500) {
-                console.error('Failed to fetch notifications:', error);
-            }
-            // Don't clear notifications on error, keep existing ones
-        }
-    };
-
-    const fetchUnreadCount = async () => {
-        try {
-            // Vérifier si l'utilisateur est connecté avant de faire l'appel
-            const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-            if (!token) {
-                setUnreadCount(0);
-                return;
-            }
-
-            const data = await api.get<{ count: number }>('/notifications/unread-count');
-            setUnreadCount(data.count || 0);
-        } catch (error: any) {
-            // Ne logger que si ce n'est pas une erreur d'authentification attendue (401 ou 500 si userId manquant)
-            if (error.status !== 401 && error.status !== 500) {
-                console.error('Failed to fetch unread count:', error);
-            }
-            setUnreadCount(0);
-        }
-    };
-
-    // Get current user ID from API
+    // Get current user ID
+    const [userId, setUserId] = useState<string | null>(null);
+    
     useEffect(() => {
         const getCurrentUserId = async () => {
             try {
@@ -118,208 +65,23 @@ export function NotificationCenter() {
                 return null;
             }
         };
-
-        const setupWebSocket = async () => {
-            const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-            if (!token) {
-                setNotifications([]);
-                setUnreadCount(0);
-                return;
-            }
-
-            // Get user ID
-            const userId = await getCurrentUserId();
-            if (!userId) {
-                return;
-            }
-            userIdRef.current = userId;
-
-            // Fetch initial notifications
-            fetchNotifications();
-            fetchUnreadCount();
-
-            // Connect to WebSocket for real-time notifications
-            // Utiliser Manager pour créer une connexion au namespace /collaboration
-            // Cela construit correctement /socket.io/?ns=/collaboration au lieu de /collaboration/socket.io/
-            const options = API_CONFIG.getSocketIOOptions('/collaboration');
-            const wsBaseUrl = API_CONFIG.wsBaseUrl;
-            
-            // Log détaillé avant connexion
-            console.log('[NotificationCenter] Connecting to WebSocket:', {
-                wsBaseUrl,
-                namespace: '/collaboration',
-                options: options,
-                expectedUrl: `${wsBaseUrl}/socket.io/?EIO=4&transport=polling&ns=/collaboration`,
-            });
-            
-            let socket: Socket | null = null;
-            
-            try {
-                const manager = new Manager(wsBaseUrl, options);
-                socket = manager.socket('/collaboration');
-                
-                // Log après création du socket
-                console.log('[NotificationCenter] Socket created:', {
-                    id: socket.id,
-                    connected: socket.connected,
-                    disconnected: socket.disconnected,
-                    manager: {
-                        uri: manager.uri,
-                        nsps: Object.keys(manager.nsps || {}),
-                    },
-                });
-                
-                // Stocker le socket dans la ref
-                socketRef.current = socket;
-                
-                // Configurer les listeners (voir ci-dessous)
-                setupSocketListeners(socket, userId);
-                
-            } catch (error) {
-                console.error('[NotificationCenter] Failed to create socket:', error);
-                // Continuer même si la création échoue - le polling fonctionnera
-                socket = null;
-            }
-            
-            // Fonction pour configurer les listeners du socket
-            function setupSocketListeners(socket: Socket, userId: string) {
-
-                socket.on('connect', () => {
-                    console.log('✅ [NotificationCenter] WebSocket connected successfully:', {
-                        socketId: socket.id,
-                        userId,
-                        namespace: '/collaboration',
-                        wsBaseUrl: API_CONFIG.wsBaseUrl,
-                    });
-                    // Join user-specific notification room
-                    socket.emit('join-notifications', { userId });
-                    console.log('[NotificationCenter] Sent join-notifications for userId:', userId);
-                });
-
-                // Listen for real-time notifications
-                socket.on(`notification:${userId}`, (notification: Notification) => {
-                    console.log('Received real-time notification:', notification);
-                    // Add notification to the list
-                    setNotifications(prev => {
-                        // Check if notification already exists (avoid duplicates)
-                        const exists = prev.some(n => n.id === notification.id);
-                        if (exists) {
-                            return prev;
-                        }
-                        // Add new notification at the beginning
-                        return [notification, ...prev];
-                    });
-                    // Update unread count
-                    if (!notification.read) {
-                        setUnreadCount(prev => prev + 1);
-                        // Trigger blinking animation for system alerts
-                        if (notification.type === 'SYSTEM_ALERT') {
-                            setIsBlinking(true);
-                            // Stop blinking after 10 seconds
-                            setTimeout(() => setIsBlinking(false), 10000);
-                        }
-                    }
-                    // Refresh notifications to ensure consistency (but don't duplicate)
-                    setTimeout(() => {
-                        fetchNotifications();
-                        fetchUnreadCount();
-                    }, 500);
-                });
-
-                socket.on('disconnect', (reason) => {
-                    console.log('[NotificationCenter] WebSocket disconnected:', {
-                        reason,
-                        socketId: socket.id,
-                    });
-                });
-                
-                socket.on('reconnect', (attemptNumber) => {
-                    console.log('[NotificationCenter] WebSocket reconnected:', {
-                        attemptNumber,
-                        socketId: socket.id,
-                    });
-                });
-                
-                socket.on('reconnect_attempt', (attemptNumber) => {
-                    console.log('[NotificationCenter] WebSocket reconnection attempt:', attemptNumber);
-                });
-                
-                socket.on('reconnect_error', (error) => {
-                    console.warn('[NotificationCenter] WebSocket reconnection error:', error);
-                });
-                
-                socket.on('reconnect_failed', () => {
-                    console.error('[NotificationCenter] WebSocket reconnection failed after all attempts');
-                });
-
-                socket.on('connect_error', (error) => {
-                    // Ignorer silencieusement les erreurs de connexion vides ou sans informations utiles
-                    // Ces erreurs sont normales pendant les tentatives de connexion initiales
-                    // Socket.io gère automatiquement la reconnexion
-                    
-                    // Vérifier si l'erreur a des informations utiles
-                    try {
-                        const errorStr = error ? JSON.stringify(error) : 'null';
-                        const hasMessage = error?.message && String(error.message).trim().length > 0;
-                        const hasType = (error as any)?.type;
-                        const hasDescription = (error as any)?.description;
-                        const errorKeys = error ? Object.keys(error) : [];
-                        
-                        // Si l'erreur est vide ({}) ou n'a pas d'informations utiles, ignorer complètement
-                        if (errorStr === '{}' || (!hasMessage && !hasType && !hasDescription && errorKeys.length === 0)) {
-                            // Erreur vide - ignorer silencieusement
-                            return;
-                        }
-                        
-                        // Seulement logger les erreurs avec des informations utiles
-                        console.warn('[NotificationCenter] WebSocket connection error (will retry):', {
-                            message: error?.message,
-                            type: (error as any)?.type,
-                            description: (error as any)?.description,
-                            wsBaseUrl: API_CONFIG.wsBaseUrl,
-                            namespace: '/collaboration',
-                        });
-                    } catch (e) {
-                        // Si la vérification échoue, ignorer l'erreur
-                        return;
-                    }
-                });
-            }
-
-            // Poll for updates every 30 seconds as backup
-            const interval = setInterval(() => {
-                const currentToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-                if (currentToken) {
-                    fetchNotifications();
-                    fetchUnreadCount();
-                }
-            }, 30000);
-
-            // Retourner une fonction de nettoyage
-            return () => {
-                clearInterval(interval);
-                if (socket) {
-                    socket.disconnect();
-                }
-                if (socketRef.current) {
-                    socketRef.current.disconnect();
-                    socketRef.current = null;
-                }
-            };
-        };
-
-        const cleanup = setupWebSocket();
-
-        return () => {
-            cleanup.then(cleanupFn => {
-                if (cleanupFn) cleanupFn();
-            });
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
-            }
-        };
+        
+        getCurrentUserId().then(id => setUserId(id || null));
     }, []);
+
+    // Use GraphQL hook for notifications
+    const { notifications, unreadCount, setNotifications, setUnreadCount } = useNotificationsGraphQL(userId || undefined);
+
+    // Handle blinking animation for new notifications
+    useEffect(() => {
+        if (notifications.length > 0) {
+            const latestNotification = notifications[0];
+            if (latestNotification && !latestNotification.read && latestNotification.type === 'SYSTEM_ALERT') {
+                setIsBlinking(true);
+                setTimeout(() => setIsBlinking(false), 10000);
+            }
+        }
+    }, [notifications]);
 
     const markAsRead = async (id: string) => {
         try {

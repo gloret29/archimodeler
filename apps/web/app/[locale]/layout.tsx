@@ -10,6 +10,7 @@ import { DialogProvider } from "@/contexts/DialogContext"
 import { LocaleSync } from "@/components/common/LocaleSync"
 import { SkipToContent } from "@/components/accessibility/SkipToContent"
 import { LiveRegion } from "@/components/accessibility/LiveRegion"
+import { ApolloProvider } from "@/components/providers/ApolloProvider"
 
 const geistSans = localFont({
     src: "../fonts/GeistVF.woff",
@@ -39,22 +40,24 @@ export default async function RootLayout({
         <html lang={locale} suppressHydrationWarning>
             <body className={`${geistSans.variable} ${geistMono.variable}`}>
                 <NextIntlClientProvider messages={messages}>
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="system"
-                        enableSystem
-                        disableTransitionOnChange
-                    >
-                        <ChatProvider>
-                            <DialogProvider>
-                                <SkipToContent />
-                                <LiveRegion message="" />
-                                <LocaleSync />
-                                {children}
-                                <Toaster />
-                            </DialogProvider>
-                        </ChatProvider>
-                    </ThemeProvider>
+                    <ApolloProvider>
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="system"
+                            enableSystem
+                            disableTransitionOnChange
+                        >
+                            <ChatProvider>
+                                <DialogProvider>
+                                    <SkipToContent />
+                                    <LiveRegion message="" />
+                                    <LocaleSync />
+                                    {children}
+                                    <Toaster />
+                                </DialogProvider>
+                            </ChatProvider>
+                        </ThemeProvider>
+                    </ApolloProvider>
                 </NextIntlClientProvider>
             </body>
         </html>

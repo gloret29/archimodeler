@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  iam-service:
+    build:
+      context: ../../..
+      dockerfile: migration-microservices/services/iam/Dockerfile
+    container_name: iam-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_IAM_USER}:${POSTGRES_IAM_PASSWORD}@${LXC_INFRASTRUCTURE_IP}:5433/${POSTGRES_IAM_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - NATS_URL=${NATS_URL}
+    ports:
+      - "3000:3000"
+    networks:
+      - gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.iam.rule=Host(`${GATEWAY_DOMAIN}`) && PathPrefix(`/api/iam`)"
+      - "traefik.http.routers.iam.entrypoints=websecure"
+      - "traefik.http.routers.iam.tls.certresolver=letsencrypt"
+      - "traefik.http.services.iam.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.iam-stripprefix.stripprefix.prefixes=/api/iam"
+      - "traefik.http.routers.iam.middlewares=iam-stripprefix"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  gateway:
+    name: archimodeler-gateway
+    external: true
+
+
+
+

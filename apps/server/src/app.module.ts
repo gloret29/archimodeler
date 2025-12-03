@@ -27,10 +27,10 @@ import { ConnectorsModule } from './connectors/connectors.module';
 import { AiModule } from './ai/ai.module';
 import { SettingsModule } from './settings/settings.module';
 import { RolesModule } from './roles/roles.module';
-import { CollaborationModule } from './collaboration/collaboration.module';
 import { StereotypesModule } from './stereotypes/stereotypes.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CommentsModule } from './comments/comments.module';
+import { GraphQLModule } from './graphql/graphql.module';
 
 /**
  * Module racine de l'application ArchiModeler.
@@ -38,7 +38,7 @@ import { CommentsModule } from './comments/comments.module';
  * @class AppModule
  */
 @Module({
-  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, SettingsModule, RolesModule, CollaborationModule, StereotypesModule, NotificationsModule, CommentsModule],
+  imports: [AuthModule, UsersModule, PrismaModule, MetamodelModule, ScriptingModule, SearchModule, ModelModule, WorkflowModule, ConnectorsModule, AiModule, SettingsModule, RolesModule, StereotypesModule, NotificationsModule, CommentsModule, GraphQLModule],
   controllers: [AppController],
   providers: [AppService],
 })

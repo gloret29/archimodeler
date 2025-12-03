@@ -12,10 +12,10 @@ import { useTabsStore } from '@/store/useTabsStore';
 import ViewTabs from '@/components/studio/ViewTabs';
 import CollaborativeCanvas from '@/components/canvas/CollaborativeCanvas';
 import ActiveUsers from '@/components/collaboration/ActiveUsers';
-import { useCollaboration } from '@/hooks/useCollaboration';
-import { useChatNotifications } from '@/hooks/useChatNotifications';
+import { useCollaborationGraphQL } from '@/hooks/useCollaborationGraphQL';
+import { useChatNotificationsGraphQL } from '@/hooks/useChatNotificationsGraphQL';
 import { useChatContext } from '@/contexts/ChatContext';
-import { UserChat } from '@/components/collaboration/UserChat';
+import { UserChatGraphQL } from '@/components/collaboration/UserChatGraphQL';
 import { API_CONFIG } from '@/lib/api/config';
 import { useDialog } from '@/contexts/DialogContext';
 
@@ -211,7 +211,7 @@ function StudioContent() {
         fetchCurrentUser();
     }, [router]);
 
-    const { users, isConnected, notifyViewSaved } = useCollaboration({
+    const { users, isConnected, notifyViewSaved } = useCollaborationGraphQL({
         viewId: activeTab?.viewId || '',
         user: currentUser && currentUser.name && currentUser.name !== 'User' && currentUser.id
             ? currentUser 
@@ -221,7 +221,7 @@ function StudioContent() {
     });
 
     // Enable chat notifications
-    useChatNotifications({
+    useChatNotificationsGraphQL({
         currentUser,
         enabled: !!currentUser && !!activeTab,
         activeUsers: users,
@@ -584,7 +584,7 @@ function StudioContent() {
                 
                 {/* Global Chat Dialog */}
                 {currentUser && chatTarget && (
-                    <UserChat
+                    <UserChatGraphQL
                         currentUser={currentUser}
                         targetUser={{ id: chatTarget.id, name: chatTarget.name, color: chatTarget.color }}
                         isOpen={isChatOpen}

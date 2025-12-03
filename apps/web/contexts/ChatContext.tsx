@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { User } from '@/hooks/useCollaboration';
+import { User } from '@/lib/types/collaboration';
 
 interface ChatContextType {
     openChat: (userId: string, userName?: string, userColor?: string) => void;

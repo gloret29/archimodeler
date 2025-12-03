@@ -1,0 +1,38 @@
+# Configuration Traefik statique
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: archimodeler-gateway
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      tlschallenge: {}
+      email: admin@archimodeler.local
+      storage: /letsencrypt/acme.json
+
+log:
+  level: INFO
+
+accessLog: {}
+
+
+
+

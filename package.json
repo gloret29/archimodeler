@@ -12,11 +12,11 @@
     "db:push": "npm run push --workspace=@repo/database"
   },
   "devDependencies": {
+    "baseline-browser-mapping": "^2.8.32",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "turbo": "^2.6.1",
-    "typescript": "5.9.2",
-    "ts-node": "^10.9.2"
+    "typescript": "5.9.2"
   },
   "engines": {
     "node": ">=18"

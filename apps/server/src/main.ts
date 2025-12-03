@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { SocketIOAdapter } from './websocket/socket-io.adapter';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
@@ -14,11 +13,6 @@ import type { Request, Response, NextFunction } from 'express';
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
-  // Configurer l'adapter Socket.io personnalisé pour les WebSockets
-  // IMPORTANT: Doit être configuré avant app.listen()
-  // Utiliser notre adapter personnalisé pour mieux contrôler la configuration
-  app.useWebSocketAdapter(new SocketIOAdapter(app));
   
   // Faire confiance au reverse proxy pour les headers X-Forwarded-*
   // Cela permet à NestJS de correctement gérer les requêtes passant par un reverse proxy
@@ -114,5 +108,6 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Server is running on: http://0.0.0.0:${port}`);
   console.log(`📚 API Documentation: http://localhost:${port}/api-docs`);
+  console.log(`🔷 GraphQL Playground: http://localhost:${port}/graphql`);
 }
 bootstrap();

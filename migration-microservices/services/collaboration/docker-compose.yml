@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  collaboration-service:
+    build:
+      context: ../../..
+      dockerfile: migration-microservices/services/collaboration/Dockerfile
+    container_name: collaboration-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_URL=${REDIS_URL}
+      - NATS_URL=${NATS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "3000:3000"
+    networks:
+      - gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.collaboration.rule=Host(`${GATEWAY_DOMAIN}`) && PathPrefix(`/api/collaboration`)"
+      - "traefik.http.routers.collaboration.entrypoints=websecure"
+      - "traefik.http.routers.collaboration.tls.certresolver=letsencrypt"
+      - "traefik.http.services.collaboration.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.collaboration-stripprefix.stripprefix.prefixes=/api/collaboration"
+      - "traefik.http.routers.collaboration.middlewares=collaboration-stripprefix"
+      # WebSocket support
+      - "traefik.http.routers.collaboration-ws.rule=Host(`${GATEWAY_DOMAIN}`) && PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.collaboration-ws.entrypoints=websecure"
+      - "traefik.http.routers.collaboration-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.collaboration-ws.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  gateway:
+    name: archimodeler-gateway
+    external: true
+
+
+
+

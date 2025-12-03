@@ -1,7 +1,7 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationType, NotificationSeverity } from '@prisma/client';
-import { CollaborationGateway } from '../collaboration/collaboration.gateway';
+import { GraphQLPubSub } from '../graphql/pubsub';
 
 export interface CreateNotificationDto {
     userId: string;
@@ -18,8 +18,7 @@ export class NotificationsService {
 
     constructor(
         private prisma: PrismaService,
-        @Inject(forwardRef(() => CollaborationGateway))
-        private collaborationGateway?: CollaborationGateway,
+        private pubSub: GraphQLPubSub,
     ) {}
 
     async createNotification(data: CreateNotificationDto) {
@@ -36,10 +35,22 @@ export class NotificationsService {
 
         this.logger.log(`Notification created: ${notification.id} for user ${data.userId}`);
         
-        // Emit notification via WebSocket if gateway is available
-        if (this.collaborationGateway) {
-            this.collaborationGateway.emitNotification(data.userId, notification);
-        }
+        // Emit notification via GraphQL PubSub
+        await this.pubSub.publish('notification-added', {
+            notificationAdded: {
+                userId: data.userId,
+                notification: {
+                    id: notification.id,
+                    type: notification.type,
+                    severity: notification.severity,
+                    title: notification.title,
+                    message: notification.message,
+                    read: notification.read,
+                    createdAt: notification.createdAt.toISOString(),
+                    metadata: notification.metadata,
+                },
+            },
+        });
         
         return notification;
     }
@@ -173,17 +184,18 @@ export class NotificationsService {
                 })
             );
 
-            // Emit notification via WebSocket to all users
-            if (this.collaborationGateway) {
-                notifications.forEach(notification => {
-                    try {
-                        this.collaborationGateway!.emitNotification(notification.userId, notification);
-                    } catch (error) {
-                        this.logger.error(`Failed to emit notification to user ${notification.userId}:`, error);
-                    }
-                });
-            } else {
-                this.logger.warn('CollaborationGateway not available, notifications not sent via WebSocket');
+            // Emit notifications via GraphQL PubSub
+            for (const notification of notifications) {
+                try {
+                    await this.pubSub.publish('notification-added', {
+                        notificationAdded: {
+                            userId: notification.userId,
+                            notification,
+                        },
+                    });
+                } catch (error) {
+                    this.logger.error(`Failed to emit notification to user ${notification.userId}:`, error);
+                }
             }
 
             this.logger.log(`Broadcast notification sent to ${notifications.length} users`);

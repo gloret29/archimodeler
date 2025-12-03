@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { ReactFlowProvider, useNodesState, useEdgesState, Node, Edge, NodeChange, EdgeChange, useReactFlow } from '@xyflow/react';
 import ModelingCanvas from '@/components/canvas/ModelingCanvas';
-import { useCollaboration, User } from '@/hooks/useCollaboration';
+import { useCollaborationGraphQL } from '@/hooks/useCollaborationGraphQL';
+import { User } from '@/lib/types/collaboration';
 import CollaborativeCursors from '@/components/collaboration/CollaborativeCursors';
 import { api } from '@/lib/api/client';
 import { useComments } from '@/hooks/useComments';
@@ -140,7 +141,7 @@ export default function CollaborativeCanvas({
         deleteNode,
         deleteEdge,
         updateSelection,
-    } = useCollaboration({
+    } = useCollaborationGraphQL({
         viewId: collaborationEnabled && currentUser ? viewId : '', // Don't connect if not enabled or no user
         user: currentUser || { id: '', name: '', color: '#4ECDC4' }, // Fallback user (will be rejected by server)
         onViewSaved: (data) => {

@@ -1,8 +1,8 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommentTargetType, NotificationType, NotificationSeverity } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CollaborationGateway } from '../collaboration/collaboration.gateway';
+import { GraphQLPubSub } from '../graphql/pubsub';
 
 export interface CreateCommentThreadDto {
     targetType: CommentTargetType;
@@ -40,8 +40,7 @@ export class CommentsService {
     constructor(
         private prisma: PrismaService,
         private notificationsService: NotificationsService,
-        @Inject(forwardRef(() => CollaborationGateway))
-        private collaborationGateway?: CollaborationGateway,
+        private pubSub: GraphQLPubSub,
     ) {}
 
     /**
@@ -146,10 +145,8 @@ export class CommentsService {
             }
         }
 
-        // Emit via WebSocket if available
-        if (this.collaborationGateway) {
-            this.collaborationGateway.emitCommentCreated(thread);
-        }
+        // Emit via GraphQL PubSub
+        await this.pubSub.publish('comment-thread-created', { commentThreadCreated: thread });
 
         return thread;
     }
@@ -437,10 +434,8 @@ export class CommentsService {
             });
         }
 
-        // Emit via WebSocket if available
-        if (this.collaborationGateway) {
-            this.collaborationGateway.emitCommentAdded(threadId, comment);
-        }
+        // Emit via GraphQL PubSub
+        await this.pubSub.publish('comment-added', { commentAdded: { threadId, comment } });
 
         return comment;
     }
@@ -653,10 +648,8 @@ export class CommentsService {
             }
         }
 
-        // Emit via WebSocket if available
-        if (this.collaborationGateway) {
-            this.collaborationGateway.emitThreadResolved(threadId, dto.resolved);
-        }
+        // Emit via GraphQL PubSub
+        await this.pubSub.publish('thread-resolved', { threadResolved: { threadId, resolved: dto.resolved } });
 
         return updatedThread;
     }
